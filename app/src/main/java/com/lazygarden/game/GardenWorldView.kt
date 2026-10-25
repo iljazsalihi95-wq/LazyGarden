@@ -5,7 +5,8 @@ import android.graphics.*
 import android.view.View
 import kotlin.math.sin
 
-class GardenWorldView(c:Context, private val restored:Boolean):View(c){
+class GardenWorldView(c:Context, private val tasks:Int, private val constructing:Boolean=false):View(c){
+ private val restored get()=tasks>0
  private val p=Paint(Paint.ANTI_ALIAS_FLAG)
  private val stroke=Paint(Paint.ANTI_ALIAS_FLAG).apply{style=Paint.Style.STROKE;strokeCap=Paint.Cap.ROUND}
  private var t=0f
@@ -52,9 +53,33 @@ class GardenWorldView(c:Context, private val restored:Boolean):View(c){
    // weeds around broken fountain
    stroke.color=0xff255f2f.toInt();stroke.strokeWidth=w*.006f;for(i in 0..6){val x=w*(.31f+i*.063f);c.drawLine(x,h*.64f,x+w*.018f,h*.60f,stroke)}
   }
-  // premium flower beds
+  // Restoration objects have distinct geometry, not only palette changes.
+  if(tasks<2){for(i in 0..9){val x=w*(.38f+(i%3)*.09f);val y=h*(.76f+(i/3)*.055f);oval(c,x,y,x+w*.055f,y+h*.018f,0xff615446.toInt())}}
+  for(i in 0..4){val x=w*(.08f+i*.19f);rect(c,x,h*.89f,x+w*.014f,h*.97f,0xffd3b37a.toInt());if(tasks>=6)rect(c,x,h*.90f,x+w*.17f,h*.915f,0xfff7dc9c.toInt())}
+  val bx=w*.72f;val by=h*.77f
+  for(i in 0..2)rect(c,bx,by+i*h*.015f,bx+w*(if(tasks>=4).20f else .09f),by+i*h*.015f+h*.01f,0xff8c5234.toInt(),3f)
+  if(tasks>=4){rect(c,bx+w*.02f,by+h*.025f,bx+w*.035f,by+h*.09f,0xff513d32.toInt());rect(c,bx+w*.16f,by+h*.025f,bx+w*.175f,by+h*.09f,0xff513d32.toInt())}
+  if(tasks>=5)for(i in 0..2){val x=w*(.1f+i*.09f);rect(c,x,h*.80f,x+w*.012f,h*.90f,0xff79512e.toInt());oval(c,x-w*.04f,h*.74f,x+w*.05f,h*.83f,0xff8bcc59.toInt())}
+  if(tasks<7){stroke.color=0xff655b48.toInt();stroke.strokeWidth=4f;c.drawLine(w*.22f,h*.30f,w*.25f,h*.33f,stroke);c.drawLine(w*.25f,h*.33f,w*.23f,h*.37f,stroke)}
+  if(constructing){
+   val x=w*.5f;val y=h*.68f
+   rect(c,x-w*.15f,y,x+w*.15f,y+h*.04f,0xffffce5a.toInt(),6f)
+   for(i in 0..4)rect(c,x-w*.14f+i*w*.06f,y,x-w*.11f+i*w*.06f,y+h*.04f,0xff5e4430.toInt())
+   for(i in 0..5){p.color=0x88fff1ba.toInt();c.drawCircle(x+w*.12f*sin(t+i),y-h*.04f*(i%3),w*.013f,p)}
+  }
+  // Original procedural character sprites; four named residents, each with a palette.
+  val shirts=intArrayOf(0xffd96b5d.toInt(),0xff4689bd.toInt(),0xffd4a548.toInt(),0xffa36ac6.toInt())
+  for(i in 0..3){val walk=sin(t*.6f+i);val x=w*(.2f+i*.19f)+walk*w*.035f;val y=h*(.83f+(i%2)*.07f)
+   oval(c,x-w*.025f,y+h*.035f,x+w*.035f,y+h*.05f,0x33000000)
+   rect(c,x-w*.014f,y,x+w*.014f,y+h*.03f,shirts[i],5f)
+   oval(c,x-w*.016f,y-h*.035f,x+w*.016f,y,0xfff2c39b.toInt())
+   oval(c,x-w*.019f,y-h*.04f,x+w*.016f,y-h*.025f,0xff5c3c30.toInt())
+   stroke.color=0xff354354.toInt();stroke.strokeWidth=w*.009f;c.drawLine(x-w*.008f,y+h*.025f,x-w*.012f+walk*w*.006f,y+h*.045f,stroke);c.drawLine(x+w*.008f,y+h*.025f,x+w*.012f-walk*w*.006f,y+h*.045f,stroke)
+  }
+  // Flower beds unlock their planted geometry after clearing.
+
   val flowers=intArrayOf(0xffffcf45.toInt(),0xffff6684.toInt(),0xffc071ff.toInt(),0xfffff1d0.toInt(),0xff5ed5ff.toInt())
-  for(side in 0..1)for(i in 0..13){val x=if(side==0)w*(.045f+(i%7)*.038f) else w*(.955f-(i%7)*.038f);val y=h*(.70f+(i/7)*.105f+(i%3)*.012f);p.color=0xff236d35.toInt();p.strokeWidth=4f;c.drawLine(x,y,x,y+h*.035f,p);p.color=flowers[(i+side)%flowers.size];c.drawCircle(x,y,w*.013f,p);p.color=0xffffe38a.toInt();c.drawCircle(x,y,w*.004f,p)}
+  for(side in 0..1)for(i in 0..(if(tasks>=3)13 else 2)){val x=if(side==0)w*(.045f+(i%7)*.038f) else w*(.955f-(i%7)*.038f);val y=h*(.70f+(i/7)*.105f+(i%3)*.012f);p.color=0xff236d35.toInt();p.strokeWidth=4f;c.drawLine(x,y,x,y+h*.035f,p);p.color=flowers[(i+side)%flowers.size];c.drawCircle(x,y,w*.013f,p);p.color=0xffffe38a.toInt();c.drawCircle(x,y,w*.004f,p)}
   // task marker belongs to the world, not a plain prototype button
   if(!restored){p.color=0xffffc928.toInt();c.drawCircle(w*.67f,h*.52f,w*.035f,p);p.color=Color.WHITE;p.textAlign=Paint.Align.CENTER;p.typeface=Typeface.DEFAULT_BOLD;p.textSize=w*.045f;c.drawText("!",w*.67f,h*.537f,p)}
  }
