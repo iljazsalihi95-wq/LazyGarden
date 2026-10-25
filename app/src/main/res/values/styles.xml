@@ -1,0 +1,3 @@
+<resources>
+<style name="Theme.LazyGarden" parent="Theme.AppCompat.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:colorAccent">#FFD34E</item><item name="android:navigationBarColor">#142D39</item><item name="android:windowLightStatusBar">false</item><item name="android:statusBarColor">#254D59</item></style>
+</resources>
