@@ -3,6 +3,7 @@ package com.lazygarden.game
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -24,6 +25,8 @@ class GameFlowTest {
  @Before fun reset(){context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE).edit().clear().commit()}
  private fun shot(name:String){
   val instrument=InstrumentationRegistry.getInstrumentation()
+  instrument.waitForIdleSync()
+  SystemClock.sleep(1000) // Let the Android window entrance and reward animation finish.
   instrument.waitForIdleSync()
   val image=instrument.uiAutomation.takeScreenshot()
   val file=File(context.getExternalFilesDir(null),"$name.png")

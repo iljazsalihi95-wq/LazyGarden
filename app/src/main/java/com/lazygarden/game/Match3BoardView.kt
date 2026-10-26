@@ -46,8 +46,12 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
   panel(c,RectF(25*d,61*d,w*.61f,68*d),intArrayOf(0xffc2a074.toInt(),0xffc2a074.toInt()),4*d)
   if(progress>0)panel(c,RectF(25*d,61*d,25*d+(w*.61f-25*d)*progress,68*d),intArrayOf(0xff95d94c.toInt(),0xff299b42.toInt()),4*d)
   p.alpha=255
-  c.drawBitmap(tiles[engine.spec.collectColor],null,RectF(23*d,73*d,49*d,99*d),p)
-  text(c,"${engine.collected[engine.spec.collectColor]}/${engine.spec.collectCount}   ❄ ${engine.clearedIce}/${engine.spec.ice}",w*.36f,91*d,14*d)
+  if(engine.spec.collectCount>0)c.drawBitmap(tiles[engine.spec.collectColor],null,RectF(23*d,73*d,49*d,99*d),p)
+  val goals=buildList {
+   if(engine.spec.collectCount>0)add("${engine.collected[engine.spec.collectColor]}/${engine.spec.collectCount}")
+   if(engine.spec.ice>0)add("❄ ${engine.clearedIce}/${engine.spec.ice}")
+  }.joinToString("   ").ifEmpty{"Mblidh ${engine.spec.target} pikë"}
+  text(c,goals,w*.36f,91*d,14*d)
   panel(c,RectF(left-5*d,top-5*d,left+cell*8+5*d,top+cell*8+5*d),intArrayOf(0xffe7bd76.toInt(),0xff875423.toInt()),10*d)
   for(r in 0..7)for(col in 0..7){
    val i=r*8+col;val x=left+col*cell;val y=top+r*cell
