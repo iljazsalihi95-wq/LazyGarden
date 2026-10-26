@@ -6,7 +6,8 @@ import android.graphics.*
 import android.view.View
 
 /** Two aligned original paintings blended through saved restoration regions. */
-class GardenWorldView(context:Context,private val tasks:Int,private val constructing:Boolean=false):View(context){
+class GardenWorldView(context:Context,private val tasks:Int,private val constructing:Boolean=false,private val decorations:List<DecorItem> = emptyList(),private val focus:DecorItem?=null):View(context){
+ private val decorationArt=mutableMapOf<Int,Bitmap>()
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val after=BitmapFactory.decodeResource(resources,R.drawable.garden_estate)
  private val before=BitmapFactory.decodeResource(resources,R.drawable.garden_before)
@@ -29,6 +30,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   val scale=maxOf(width.toFloat()/after.width,height.toFloat()/after.height)
   val dw=after.width*scale;val dh=after.height*scale
   val dst=RectF((width-dw)/2,(height-dh)/2,(width+dw)/2,(height+dh)/2)
+  focus?.let{dst.offset(0f,height*.39f-(dst.top+it.y*dh))}
   p.alpha=255;p.xfermode=null;p.shader=null;c.drawBitmap(before,null,dst,p)
   if(tasks>=7){c.drawBitmap(after,null,dst,p)}else if(tasks>0||constructing){
    mask.eraseColor(Color.TRANSPARENT)
@@ -43,6 +45,12 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
    c.drawBitmap(after,null,dst,p)
    p.xfermode=PorterDuffXfermode(PorterDuff.Mode.DST_IN);c.drawBitmap(mask,null,dst,p);p.xfermode=null
    c.restoreToCount(layer)
+  }
+  for(item in decorations){
+   val bitmap=decorationArt.getOrPut(item.art){BitmapFactory.decodeResource(resources,item.art)}
+   val w=dw*item.width;val h=w*bitmap.height/bitmap.width
+   val x=dst.left+item.x*dw;val y=dst.top+item.y*dh
+   p.alpha=255;p.shader=null;c.drawBitmap(bitmap,null,RectF(x-w/2,y-h,x+w/2,y),p)
   }
   p.shader=LinearGradient(0f,0f,0f,height.toFloat(),intArrayOf(0x99102b25.toInt(),0x00000000,0x990c261f.toInt()),floatArrayOf(0f,.45f,1f),Shader.TileMode.CLAMP)
   c.drawRect(0f,0f,width.toFloat(),height.toFloat(),p);p.shader=null

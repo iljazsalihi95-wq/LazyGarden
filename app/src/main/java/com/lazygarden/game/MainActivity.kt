@@ -20,10 +20,10 @@ class MainActivity : AppCompatActivity() {
  private var screen="garden"
  private var rewardAnimator:ValueAnimator?=null
  private val names=arrayOf("Rikthe ujin e shatërvanit","Rregullo shtegun","Mbille kopshtin me lule","Riparo stolin","Rikthe gjelbërimin","Restauro hyrjen","Restauro fasadën e pronës")
- private val story=arrayOf("Meli: Dëgjo ujin! Ky shatërvan ruan kujtimet e familjes sonë. Tani të zbulojmë shtegun.","Bejdi: Nën barin e egër gjetëm gurët e vjetër. Do të na çojnë deri te shtëpia.","Lina: Mbollëm lule për çdo njeri që na ndihmoi. Kopshti po merr përsëri ngjyra.","Meti: Gjyshi pushonte këtu çdo mbrëmje. Tani kemi një vend ku të ulemi bashkë.","Lina: Pemët kanë nevojë për kujdes, njësoj si kjo shtëpi. Do të rriten me historinë tonë.","Bejdi: Porta është hapur. Le t'i ftojmë fqinjët ta shohin çfarë kemi bërë.","Meli: Nuk riparuam vetëm muret. I kthyem jetën shtëpisë sonë. Kjo është vetëm fillimi!")
+
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
  override fun onCreate(state:Bundle?){
-  super.onCreate(state);save=GardenSave(this);showGarden()
+  super.onCreate(state);save=GardenSave(this);showGarden();if(save.hasPendingStory)showStory()
   onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true){override fun handleOnBackPressed(){if(screen=="garden")finish() else {engine?.let{save.saveBoard(it)};showGarden()}}})
  }
  override fun onPause(){engine?.let{save.saveBoard(it)};super.onPause()}
@@ -45,7 +45,7 @@ class MainActivity : AppCompatActivity() {
  private fun showGarden(){
   screen="garden";engine=null
   val root=FrameLayout(this)
-  root.addView(GardenWorldView(this,save.tasks,save.constructing),FrameLayout.LayoutParams(-1,-1))
+  root.addView(GardenWorldView(this,save.tasks,save.constructing,save.decorations).apply{contentDescription="Shiko pronën";setOnClickListener{if(!save.constructing)showEstate()}},FrameLayout.LayoutParams(-1,-1))
   val top=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(10),dp(12),0)}
   val utility=LinearLayout(this)
   utility.addView(premiumButton("Profil"){profile()},LinearLayout.LayoutParams(0,-2,1f).apply{marginEnd=dp(8)})
@@ -54,6 +54,7 @@ class MainActivity : AppCompatActivity() {
   top.addView(label("LazyGarden",42f,0xffffdc6f.toInt()))
   top.addView(label("Ndërto · Luaj · Dekoro\nKopshti i ëndrrave",16f))
   top.addView(label("${save.coins} Game Coins     ★ ${save.stars}",18f).apply{setPadding(0,dp(14),0,0)})
+  top.addView(label("Prek kopshtin për ta parë",12f).apply{setPadding(0,dp(7),0,0)})
   root.addView(top,FrameLayout.LayoutParams(-1,-2,Gravity.TOP))
   val bottom=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),0,dp(16),dp(16))}
   bottom.addView(label("Prona jonë · ${save.tasks}/7 restaurime",15f))
@@ -61,6 +62,10 @@ class MainActivity : AppCompatActivity() {
   row.addView(premiumButton("Ndërto"){tasks()},LinearLayout.LayoutParams(0,-2,1f).apply{marginEnd=dp(8)})
   row.addView(premiumButton("Nivelet"){showMap()},LinearLayout.LayoutParams(0,-2,1f))
   bottom.addView(row)
+  val creative=LinearLayout(this)
+  creative.addView(premiumButton("Dekoro"){showDecor()},LinearLayout.LayoutParams(0,dp(44),1f).apply{marginEnd=dp(8)})
+  creative.addView(premiumButton(if(save.hasPendingStory)"Historia · E re" else "Historia"){if(save.hasPendingStory)showStory() else showStoryArchive()},LinearLayout.LayoutParams(0,dp(44),1f))
+  bottom.addView(creative)
   bottom.addView(premiumButton(if(save.activeBoard!=null)"▶ Vazhdo · ${save.level}" else "▶ Luaj · ${save.level}",true){showMatch3()})
   root.addView(bottom,FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));attach(root)
   if(save.constructing){bottom.visibility=View.INVISIBLE
@@ -89,9 +94,52 @@ class MainActivity : AppCompatActivity() {
   AlertDialog.Builder(this).setTitle(names[save.tasks]).setMessage("${names.mapIndexed{i,n->if(i<save.tasks)"✓ $n" else if(i==save.tasks)"→ $n" else "🔒 $n"}.joinToString("\n\n")}\n\nKosto: 120 Game Coins${if(save.tasks>0)" + 1 yll" else ""}")
    .setPositiveButton("Restauro"){_,_->if(save.beginRestoration())showGarden() else Toast.makeText(this,"Fito nivele për të marrë Game Coins dhe yje",Toast.LENGTH_LONG).show()}.setNegativeButton("Mbyll",null).show()
  }
- private fun showStory(){
-  val i=(save.tasks-1).coerceIn(0,6)
-  AlertDialog.Builder(this).setTitle("${names[i]} · Përfundoi").setMessage(story[i]).setPositiveButton("Vazhdo",null).show()
+ private fun showEstate(){
+  screen="estate";engine=null
+  val root=FrameLayout(this)
+  root.addView(GardenWorldView(this,save.tasks,decorations=save.decorations),FrameLayout.LayoutParams(-1,-1))
+  val controls=LinearLayout(this).apply{setPadding(dp(10),dp(8),dp(10),0)}
+  controls.addView(premiumButton("‹ Ballina"){showGarden()},LinearLayout.LayoutParams(0,dp(46),1f).apply{marginEnd=dp(10)})
+  controls.addView(premiumButton("Dekoro"){showDecor()},LinearLayout.LayoutParams(0,dp(46),1f))
+  root.addView(controls,FrameLayout.LayoutParams(-1,-2,Gravity.TOP))
+  root.addView(label("${save.tasks}/7 restaurime · ${save.decorations.size} dekorime",14f).apply{setPadding(0,0,0,dp(14))},FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM))
+  attach(root)
+ }
+ private fun showDecor(category:DecorCategory=DecorCategory.DECOR,preview:DecorItem?=null){
+  screen="decor";engine=null
+  attach(DecorationScreen(this,save,category,preview,{showGarden()},{showDecor(it)},{showDecor(category,it)},{item->
+   when(save.selectDecoration(item.id)){
+    GardenSave.DecorResult.PURCHASED,GardenSave.DecorResult.SELECTED->showDecor(category)
+    GardenSave.DecorResult.LOCKED->Toast.makeText(this,"Përfundo ${item.requiredTasks} restaurime për këtë dekorim",Toast.LENGTH_LONG).show()
+    GardenSave.DecorResult.INSUFFICIENT->Toast.makeText(this,"Duhen ${item.cost} Game Coins",Toast.LENGTH_LONG).show()
+    GardenSave.DecorResult.INVALID->Toast.makeText(this,"Zgjedhja nuk u ruajt",Toast.LENGTH_SHORT).show()
+   }
+  },{save.removeDecoration(category);showDecor(category)}))
+ }
+ private fun showStory(replayChapter:Int?=null,replayLine:Int=0){
+  if(replayChapter==null && !save.hasPendingStory){showStoryArchive();return}
+  val position=save.storyPosition
+  val chapter=replayChapter ?: position/GardenStory.LINES_PER_CHAPTER
+  val line=if(replayChapter==null)position%GardenStory.LINES_PER_CHAPTER else replayLine
+  if(chapter !in 0 until save.tasks.coerceAtMost(7)){showGarden();return}
+  screen="story";engine=null
+  attach(StoryScreen(this,save,chapter,line,replayChapter!=null,{
+   if(replayChapter!=null){if(line<2)showStory(chapter,line+1) else showStoryArchive()}
+   else if(save.advanceStory(position)){if(save.hasPendingStory)showStory() else showGarden()}
+  },{if(replayChapter!=null)showStoryArchive() else showGarden()}))
+ }
+ private fun showStoryArchive(){
+  screen="story_archive";engine=null
+  val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(8),dp(12),dp(10));setBackgroundColor(0xff204d40.toInt())}
+  root.addView(premiumButton("‹ Kopshti"){showGarden()});root.addView(label("Historia e pronës",26f,0xffffdf83.toInt()))
+  val list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
+  GardenStory.chapters.forEachIndexed{i,chapter->
+   val unlocked=i<save.tasks;val read=save.storyPosition>=(i+1)*3
+   list.addView(premiumButton("${i+1}. ${chapter.title}\n${if(!unlocked)"🔒 Përfundo restaurimin ${i+1}" else if(read)"Rilexo" else "Vazhdo tregimin"}"){
+    if(unlocked){if(read)showStory(i,0) else showStory()}else Toast.makeText(this,"Ky kapitull hapet pas restaurimit",Toast.LENGTH_SHORT).show()
+   }.apply{contentDescription="Kapitulli ${i+1}"})
+  }
+  root.addView(ScrollView(this).apply{addView(list)},LinearLayout.LayoutParams(-1,0,1f));attach(root)
  }
  private fun showMatch3(restart:Boolean=false,levelNumber:Int=save.level){
   screen="match"
@@ -130,7 +178,7 @@ class MainActivity : AppCompatActivity() {
   screen="result"
   if(!board.won && board.level==save.level)save.saveBoard(board)
   val root=FrameLayout(this)
-  root.addView(GardenWorldView(this,save.tasks),FrameLayout.LayoutParams(-1,-1))
+  root.addView(GardenWorldView(this,save.tasks,decorations=save.decorations),FrameLayout.LayoutParams(-1,-1))
   root.addView(View(this).apply{setBackgroundColor(0xb9101826.toInt())},FrameLayout.LayoutParams(-1,-1))
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(dp(22),dp(24),dp(22),dp(20));background=GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,intArrayOf(0xfffff1d4.toInt(),0xffeac58a.toInt())).apply{cornerRadius=dp(28).toFloat();setStroke(dp(3),0xffa0672b.toInt())}}
   val stars=LinearLayout(this).apply{gravity=Gravity.CENTER}

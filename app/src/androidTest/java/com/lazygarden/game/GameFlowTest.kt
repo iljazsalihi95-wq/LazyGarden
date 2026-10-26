@@ -61,6 +61,7 @@ class GameFlowTest {
    onView(withText("Vazhdo")).perform(click())
    assertTrue(save.beginRestoration());save.finishRestoration()
    scenario.recreate();assertEquals(1,GardenSave(context).tasks);assertEquals(30,save.coins)
+   onView(withText("Lexo më vonë")).perform(click())
    shot("05-fountain-restored")
   }
  }
@@ -73,6 +74,50 @@ class GameFlowTest {
   assertTrue(save.buyBooster(board,Match3Engine.Booster.HAMMER,0).isNotEmpty())
   assertEquals(coins-40,GardenSave(context).coins)
   val restored=Match3Engine(1);assertTrue(restored.restore(save.activeBoard!!));assertEquals(board.encode(),restored.encode())
+  context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE).edit().putInt("story_position",21).commit()
   ActivityScenario.launch(MainActivity::class.java).use{shot("06-estate-after")}
+ }
+ @Test fun decorationTransactionsAndWorldSelectionSurviveRecreation(){
+  val prefs=context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE)
+  prefs.edit().putInt("coins",300).putInt("tasks",1).putInt("story_position",3).commit()
+  val save=GardenSave(context)
+  assertEquals(GardenSave.DecorResult.LOCKED,save.selectDecoration("bench"));assertEquals(300,save.coins)
+  assertEquals(GardenSave.DecorResult.INVALID,save.selectDecoration("missing"));assertEquals(300,save.coins)
+  assertEquals(GardenSave.DecorResult.PURCHASED,save.selectDecoration("classic_fountain"));assertEquals(150,save.coins)
+  assertEquals(GardenSave.DecorResult.SELECTED,save.selectDecoration("classic_fountain"));assertEquals(150,save.coins)
+  assertEquals(GardenSave.DecorResult.INSUFFICIENT,save.selectDecoration("lotus_fountain"));assertEquals(150,save.coins)
+  assertEquals("classic_fountain",save.selectedDecoration(DecorCategory.FOUNTAINS)?.id)
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   onView(withText("Dekoro")).perform(click())
+   onView(withContentDescription("Kategoria FOUNTAINS")).perform(click());shot("07-decoration-shop")
+   onView(withContentDescription("Shiko lotus_fountain")).perform(click())
+   assertEquals("classic_fountain",GardenSave(context).selectedDecoration(DecorCategory.FOUNTAINS)?.id)
+   assertEquals(150,save.coins)
+   onView(withText("‹ Kopshti")).perform(click());scenario.recreate()
+   assertEquals("classic_fountain",GardenSave(context).selectedDecoration(DecorCategory.FOUNTAINS)?.id)
+   onView(withContentDescription("Shiko pronën")).perform(click())
+   shot("08-garden-with-decoration")
+  }
+  save.removeDecoration(DecorCategory.FOUNTAINS);assertNull(save.selectedDecoration(DecorCategory.FOUNTAINS));assertTrue(save.ownsDecoration("classic_fountain"))
+  assertEquals(GardenSave.DecorResult.SELECTED,save.selectDecoration("classic_fountain"));assertEquals(150,save.coins)
+ }
+ @Test fun storyContinuesAtSavedLineAndReplayDoesNotAdvance(){
+  context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE).edit().putInt("tasks",1).commit()
+  val save=GardenSave(context)
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   onView(withContentDescription("Personazhi Meli")).check(matches(isDisplayed()));shot("09-story-meli")
+   onView(withText("Vazhdo tregimin")).perform(click());assertEquals(1,save.storyPosition)
+   scenario.recreate();onView(withContentDescription("Personazhi Bejdi")).check(matches(isDisplayed()));shot("10-story-resumed")
+   assertFalse(save.advanceStory(0));assertEquals(1,save.storyPosition)
+   onView(withText("Vazhdo tregimin")).perform(click())
+   onView(withText("Vazhdo tregimin")).perform(click());assertEquals(3,save.storyPosition);assertFalse(save.hasPendingStory)
+   onView(withText("Historia")).perform(click());onView(withContentDescription("Kapitulli 1")).perform(click())
+   onView(withContentDescription("Personazhi Meli")).check(matches(isDisplayed()))
+   onView(withText("Vazhdo tregimin")).perform(click());assertEquals(3,save.storyPosition)
+  }
+ }
+ @Test fun allNewCatalogAndCharacterArtworkDecodes(){
+  val ids=GardenDecor.items.map{it.art}+GardenCharacter.entries.map{it.portrait}
+  for(id in ids){val bmp=android.graphics.BitmapFactory.decodeResource(context.resources,id);assertNotNull(bmp);assertTrue(bmp.width>100);bmp.recycle()}
  }
 }

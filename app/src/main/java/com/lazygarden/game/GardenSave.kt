@@ -17,6 +17,30 @@ class GardenSave(ctx:Context) {
   if(waves.isNotEmpty())p.edit().putInt("coins",coins-kind.cost).putString("active_board",board.encode()).commit()
   return waves
  }
+ val storyPosition get()=p.getInt("story_position",0).coerceIn(0,21)
+ val availableStoryLines get()=tasks.coerceIn(0,7)*GardenStory.LINES_PER_CHAPTER
+ val hasPendingStory get()=storyPosition<availableStoryLines
+ fun advanceStory(expectedPosition:Int):Boolean {
+  if(expectedPosition!=storyPosition || !hasPendingStory)return false
+  return p.edit().putInt("story_position",storyPosition+1).commit()
+ }
+ fun ownsDecoration(id:String)=GardenDecor.find(id)!=null && p.getBoolean("decor_owned_$id",false)
+ fun selectedDecoration(category:DecorCategory):DecorItem? {
+  val item=p.getString("decor_selected_${category.name}",null)?.let{GardenDecor.find(it)}
+  return item?.takeIf{it.category==category && ownsDecoration(it.id) && tasks>=it.requiredTasks}
+ }
+ val decorations get()=DecorCategory.entries.mapNotNull{selectedDecoration(it)}
+ enum class DecorResult{PURCHASED,SELECTED,LOCKED,INSUFFICIENT,INVALID}
+ fun selectDecoration(id:String):DecorResult {
+  val item=GardenDecor.find(id) ?: return DecorResult.INVALID
+  if(tasks<item.requiredTasks || constructing)return DecorResult.LOCKED
+  val owned=ownsDecoration(id)
+  if(!owned && coins<item.cost)return DecorResult.INSUFFICIENT
+  val edit=p.edit().putString("decor_selected_${item.category.name}",id)
+  if(!owned)edit.putInt("coins",coins-item.cost).putBoolean("decor_owned_$id",true)
+  return if(edit.commit())if(owned)DecorResult.SELECTED else DecorResult.PURCHASED else DecorResult.INVALID
+ }
+ fun removeDecoration(category:DecorCategory){p.edit().remove("decor_selected_${category.name}").commit()}
  fun rating(level:Int)=p.getInt("rating_$level",0)
  fun saveBoard(board:Match3Engine){if(board.level==level && p.getInt("rewarded_level",0)<board.level)p.edit().putString("active_board",board.encode()).commit()}
  fun clearBoard(){p.edit().remove("active_board").commit()}
