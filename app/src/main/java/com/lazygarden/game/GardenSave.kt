@@ -11,11 +11,12 @@ class GardenSave(ctx:Context) {
  val fountainRestored get()=tasks>0
  val constructing get()=p.getBoolean("constructing",false)
  val activeBoard get()=p.getString("active_board",null)
+ fun rating(level:Int)=p.getInt("rating_$level",0)
  fun saveBoard(board:Match3Engine){p.edit().putString("active_board",board.encode()).commit()}
  fun clearBoard(){p.edit().remove("active_board").commit()}
  fun win(board:Match3Engine):Boolean {
   if(!board.won || board.level!=level || p.getInt("rewarded_level",0)>=level)return false
-  p.edit().putInt("coins",coins+150).putInt("stars",stars+1).putInt("rewarded_level",level)
+  p.edit().putInt("coins",coins+150).putInt("stars",stars+1).putInt("rewarded_level",level).putInt("rating_$level",board.earnedStars)
    .putInt("level",(level+1).coerceAtMost(Campaign.COUNT)).remove("active_board").commit()
   return true
  }

@@ -14,6 +14,7 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
     var combo = 0; private set
     var revision = 0; private set
     val won get() = score >= spec.target && clearedIce >= spec.ice && collected[spec.collectColor] >= spec.collectCount
+    val earnedStars get() = if (!won) 0 else if (moves >= spec.moves / 3) 3 else if (moves >= spec.moves / 6) 2 else 1
     val failed get() = moves == 0 && !won
     data class Wave(val cells: List<Int>, val before: Array<IntArray>, val after: Array<IntArray>, val combo: Int)
     init {
