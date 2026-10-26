@@ -26,11 +26,12 @@ class GameFlowTest {
   val instrument=InstrumentationRegistry.getInstrumentation()
   instrument.waitForIdleSync()
   val image=instrument.uiAutomation.takeScreenshot()
-  val file=File(context.filesDir,"$name.png")
+  val file=File(context.getExternalFilesDir(null),"$name.png")
   file.outputStream().use{image.compress(Bitmap.CompressFormat.PNG,100,it)}
   // UTP uninstalls the APK after tests. Keep QA screenshots outside app-owned storage.
-  val command="sh -c 'mkdir -p /data/local/tmp/lazygarden-screenshots; run-as com.lazygarden.game cat ${file.absolutePath} > /data/local/tmp/lazygarden-screenshots/$name.png'"
-  ParcelFileDescriptor.AutoCloseInputStream(instrument.uiAutomation.executeShellCommand(command)).use{it.readBytes()}
+  for(command in listOf("mkdir -p /data/local/tmp/lazygarden-screenshots","cp ${file.absolutePath} /data/local/tmp/lazygarden-screenshots/$name.png")){
+   ParcelFileDescriptor.AutoCloseInputStream(instrument.uiAutomation.executeShellCommand(command)).use{it.readBytes()}
+  }
  }
  @Test fun nativeNavigationAndBoardAreVisible(){
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
