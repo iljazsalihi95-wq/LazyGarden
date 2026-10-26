@@ -47,7 +47,7 @@ jobs:
           script: |
             gradle connectedDebugAndroidTest
             mkdir -p device-screenshots
-            adb pull /sdcard/Android/data/com.lazygarden.game/files/. device-screenshots/
+            adb pull /data/local/tmp/lazygarden-screenshots/. device-screenshots/
       - uses: actions/upload-artifact@v4
         if: always()
         with:
