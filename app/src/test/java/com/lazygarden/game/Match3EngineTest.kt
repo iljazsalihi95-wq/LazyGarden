@@ -33,4 +33,20 @@ class Match3EngineTest {
   val state=e.encode();assertFalse(e.legal(0,1));assertTrue(e.boost(Match3Engine.Booster.SHUFFLE,0).isEmpty());assertEquals(state,e.encode())
   assertEquals(e.won,e.earnedStars in 1..3)
  }
+ @Test fun gravityTracksPreserveSurvivorsAndFallOnlyDownward(){
+  for(level in listOf(1,20,100)){
+   val e=Match3Engine(level,Random(level*39))
+   repeat(10){if(!e.won && !e.failed){
+    val move=(0..63).flatMap{a->listOf(a to a+1,a to a+8)}.first{e.legal(it.first,it.second)}
+    for(wave in e.swap(move.first,move.second))if(!wave.shuffled){
+     for(c in 0..7)for(r in 0..7){val origin=wave.origins[r][c]
+      assertTrue(origin<=r)
+      if(r>0)assertTrue(wave.origins[r-1][c]<origin)
+      if(origin>=0 && origin*8+c !in wave.cells)assertEquals(wave.before[origin][c],wave.after[r][c])
+     }
+     assertTrue(wave.iceAfter.sumOf{it.sum()}<=wave.iceBefore.sumOf{it.sum()})
+    }
+   }}
+  }
+ }
 }

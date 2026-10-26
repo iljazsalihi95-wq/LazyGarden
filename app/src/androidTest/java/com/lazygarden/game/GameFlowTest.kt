@@ -38,14 +38,14 @@ class GameFlowTest {
  }
  @Test fun nativeNavigationAndBoardAreVisible(){
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
-   onView(withText("LazyGarden")).check(matches(isDisplayed()));shot("01-home-before")
+   onView(withContentDescription("Logo LazyGarden")).check(matches(isDisplayed()));shot("01-home-before")
    onView(withText("Nivelet")).perform(click())
    onView(withText("Kapitulli 1 · 1–25")).check(matches(isDisplayed()));shot("02-map")
    onView(withText("‹ Kopshti")).perform(click())
    onView(withText("▶ Luaj · 1")).perform(click())
    onView(withContentDescription("Tabela Match-3")).check(matches(isDisplayed()));shot("03-match")
    scenario.recreate()
-   onView(withText("LazyGarden")).check(matches(isDisplayed()))
+   onView(withContentDescription("Logo LazyGarden")).check(matches(isDisplayed()))
   }
  }
  @Test fun solvedSaveAwardsOnceAndRestorationSurvivesRecreation(){
@@ -119,5 +119,27 @@ class GameFlowTest {
  @Test fun allNewCatalogAndCharacterArtworkDecodes(){
   val ids=GardenDecor.items.map{it.art}+GardenCharacter.entries.map{it.portrait}
   for(id in ids){val bmp=android.graphics.BitmapFactory.decodeResource(context.resources,id);assertNotNull(bmp);assertTrue(bmp.width>100);bmp.recycle()}
+ }
+ @Test fun realSwipeConsumesOneMoveAndInvalidSwapReturnsWithoutCost(){
+  ActivityScenario.launch(MainActivity::class.java).use{
+   onView(withText("▶ Luaj · 1")).perform(click())
+   onView(withContentDescription("Tabela Match-3")).perform(object:androidx.test.espresso.ViewAction{
+    override fun getDescription()="Play a legal swipe through the native game view"
+    override fun getConstraints()=isDisplayed()
+    override fun perform(controller:androidx.test.espresso.UiController,view:android.view.View){
+     val board=view as Match3BoardView;val e=board.engine
+     val invalid=(0..63).flatMap{a->listOf(a to a+1,a to a+8)}.first{(a,b)->b<64 && kotlin.math.abs(a/8-b/8)+kotlin.math.abs(a%8-b%8)==1 && !e.legal(a,b)}
+     fun swipe(pair:Pair<Int,Int>){
+      val from=board.cellCenter(pair.first);val to=board.cellCenter(pair.second);val now=SystemClock.uptimeMillis()
+      board.dispatchTouchEvent(android.view.MotionEvent.obtain(now,now,android.view.MotionEvent.ACTION_DOWN,from.x,from.y,0))
+      board.dispatchTouchEvent(android.view.MotionEvent.obtain(now,now+90,android.view.MotionEvent.ACTION_UP,to.x,to.y,0))
+     }
+     val state=e.encode();swipe(invalid);controller.loopMainThreadForAtLeast(400);assertEquals(state,e.encode())
+     val legal=(0..63).flatMap{a->listOf(a to a+1,a to a+8)}.first{e.legal(it.first,it.second)}
+     val moves=e.moves;swipe(legal);controller.loopMainThreadForAtLeast(1000)
+     assertEquals(moves-1,e.moves);assertTrue(e.score>0)
+    }
+   });shot("11-match-after-real-swipe")
+  }
  }
 }

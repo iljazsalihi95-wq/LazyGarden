@@ -6,6 +6,9 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.graphics.drawable.BitmapDrawable
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import android.view.View
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
@@ -23,7 +26,7 @@ class MainActivity : AppCompatActivity() {
 
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
  override fun onCreate(state:Bundle?){
-  super.onCreate(state);save=GardenSave(this);showGarden();if(save.hasPendingStory)showStory()
+  super.onCreate(state);WindowCompat.setDecorFitsSystemWindows(window,false);save=GardenSave(this);showGarden();if(save.hasPendingStory)showStory()
   onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true){override fun handleOnBackPressed(){if(screen=="garden")finish() else {engine?.let{save.saveBoard(it)};showGarden()}}})
  }
  override fun onPause(){engine?.let{save.saveBoard(it)};super.onPause()}
@@ -33,12 +36,13 @@ class MainActivity : AppCompatActivity() {
   val host=FrameLayout(this).apply{setBackgroundColor(0xff142f28.toInt());addView(view,FrameLayout.LayoutParams(-1,-1))}
   ViewCompat.setOnApplyWindowInsetsListener(host){v,insets->val bars=insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout());v.setPadding(bars.left,bars.top,bars.right,bars.bottom);insets}
   setContentView(host);ViewCompat.requestApplyInsets(host)
+  WindowInsetsControllerCompat(window,host).apply{systemBarsBehavior=WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE;hide(WindowInsetsCompat.Type.systemBars())}
  }
  private fun label(value:String,size:Float=18f,color:Int=Color.WHITE)=TextView(this).apply{text=value;textSize=size;setTextColor(color);gravity=Gravity.CENTER;typeface=Typeface.DEFAULT_BOLD;setShadowLayer(2f,0f,1f,0x77253020)}
- private fun premiumButton(value:String,primary:Boolean=false,action:()->Unit)=Button(this).apply{
+ private fun premiumButton(value:String,primary:Boolean=false,action:()->Unit)=GameButton(this,primary).apply{
   text=value;isAllCaps=false;textSize=if(primary)23f else 15f;setTextColor(Color.WHITE);typeface=Typeface.DEFAULT_BOLD
   minHeight=dp(if(primary)66 else 48);setPadding(dp(10),dp(6),dp(10),dp(6))
-  background=GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,if(primary)intArrayOf(0xff8bda30.toInt(),0xff218a16.toInt()) else intArrayOf(0xff3b97b3.toInt(),0xff164966.toInt())).apply{cornerRadius=dp(18).toFloat();setStroke(dp(2),0xffffe6a4.toInt())}
+
   layoutParams=LinearLayout.LayoutParams(-1,-2).apply{setMargins(dp(4),dp(5),dp(4),dp(5))}
   setOnClickListener{performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);action()}
  }
@@ -46,29 +50,39 @@ class MainActivity : AppCompatActivity() {
   screen="garden";engine=null
   val root=FrameLayout(this)
   root.addView(GardenWorldView(this,save.tasks,save.constructing,save.decorations).apply{contentDescription="Shiko pronën";setOnClickListener{if(!save.constructing)showEstate()}},FrameLayout.LayoutParams(-1,-1))
-  val top=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(10),dp(12),0)}
-  val utility=LinearLayout(this)
-  utility.addView(premiumButton("Profil"){profile()},LinearLayout.LayoutParams(0,-2,1f).apply{marginEnd=dp(8)})
-  utility.addView(premiumButton("Cilësimet"){settings()},LinearLayout.LayoutParams(0,-2,1f))
-  top.addView(utility)
-  top.addView(label("LazyGarden",42f,0xffffdc6f.toInt()))
-  top.addView(label("Ndërto · Luaj · Dekoro\nKopshti i ëndrrave",16f))
-  top.addView(label("${save.coins} Game Coins     ★ ${save.stars}",18f).apply{setPadding(0,dp(14),0,0)})
-  top.addView(label("Prek kopshtin për ta parë",12f).apply{setPadding(0,dp(7),0,0)})
+  val top=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(8),dp(12),0)}
+  val balances=LinearLayout(this).apply{gravity=Gravity.CENTER;background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,18f);setPadding(dp(12),0,dp(12),0)}
+  balances.addView(label("${save.coins} Game Coins",16f,0xff64401b.toInt()),LinearLayout.LayoutParams(0,dp(44),1f))
+  balances.addView(ImageView(this).apply{setImageResource(R.drawable.reward_star);scaleType=ImageView.ScaleType.FIT_CENTER},LinearLayout.LayoutParams(dp(28),dp(30)))
+  balances.addView(label("${save.stars}",19f,0xff64401b.toInt()),LinearLayout.LayoutParams(dp(48),dp(44)))
+  top.addView(balances)
+  top.addView(ImageView(this).apply{setImageResource(R.drawable.hd_logo);scaleType=ImageView.ScaleType.FIT_CENTER;contentDescription="Logo LazyGarden"},LinearLayout.LayoutParams(-1,dp(132)))
+  top.addView(label("Ndërto · Luaj · Dekoro\nKopshti i ëndrrave",15f,0xff633a19.toInt()).apply{background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,18f);setPadding(dp(14),dp(4),dp(14),dp(4))},LinearLayout.LayoutParams(-1,dp(53)).apply{setMargins(dp(48),0,dp(48),0)})
   root.addView(top,FrameLayout.LayoutParams(-1,-2,Gravity.TOP))
-  val bottom=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),0,dp(16),dp(16))}
-  bottom.addView(label("Prona jonë · ${save.tasks}/7 restaurime",15f))
-  val row=LinearLayout(this)
-  row.addView(premiumButton("Ndërto"){tasks()},LinearLayout.LayoutParams(0,-2,1f).apply{marginEnd=dp(8)})
-  row.addView(premiumButton("Nivelet"){showMap()},LinearLayout.LayoutParams(0,-2,1f))
-  bottom.addView(row)
-  val creative=LinearLayout(this)
-  creative.addView(premiumButton("Dekoro"){showDecor()},LinearLayout.LayoutParams(0,dp(44),1f).apply{marginEnd=dp(8)})
-  creative.addView(premiumButton(if(save.hasPendingStory)"Historia · E re" else "Historia"){if(save.hasPendingStory)showStory() else showStoryArchive()},LinearLayout.LayoutParams(0,dp(44),1f))
-  bottom.addView(creative)
-  bottom.addView(premiumButton(if(save.activeBoard!=null)"▶ Vazhdo · ${save.level}" else "▶ Luaj · ${save.level}",true){showMatch3()})
-  root.addView(bottom,FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));attach(root)
-  if(save.constructing){bottom.visibility=View.INVISIBLE
+  fun side(value:String,icon:Int,action:()->Unit)=premiumButton(value,false,action).apply{
+   textSize=13f;setPadding(dp(6),dp(9),dp(6),dp(8))
+   val drawable=BitmapDrawable(resources,GameSkin.bitmap(this@MainActivity,icon)).apply{setBounds(0,0,dp(40),dp(40))}
+   setCompoundDrawables(null,drawable,null,null);compoundDrawablePadding=dp(1)
+  }
+  val leftMenu=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
+  leftMenu.addView(side("Profil",R.drawable.character_meti){profile()},LinearLayout.LayoutParams(dp(79),dp(83)))
+  leftMenu.addView(side("Cilësimet",R.drawable.hd_icon_gear){settings()},LinearLayout.LayoutParams(dp(79),dp(83)).apply{topMargin=dp(8)})
+  root.addView(leftMenu,FrameLayout.LayoutParams(-2,-2,Gravity.START or Gravity.BOTTOM).apply{setMargins(dp(9),0,0,dp(158))})
+  val rightMenu=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
+  rightMenu.addView(side("Ndërto",R.drawable.boost_hammer){tasks()},LinearLayout.LayoutParams(dp(79),dp(83)))
+  rightMenu.addView(side("Dekoro",R.drawable.tile_flower){showDecor()},LinearLayout.LayoutParams(dp(79),dp(83)).apply{topMargin=dp(8)})
+  root.addView(rightMenu,FrameLayout.LayoutParams(-2,-2,Gravity.END or Gravity.BOTTOM).apply{setMargins(0,0,dp(9),dp(158))})
+  val bottom=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(dp(10),0,dp(10),dp(10))}
+  bottom.addView(label("Prona jonë · ${save.tasks}/7 restaurime",14f))
+  bottom.addView(premiumButton(if(save.activeBoard!=null)"▶ Vazhdo · ${save.level}" else "▶ Luaj · ${save.level}",true){showMatch3()},LinearLayout.LayoutParams(dp(242),dp(80)).apply{setMargins(0,dp(5),0,dp(5))})
+  val nav=LinearLayout(this)
+  nav.addView(side("Nivelet",R.drawable.hd_icon_map){showMap()},LinearLayout.LayoutParams(0,dp(57),1f).apply{marginEnd=dp(8)})
+  nav.addView(side(if(save.hasPendingStory)"Historia · E re" else "Historia",R.drawable.hd_icon_book){if(save.hasPendingStory)showStory() else showStoryArchive()},LinearLayout.LayoutParams(0,dp(57),1f))
+  // Compact footer uses text; the illustrated side controls retain their full icons.
+  for(i in 0 until nav.childCount)(nav.getChildAt(i) as Button).setCompoundDrawables(null,null,null,null)
+  bottom.addView(nav);root.addView(bottom,FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));attach(root)
+
+  if(save.constructing){bottom.visibility=View.INVISIBLE;leftMenu.visibility=View.INVISIBLE;rightMenu.visibility=View.INVISIBLE
    root.postDelayed({if(root.isAttachedToWindow && screen=="garden" && save.constructing){save.finishRestoration();showGarden();showStory()}},2200)
   }
  }
@@ -148,15 +162,15 @@ class MainActivity : AppCompatActivity() {
   if(restart && levelNumber==save.level)save.clearBoard()
   engine=board
   val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(0xff153f42.toInt())}
-  val bar=LinearLayout(this)
-  bar.addView(premiumButton("‹ Kopshti"){save.saveBoard(board);showGarden()},LinearLayout.LayoutParams(0,dp(44),1f))
-  val coins=label("${save.coins} Coins",14f)
-  bar.addView(coins,LinearLayout.LayoutParams(0,dp(44),1f));root.addView(bar)
+  val bar=LinearLayout(this).apply{background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,15f)}
+  bar.addView(premiumButton("‹"){save.saveBoard(board);showGarden()},LinearLayout.LayoutParams(dp(48),dp(36)))
+  val coins=label("${save.coins} Game Coins",15f,0xff66411f.toInt())
+  bar.addView(coins,LinearLayout.LayoutParams(0,dp(36),1f));root.addView(bar)
   val boardView=Match3BoardView(this,board,{save.saveBoard(board)},{won->val rewarded=if(won)save.win(board) else false;engine=null;showResult(board,rewarded)})
   boardView.onBoosterTarget={kind,at->
    if(board.level!=save.level){Toast.makeText(this,"Përforcuesit përdoren në nivelin aktual",Toast.LENGTH_SHORT).show();emptyList()}else{
     val waves=save.buyBooster(board,kind,at)
-    coins.text="${save.coins} Coins"
+    coins.text="${save.coins} Game Coins"
     if(waves.isEmpty())Toast.makeText(this,"Duhen ${kind.cost} Game Coins",Toast.LENGTH_SHORT).show()
     waves
    }
@@ -165,11 +179,11 @@ class MainActivity : AppCompatActivity() {
   val tray=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;setPadding(dp(5),0,dp(5),dp(7))}
   val icons=intArrayOf(R.drawable.boost_hammer,R.drawable.boost_row,R.drawable.boost_column,R.drawable.boost_cross,R.drawable.boost_bomb,R.drawable.boost_color,R.drawable.boost_shuffle)
   Match3Engine.Booster.entries.forEachIndexed{i,kind->
-   val tile=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;background=GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,intArrayOf(0xffffe9bf.toInt(),0xffdba85f.toInt())).apply{cornerRadius=dp(10).toFloat()};contentDescription="${kind.label}, ${kind.cost} Game Coins"}
-   tile.addView(ImageView(this).apply{setImageResource(icons[i]);scaleType=ImageView.ScaleType.FIT_CENTER},LinearLayout.LayoutParams(dp(37),dp(38)))
+   val tile=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,10f);contentDescription="${kind.label}, ${kind.cost} Game Coins"}
+   tile.addView(ImageView(this).apply{setImageResource(icons[i]);scaleType=ImageView.ScaleType.FIT_CENTER},LinearLayout.LayoutParams(dp(40),dp(42)))
    tile.addView(label("${kind.cost}",11f,0xff50341b.toInt()))
    tile.setOnClickListener{boardView.runBooster(kind)}
-   tray.addView(tile,LinearLayout.LayoutParams(0,dp(62),1f).apply{setMargins(dp(2),dp(3),dp(2),0)})
+   tray.addView(tile,LinearLayout.LayoutParams(0,dp(67),1f).apply{setMargins(dp(2),dp(3),dp(2),0)})
   }
   root.addView(label("Përforcues · Game Coins",11f));root.addView(tray);attach(root)
   if(board.won||board.failed){val rewarded=if(board.won)save.win(board) else false;engine=null;showResult(board,rewarded)}
@@ -180,7 +194,7 @@ class MainActivity : AppCompatActivity() {
   val root=FrameLayout(this)
   root.addView(GardenWorldView(this,save.tasks,decorations=save.decorations),FrameLayout.LayoutParams(-1,-1))
   root.addView(View(this).apply{setBackgroundColor(0xb9101826.toInt())},FrameLayout.LayoutParams(-1,-1))
-  val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(dp(22),dp(24),dp(22),dp(20));background=GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,intArrayOf(0xfffff1d4.toInt(),0xffeac58a.toInt())).apply{cornerRadius=dp(28).toFloat();setStroke(dp(3),0xffa0672b.toInt())}}
+  val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(dp(22),dp(24),dp(22),dp(20));background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,28f)}
   val stars=LinearLayout(this).apply{gravity=Gravity.CENTER}
   for(i in 0..2){val star=ImageView(this).apply{setImageResource(R.drawable.reward_star);alpha=if(i<board.earnedStars)1f else .18f;scaleX=.1f;scaleY=.1f}
    stars.addView(star,LinearLayout.LayoutParams(dp(if(i==1)88 else 65),dp(94)))

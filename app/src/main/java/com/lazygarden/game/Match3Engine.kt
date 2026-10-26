@@ -16,7 +16,10 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
     val won get() = score >= spec.target && clearedIce >= spec.ice && collected[spec.collectColor] >= spec.collectCount
     val earnedStars get() = if (!won) 0 else if (moves >= spec.moves / 3) 3 else if (moves >= spec.moves / 6) 2 else 1
     val failed get() = moves == 0 && !won
-    data class Wave(val cells: List<Int>, val before: Array<IntArray>, val after: Array<IntArray>, val combo: Int)
+    data class Wave(val cells: List<Int>, val before: Array<IntArray>, val after: Array<IntArray>, val combo: Int,
+        val origins:Array<IntArray> = Array(8){r->IntArray(8){r}},
+        val iceBefore:Array<IntArray> = Array(8){IntArray(8)},val iceAfter:Array<IntArray> = Array(8){IntArray(8)},
+        val scoreAfter:Int=0,val shuffled:Boolean=false)
     init {
         refill()
         val positions = (0..63).shuffled(random)
@@ -77,7 +80,7 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
         if(kind==Booster.SHUFFLE){
             val before=Array(8){board[it].clone()}
             refill()
-            return listOf(Wave(emptyList(),before,Array(8){board[it].clone()},0))
+            return listOf(Wave(emptyList(),before,Array(8){board[it].clone()},0,iceBefore=Array(8){ice[it].clone()},iceAfter=Array(8){ice[it].clone()},scoreAfter=score,shuffled=true))
         }
         val r=at/8;val c=at%8
         val hits=when(kind){
@@ -97,6 +100,7 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
         while (hits.isNotEmpty()) {
             combo++
             val before=Array(8){board[it].clone()}
+            val iceBefore=Array(8){ice[it].clone()}
             // Four creates a line rocket; five or intersecting runs create a blast.
             val specials=mutableMapOf<Int,Int>()
             for (axis in 0..1) for (line in 0..7) {
@@ -131,15 +135,21 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
                 board[i/8][i%8]=-1
             }
             for((i,v) in specials) board[i/8][i%8]=v
+            val origins=Array(8){IntArray(8)}
             for(c in 0..7) {
                 var write=7
-                for(r in 7 downTo 0) if(board[r][c]>=0) board[write--][c]=board[r][c]
-                while(write>=0) board[write--][c]=random.nextInt(6)
+                for(r in 7 downTo 0) if(board[r][c]>=0){board[write][c]=board[r][c];origins[write][c]=r;write--}
+                val spawned=write+1
+                while(write>=0){board[write][c]=random.nextInt(6);origins[write][c]=write-spawned;write--}
             }
-            waves.add(Wave(hits.toList(),before,Array(8){board[it].clone()},combo))
+            waves.add(Wave(hits.toList(),before,Array(8){board[it].clone()},combo,origins,iceBefore,Array(8){ice[it].clone()},score))
             hits=matches().toMutableSet()
         }
-        if(!won && !failed && !hasMove()) refill()
+        if(!won && !failed && !hasMove()) {
+            val before=Array(8){board[it].clone()};refill()
+            waves.add(Wave(emptyList(),before,Array(8){board[it].clone()},combo,
+                iceBefore=Array(8){ice[it].clone()},iceAfter=Array(8){ice[it].clone()},scoreAfter=score,shuffled=true))
+        }
         return waves
     }
     fun encode(): String = (listOf(level,moves,score,clearedIce) + collected.toList() + board.flatMap{it.toList()} + ice.flatMap{it.toList()}).joinToString(",")

@@ -15,9 +15,9 @@ class DecorationScreen(
 ):FrameLayout(context){
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
  private fun text(value:String,size:Float,color:Int=0xff57391f.toInt())=TextView(context).apply{text=value;textSize=size;setTextColor(color);gravity=Gravity.CENTER;typeface=Typeface.DEFAULT_BOLD}
- private fun button(value:String,action:()->Unit)=Button(context).apply{
+ private fun button(value:String,action:()->Unit)=GameButton(context).apply{
   text=value;isAllCaps=false;textSize=12f;setTextColor(Color.WHITE);minHeight=dp(43);setPadding(dp(3),dp(4),dp(3),dp(4))
-  background=GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,intArrayOf(0xff4f9f9e.toInt(),0xff1b5562.toInt())).apply{cornerRadius=dp(11).toFloat();setStroke(dp(1),0xffffe3a0.toInt())}
+
   setOnClickListener{action()}
  }
  init {
@@ -30,7 +30,7 @@ class DecorationScreen(
   top.addView(text("Dekoro pronën",26f,0xffffdf83.toInt()).apply{setPadding(0,dp(8),0,0)})
   if(preview!=null)top.addView(text("Pamje para vendosjes",14f,Color.WHITE))
   addView(top,LayoutParams(-1,-2,Gravity.TOP))
-  val panel=LinearLayout(context).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(9),dp(11),dp(9),dp(12));background=GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,intArrayOf(0xffffedcb.toInt(),0xffdeb47a.toInt())).apply{cornerRadius=dp(19).toFloat()}}
+  val panel=LinearLayout(context).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(9),dp(11),dp(9),dp(12));background=GameSkin.background(context,R.drawable.hd_hud,22f)}
   val tabs=LinearLayout(context)
   DecorCategory.entries.forEach{cat->
    val tab=button(cat.title){changeCategory(cat)}.apply{isSelected=cat==category;alpha=if(cat==category)1f else .65f;contentDescription="Kategoria ${cat.name}"}

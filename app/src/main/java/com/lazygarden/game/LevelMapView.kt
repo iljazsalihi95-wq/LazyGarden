@@ -12,6 +12,10 @@ class LevelMapView(context:Context,private val save:GardenSave,private val chapt
  private val d=resources.displayMetrics.density
  private val art=BitmapFactory.decodeResource(resources,R.drawable.garden_map)
  private val star=BitmapFactory.decodeResource(resources,R.drawable.reward_star)
+ private val badge=GameSkin.bitmap(context,R.drawable.hd_level_badge)
+ private val lock=GameSkin.bitmap(context,R.drawable.hd_lock)
+ private val gold=ColorMatrixColorFilter(ColorMatrix(floatArrayOf(.2f,.7f,.7f,0f,0f,.2f,.6f,.2f,0f,0f,.1f,.15f,.02f,0f,0f,0f,0f,0f,1f,0f)))
+ private val gray=ColorMatrixColorFilter(ColorMatrix().apply{setSaturation(0f)})
  private val nodes=mutableListOf<Pair<Int,PointF>>()
  private val xs=floatArrayOf(.50f,.49f,.55f,.66f,.70f,.65f,.54f,.46f,.47f,.53f,.57f,.55f,.48f,.46f,.52f,.59f,.50f,.44f,.55f,.59f,.47f,.36f,.43f,.58f,.56f)
  val currentY get()=(height*(.93f-((save.level-1)%25)*.034f)).toInt()
@@ -21,14 +25,20 @@ class LevelMapView(context:Context,private val save:GardenSave,private val chapt
   for(i in 0..24){
    val level=chapter*25+i+1
    val pt=PointF(width*xs[i],height*(.93f-i*.034f));nodes.add(level to pt)
-   val radius=if(level==save.level)22*d else 17*d
-   p.shader=RadialGradient(pt.x-radius*.3f,pt.y-radius*.4f,radius*1.8f,if(level==save.level)intArrayOf(0xfffff1a1.toInt(),0xffdfa02c.toInt()) else if(level<save.level)intArrayOf(0xff79dce6.toInt(),0xff176487.toInt()) else intArrayOf(0xffb6b9af.toInt(),0xff555e5c.toInt()),null,Shader.TileMode.CLAMP)
-   c.drawCircle(pt.x,pt.y,radius,p);p.shader=null
-   p.style=Paint.Style.STROKE;p.strokeWidth=2*d;p.color=0xffffe4a3.toInt();c.drawCircle(pt.x,pt.y,radius,p);p.style=Paint.Style.FILL
-   p.typeface=Typeface.DEFAULT_BOLD;p.textSize=if(level>99)12*d else 15*d;p.textAlign=Paint.Align.CENTER;p.color=Color.WHITE
-   c.drawText(if(level<=save.level)"$level" else "🔒",pt.x,pt.y+5*d,p)
+   val size=if(level==save.level)62*d else 50*d
+   val bh=size*badge.height/badge.width
+   p.alpha=if(level>save.level)210 else 255;p.colorFilter=if(level==save.level)gold else if(level>save.level)gray else null
+   c.drawBitmap(badge,null,RectF(pt.x-size/2,pt.y-bh/2,pt.x+size/2,pt.y+bh/2),p);p.colorFilter=null;p.alpha=255
+   if(level>save.level)c.drawBitmap(lock,null,RectF(pt.x-10*d,pt.y-15*d,pt.x+10*d,pt.y+7*d),p)
+   else{
+    p.typeface=Typeface.create("sans-serif-condensed",Typeface.BOLD);p.textSize=if(level>99)14*d else 18*d;p.textAlign=Paint.Align.CENTER
+    p.style=Paint.Style.STROKE;p.strokeWidth=2*d;p.color=0xff284b57.toInt();c.drawText("$level",pt.x,pt.y+2*d,p)
+    p.style=Paint.Style.FILL;p.color=Color.WHITE;c.drawText("$level",pt.x,pt.y+2*d,p)
+   }
    val rating=save.rating(level)
-   for(s in 0 until rating){val x=pt.x+(s-(rating-1)/2f)*11*d;c.drawBitmap(star,null,RectF(x-7*d,pt.y+radius-2*d,x+7*d,pt.y+radius+12*d),p)}
+   for(st in 0 until rating){val x=pt.x+(st-(rating-1)/2f)*12*d;c.drawBitmap(star,null,RectF(x-8*d,pt.y+bh/2-12*d,x+8*d,pt.y+bh/2+4*d),p)}
+   if(level==save.level)c.drawBitmap(star,null,RectF(pt.x-8*d,pt.y-bh/2-10*d,pt.x+8*d,pt.y-bh/2+6*d),p)
+
   }
  }
  override fun onTouchEvent(e:MotionEvent):Boolean{
