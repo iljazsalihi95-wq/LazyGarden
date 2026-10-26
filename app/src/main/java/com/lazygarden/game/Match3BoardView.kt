@@ -67,7 +67,7 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
   for(r in 0..7)for(col in 0..7){
    val x=left+col*cell;val y=top+r*cell
    p.alpha=255;p.colorFilter=if((r+col)%2==0)null else darkSocket
-   c.drawBitmap(socket,null,RectF(x-.6*d,y-.6*d,x+cell+.6*d,y+cell+.6*d),p);p.colorFilter=null
+   c.drawBitmap(socket,null,RectF(x-.6f*d,y-.6f*d,x+cell+.6f*d,y+cell+.6f*d),p);p.colorFilter=null
    if(selected==r*8+col || targetBooster!=null && selected==r*8+col){p.shader=RadialGradient(x+cell/2,y+cell/2,cell*.7f,intArrayOf(0xaaffdf64.toInt(),0x00ffdf64),null,Shader.TileMode.CLAMP);c.drawCircle(x+cell/2,y+cell/2,cell*.7f,p);p.shader=null}
   }
   val clip=c.save();c.clipRect(left,top,left+8*cell,top+8*cell)
