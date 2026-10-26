@@ -1,58 +1,51 @@
 package com.lazygarden.game
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
-import android.util.Base64
 import android.view.View
-import kotlin.math.sin
 
-class GardenWorldView(
-    context: Context,
-    private val tasks: Int,
-    private val constructing: Boolean = false
-) : View(context) {
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var phase = 0f
-    private val artwork: Bitmap by lazy { BitmapFactory.decodeResource(resources, R.drawable.garden_estate) }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        val src = Rect(0, 0, artwork.width, artwork.height)
-        val scale = maxOf(width.toFloat()/artwork.width, height.toFloat()/artwork.height)
-        val dw=(artwork.width*scale).toInt(); val dh=(artwork.height*scale).toInt()
-        val dst = Rect((width-dw)/2, (height-dh)/2, (width+dw)/2, (height+dh)/2)
-        canvas.drawBitmap(artwork, src, dst, paint)
-
-        val w = width.toFloat(); val h = height.toFloat()
-        paint.shader = LinearGradient(0f, 0f, 0f, h,
-            intArrayOf(0x22000000, 0x00000000, 0x66000000),
-            floatArrayOf(0f, .58f, 1f), Shader.TileMode.CLAMP)
-        canvas.drawRect(0f, 0f, w, h, paint)
-        paint.shader = null
-
-        phase = (phase + .018f) % 1f
-        for (i in 0 until 10) {
-            val x = w * (.08f + ((i * .091f) % .84f))
-            val y = h * (.18f + ((i * .073f + phase) % .58f))
-            paint.color = if (i % 2 == 0) 0x66FFD765 else 0x55FFFFFF
-            canvas.drawCircle(x, y, w * (.003f + (i % 3) * .0013f), paint)
-        }
-
-        if (constructing) {
-            paint.color = 0xB0000000.toInt()
-            canvas.drawRoundRect(w*.16f,h*.43f,w*.84f,h*.58f,30f,30f,paint)
-            paint.color = 0xFFFFD54F.toInt(); paint.textAlign = Paint.Align.CENTER
-            paint.typeface = Typeface.DEFAULT_BOLD; paint.textSize = w*.052f
-            canvas.drawText("DUKE RESTAURUAR PRONËN",w*.5f,h*.515f,paint)
-        }
-        if (tasks > 0) {
-            paint.color = 0xB0155A2A.toInt()
-            canvas.drawRoundRect(w*.08f,h*.80f,w*.92f,h*.89f,28f,28f,paint)
-            paint.color = Color.WHITE; paint.textAlign = Paint.Align.CENTER
-            paint.typeface = Typeface.DEFAULT_BOLD; paint.textSize = w*.034f
-            canvas.drawText("RESTAURIME  $tasks/7",w*.5f,h*.855f,paint)
-        }
-        postInvalidateDelayed(32)
+/** Two aligned original paintings blended through saved restoration regions. */
+class GardenWorldView(context:Context,private val tasks:Int,private val constructing:Boolean=false):View(context){
+ private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+ private val after=BitmapFactory.decodeResource(resources,R.drawable.garden_estate)
+ private val before=BitmapFactory.decodeResource(resources,R.drawable.garden_before)
+ private val mask=Bitmap.createBitmap(256,384,Bitmap.Config.ARGB_8888)
+ private var progress=0f
+ private var animator:ValueAnimator?=null
+ private val regions=arrayOf(
+  RectF(.32f,.425f,.80f,.635f), // fountain
+  RectF(.12f,.63f,.91f,1.04f), // path
+  RectF(.75f,.31f,1.04f,.99f), // flower beds
+  RectF(-.04f,.46f,.32f,.65f), // bench
+  RectF(-.04f,.28f,.36f,.48f), // planting
+  RectF(.34f,.36f,.79f,.46f), // entrance
+  RectF(.37f,.14f,1.04f,.415f) // manor
+ )
+ override fun onAttachedToWindow(){super.onAttachedToWindow();if(constructing){animator=ValueAnimator.ofFloat(0f,1f).apply{duration=2000;addUpdateListener{progress=it.animatedValue as Float;invalidate()};start()}}}
+ override fun onDetachedFromWindow(){animator?.cancel();super.onDetachedFromWindow()}
+ override fun onDraw(c:Canvas){
+  super.onDraw(c)
+  val scale=maxOf(width.toFloat()/after.width,height.toFloat()/after.height)
+  val dw=after.width*scale;val dh=after.height*scale
+  val dst=RectF((width-dw)/2,(height-dh)/2,(width+dw)/2,(height+dh)/2)
+  p.alpha=255;p.xfermode=null;p.shader=null;c.drawBitmap(before,null,dst,p)
+  if(tasks>=7){c.drawBitmap(after,null,dst,p)}else if(tasks>0||constructing){
+   mask.eraseColor(Color.TRANSPARENT)
+   val mc=Canvas(mask);val mp=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.WHITE;maskFilter=BlurMaskFilter(3f,BlurMaskFilter.Blur.NORMAL)}
+   for(i in regions.indices){
+    if(i<tasks || (i==tasks && constructing)){
+     mp.alpha=if(i<tasks)255 else (255*progress).toInt()
+     val r=regions[i];mc.drawRoundRect(RectF(r.left*256,r.top*384,r.right*256,r.bottom*384),5f,5f,mp)
     }
-
+   }
+   val layer=c.saveLayer(dst,null)
+   c.drawBitmap(after,null,dst,p)
+   p.xfermode=PorterDuffXfermode(PorterDuff.Mode.DST_IN);c.drawBitmap(mask,null,dst,p);p.xfermode=null
+   c.restoreToCount(layer)
+  }
+  p.shader=LinearGradient(0f,0f,0f,height.toFloat(),intArrayOf(0x99102b25.toInt(),0x00000000,0x990c261f.toInt()),floatArrayOf(0f,.45f,1f),Shader.TileMode.CLAMP)
+  c.drawRect(0f,0f,width.toFloat(),height.toFloat(),p);p.shader=null
+  if(constructing){p.color=0xffffe6a3.toInt();p.textSize=18*resources.displayMetrics.density;p.textAlign=Paint.Align.CENTER;p.typeface=Typeface.DEFAULT_BOLD;c.drawText("Po i kthejmë jetën kopshtit…",width/2f,height*.55f,p)}
+ }
 }

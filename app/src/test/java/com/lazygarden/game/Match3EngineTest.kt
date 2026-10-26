@@ -15,4 +15,22 @@ class Match3EngineTest {
   }
  }
  @Test fun corruptSaveIsRejected(){val e=Match3Engine(1);assertFalse(e.restore("bad"));assertFalse(e.restore(Match3Engine(2).encode()))}
+ @Test fun allBoostersHaveRealEffectsAndPreserveMoves(){
+  for(kind in Match3Engine.Booster.entries){
+   val e=Match3Engine(30,Random(401));val before=e.encode();val moves=e.moves
+   val waves=e.boost(kind,27)
+   assertTrue("$kind must resolve",waves.isNotEmpty());assertEquals(moves,e.moves)
+   assertNotEquals(before,e.encode());assertTrue(e.board.all{row->row.all{it in 0..23}})
+   if(kind!=Match3Engine.Booster.SHUFFLE)assertTrue(e.score>0)
+   val copy=Match3Engine(30);assertTrue(copy.restore(e.encode()));assertEquals(e.encode(),copy.encode())
+  }
+ }
+ @Test fun invalidBoosterTargetDoesNotMutate(){val e=Match3Engine(1);val state=e.encode();assertTrue(e.boost(Match3Engine.Booster.HAMMER,-1).isEmpty());assertEquals(state,e.encode())}
+ @Test fun malformedTokenCannotBeSilentlyDropped(){val e=Match3Engine(1);assertFalse(e.restore(e.encode()+",bad"))}
+ @Test fun terminalBoardsRejectSwapsAndBoosters(){
+  val e=Match3Engine(1,Random(33))
+  while(!e.won && !e.failed){val pair=(0..63).flatMap{a->listOf(a to a+1,a to a+8)}.first{e.legal(it.first,it.second)};e.swap(pair.first,pair.second)}
+  val state=e.encode();assertFalse(e.legal(0,1));assertTrue(e.boost(Match3Engine.Booster.SHUFFLE,0).isEmpty());assertEquals(state,e.encode())
+  assertEquals(e.won,e.earnedStars in 1..3)
+ }
 }

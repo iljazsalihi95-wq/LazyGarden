@@ -43,6 +43,7 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
         board[b / 8][b % 8] = temp
     }
     fun legal(a: Int, b: Int): Boolean {
+        if (won || failed) return false
         if (a !in 0..63 || b !in 0..63 || kotlin.math.abs(a/8-b/8)+kotlin.math.abs(a%8-b%8)!=1) return false
         exchange(a,b)
         val valid = matches().isNotEmpty() || board[a/8][a%8]>=6 || board[b/8][b%8]>=6
@@ -62,9 +63,37 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
     fun swap(a: Int, b: Int): List<Wave> {
         if (won || failed || !legal(a,b)) return emptyList()
         exchange(a,b); moves--; revision++; combo=0
+        val initial = matches().toMutableSet()
+        for (i in listOf(a,b)) if (board[i/8][i%8]>=6) initial.add(i)
+        return resolve(initial, b)
+    }
+    enum class Booster(val cost: Int, val label: String) {
+        HAMMER(40,"Çekiçi"), ROW(55,"Rreshti"), COLUMN(55,"Kolona"),
+        CROSS(75,"Kryqi"), BOMB(65,"Bomba"), COLOR(100,"Ngjyra"), SHUFFLE(30,"Përzieje")
+    }
+    fun boost(kind: Booster, at: Int): List<Wave> {
+        if(won || failed || at !in 0..63) return emptyList()
+        revision++; combo=0
+        if(kind==Booster.SHUFFLE){
+            val before=Array(8){board[it].clone()}
+            refill()
+            return listOf(Wave(emptyList(),before,Array(8){board[it].clone()},0))
+        }
+        val r=at/8;val c=at%8
+        val hits=when(kind){
+            Booster.HAMMER -> setOf(at)
+            Booster.ROW -> (0..7).map{r*8+it}.toSet()
+            Booster.COLUMN -> (0..7).map{it*8+c}.toSet()
+            Booster.CROSS -> ((0..7).map{r*8+it}+(0..7).map{it*8+c}).toSet()
+            Booster.BOMB -> (0..63).filter{kotlin.math.abs(it/8-r)<=1 && kotlin.math.abs(it%8-c)<=1}.toSet()
+            Booster.COLOR -> (0..63).filter{color(board[it/8][it%8])==color(board[r][c])}.toSet()
+            Booster.SHUFFLE -> emptySet()
+        }
+        return resolve(hits, at)
+    }
+    private fun resolve(initial:Set<Int>, b:Int):List<Wave> {
         val waves = mutableListOf<Wave>()
-        var hits = matches().toMutableSet()
-        for (i in listOf(a,b)) if (board[i/8][i%8]>=6) hits.add(i)
+        var hits = initial.toMutableSet()
         while (hits.isNotEmpty()) {
             combo++
             val before=Array(8){board[it].clone()}
@@ -115,7 +144,7 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
     }
     fun encode(): String = (listOf(level,moves,score,clearedIce) + collected.toList() + board.flatMap{it.toList()} + ice.flatMap{it.toList()}).joinToString(",")
     fun restore(raw:String):Boolean {
-        val v=raw.split(',').mapNotNull{it.toIntOrNull()}
+        val v=raw.split(',').map{it.toIntOrNull() ?: return false}
         if(v.size!=138 || v[0]!=level || v[1] !in 0..spec.moves || v[2]<0 || v[3] !in 0..spec.ice || v.slice(4..9).any{it<0} || v.slice(10..73).any{it !in 0..23} || v.slice(74..137).any{it !in 0..1}) return false
         moves=v[1];score=v[2];clearedIce=v[3]
         for(i in 0..5) collected[i]=v[4+i]

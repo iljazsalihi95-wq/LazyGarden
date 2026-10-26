@@ -11,11 +11,22 @@ class GardenSave(ctx:Context) {
  val fountainRestored get()=tasks>0
  val constructing get()=p.getBoolean("constructing",false)
  val activeBoard get()=p.getString("active_board",null)
+ fun buyBooster(board:Match3Engine, kind:Match3Engine.Booster, at:Int):List<Match3Engine.Wave> {
+  if(coins<kind.cost || board.won || board.failed)return emptyList()
+  val waves=board.boost(kind,at)
+  if(waves.isNotEmpty())p.edit().putInt("coins",coins-kind.cost).putString("active_board",board.encode()).commit()
+  return waves
+ }
  fun rating(level:Int)=p.getInt("rating_$level",0)
- fun saveBoard(board:Match3Engine){p.edit().putString("active_board",board.encode()).commit()}
+ fun saveBoard(board:Match3Engine){if(board.level==level && p.getInt("rewarded_level",0)<board.level)p.edit().putString("active_board",board.encode()).commit()}
  fun clearBoard(){p.edit().remove("active_board").commit()}
  fun win(board:Match3Engine):Boolean {
-  if(!board.won || board.level!=level || p.getInt("rewarded_level",0)>=level)return false
+  if(!board.won)return false
+  if(board.level<level || p.getInt("rewarded_level",0)>=board.level){
+   p.edit().putInt("rating_${board.level}",maxOf(rating(board.level),board.earnedStars)).commit()
+   return false
+  }
+  if(board.level!=level)return false
   p.edit().putInt("coins",coins+150).putInt("stars",stars+1).putInt("rewarded_level",level).putInt("rating_$level",board.earnedStars)
    .putInt("level",(level+1).coerceAtMost(Campaign.COUNT)).remove("active_board").commit()
   return true
