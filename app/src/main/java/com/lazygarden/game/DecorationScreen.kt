@@ -44,7 +44,7 @@ class DecorationScreen(
    val card=LinearLayout(context).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(5),dp(6),dp(5),dp(6));background=GradientDrawable().apply{setColor(0xfffff6df.toInt());cornerRadius=dp(13).toFloat();setStroke(dp(if(selected?.id==item.id)3 else 1),if(selected?.id==item.id)0xff449d49.toInt() else 0xffc18c47.toInt())}}
    card.addView(ImageView(context).apply{setImageResource(item.art);scaleType=ImageView.ScaleType.FIT_CENTER;contentDescription="Shiko ${item.id}";setOnClickListener{showPreview(item)}},LinearLayout.LayoutParams(-1,dp(86)))
    card.addView(text(item.title,12f).apply{minLines=2},LinearLayout.LayoutParams(-1,dp(39)))
-   card.addView(text(if(locked)"${item.requiredTasks} restaurime" else if(owned)"Në koleksion" else "${item.cost} Coins",11f).apply{setPadding(0,0,0,dp(5))})
+   card.addView(text(if(locked)"${item.requiredTasks} ${if(item.requiredTasks==1)"restaurim" else "restaurime"}" else if(owned)"Në koleksion" else "${item.cost} Coins",11f).apply{setPadding(0,0,0,dp(5))})
    card.addView(button(if(locked)"🔒" else if(selected?.id==item.id)"Vendosur" else if(owned)"Vendos" else "Bli"){purchase(item)}.apply{contentDescription="Vendos ${item.id}"},LinearLayout.LayoutParams(-1,dp(43)))
    cards.addView(card,LinearLayout.LayoutParams(0,-2,1f).apply{setMargins(dp(3),0,dp(3),0)})
   };panel.addView(cards)

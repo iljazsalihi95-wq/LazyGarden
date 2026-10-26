@@ -102,7 +102,7 @@ class MainActivity : AppCompatActivity() {
   controls.addView(premiumButton("‹ Ballina"){showGarden()},LinearLayout.LayoutParams(0,dp(46),1f).apply{marginEnd=dp(10)})
   controls.addView(premiumButton("Dekoro"){showDecor()},LinearLayout.LayoutParams(0,dp(46),1f))
   root.addView(controls,FrameLayout.LayoutParams(-1,-2,Gravity.TOP))
-  root.addView(label("${save.tasks}/7 restaurime · ${save.decorations.size} dekorime",14f).apply{setPadding(0,0,0,dp(14))},FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM))
+  root.addView(label("${save.tasks}/7 restaurime · ${save.decorations.size} ${if(save.decorations.size==1)"dekorim" else "dekorime"}",14f).apply{setPadding(0,0,0,dp(14))},FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM))
   attach(root)
  }
  private fun showDecor(category:DecorCategory=DecorCategory.DECOR,preview:DecorItem?=null){
@@ -110,7 +110,7 @@ class MainActivity : AppCompatActivity() {
   attach(DecorationScreen(this,save,category,preview,{showGarden()},{showDecor(it)},{showDecor(category,it)},{item->
    when(save.selectDecoration(item.id)){
     GardenSave.DecorResult.PURCHASED,GardenSave.DecorResult.SELECTED->showDecor(category)
-    GardenSave.DecorResult.LOCKED->Toast.makeText(this,"Përfundo ${item.requiredTasks} restaurime për këtë dekorim",Toast.LENGTH_LONG).show()
+    GardenSave.DecorResult.LOCKED->Toast.makeText(this,"Përfundo ${item.requiredTasks} ${if(item.requiredTasks==1)"restaurim" else "restaurime"} për këtë dekorim",Toast.LENGTH_LONG).show()
     GardenSave.DecorResult.INSUFFICIENT->Toast.makeText(this,"Duhen ${item.cost} Game Coins",Toast.LENGTH_LONG).show()
     GardenSave.DecorResult.INVALID->Toast.makeText(this,"Zgjedhja nuk u ruajt",Toast.LENGTH_SHORT).show()
    }
