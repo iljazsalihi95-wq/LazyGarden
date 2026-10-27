@@ -40,6 +40,24 @@ class GameFlowTest {
   val output=ui.executeShellCommand("screenrecord --size 720x1280 --bit-rate 1800000 --time-limit 35 /data/local/tmp/lazygarden-screenshots/15-fountain-sequence.mp4")
   return Thread{ParcelFileDescriptor.AutoCloseInputStream(output).use{it.readBytes()}}.apply{start()}
  }
+ /** Navigation/save assertions should not wait for an intentionally infinite ambient garden loop.
+  * Only these two UI tests pause ambience; live restoration and swipe tests keep their real clocks. */
+ private fun quietUiWorlds():AutoCloseable {
+  val main=android.os.Handler(android.os.Looper.getMainLooper())
+  val monitor=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+  val listeners=mutableMapOf<android.view.View,android.view.ViewTreeObserver.OnGlobalLayoutListener>()
+  fun pause(v:android.view.View){if(v is GardenWorldView)v.pauseScene();if(v is android.view.ViewGroup)for(i in 0 until v.childCount)pause(v.getChildAt(i))}
+  val callback=object:androidx.test.runner.lifecycle.ActivityLifecycleCallback {
+   override fun onActivityLifecycleChanged(activity:android.app.Activity,stage:androidx.test.runner.lifecycle.Stage){
+    if(activity !is MainActivity||stage!=androidx.test.runner.lifecycle.Stage.RESUMED)return
+    val decor=activity.window.decorView
+    if(decor !in listeners){val listener=android.view.ViewTreeObserver.OnGlobalLayoutListener{pause(decor)};listeners[decor]=listener;decor.viewTreeObserver.addOnGlobalLayoutListener(listener)}
+    main.post{if(!activity.isDestroyed)pause(decor)}
+   }
+  }
+  val ready=java.util.concurrent.CountDownLatch(1);main.post{monitor.addLifecycleCallback(callback);ready.countDown()};assertTrue(ready.await(10,java.util.concurrent.TimeUnit.SECONDS))
+  return AutoCloseable{val closed=java.util.concurrent.CountDownLatch(1);main.post{monitor.removeLifecycleCallback(callback);listeners.forEach{(v,l)->if(v.viewTreeObserver.isAlive)v.viewTreeObserver.removeOnGlobalLayoutListener(l)};listeners.clear();closed.countDown()};assertTrue(closed.await(10,java.util.concurrent.TimeUnit.SECONDS))}
+ }
  @Test fun nativeNavigationAndBoardAreVisible(){
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
    onView(withContentDescription("Logo LazyGarden")).check(matches(isDisplayed()));shot("01-home-before")
@@ -154,6 +172,7 @@ class GameFlowTest {
   ActivityScenario.launch(MainActivity::class.java).use{shot("06-estate-after")}
  }
  @Test fun decorationTransactionsAndWorldSelectionSurviveRecreation(){
+  quietUiWorlds().use{
   val prefs=context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE)
   prefs.edit().putInt("coins",300).putInt("tasks",1).putInt("story_position",3).commit()
   val save=GardenSave(context)
@@ -176,8 +195,11 @@ class GameFlowTest {
   }
   save.removeDecoration(DecorCategory.FOUNTAINS);assertNull(save.selectedDecoration(DecorCategory.FOUNTAINS));assertTrue(save.ownsDecoration("classic_fountain"))
   assertEquals(GardenSave.DecorResult.SELECTED,save.selectDecoration("classic_fountain"));assertEquals(150,save.coins)
+
+  }
  }
  @Test fun storyContinuesAtSavedLineAndReplayDoesNotAdvance(){
+  quietUiWorlds().use{
   context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE).edit().putInt("tasks",1).commit()
   val save=GardenSave(context)
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
@@ -190,6 +212,8 @@ class GameFlowTest {
    onView(withText("Historia")).perform(click());onView(withContentDescription("Kapitulli 1")).perform(click())
    onView(withContentDescription("Personazhi Meti")).check(matches(isDisplayed()))
    onView(withText("Vazhdo tregimin")).perform(click());assertEquals(3,save.storyPosition)
+  }
+
   }
  }
  @Test fun allNewCatalogAndCharacterArtworkDecodes(){
