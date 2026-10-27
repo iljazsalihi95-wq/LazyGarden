@@ -25,6 +25,11 @@ jobs:
           name: LazyGarden-debug-${{ github.sha }}
           path: app/build/outputs/apk/debug/
   device-tests:
+    name: device-tests-${{ matrix.shard }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -48,11 +53,11 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: false
-          script: bash .github/scripts/device-tests.sh
+          script: bash .github/scripts/device-tests.sh ${{ matrix.shard }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: LazyGarden-device-checks
+          name: LazyGarden-device-checks-${{ matrix.shard }}
           path: |
             device-screenshots/
             app/build/reports/androidTests/

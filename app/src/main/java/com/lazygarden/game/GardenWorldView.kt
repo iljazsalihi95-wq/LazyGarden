@@ -101,7 +101,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
    val saved=c.save();val breath=1f+sin(life*18+id)*.006f;c.scale(1f,breath,x,y)
    val faceRight=if(visit>0)if(life<.75f)id==3 else id==2 else x<fx
    resident(c,id,x,y+bob,dw*.16f*(1-visit*.12f),frame,faceRight);c.restoreToCount(saved)
-   if(speaking)bubble(c,x,y-dh*.10f,names[id],FountainSequence.dialogue(sceneMs))
+   if(speaking)bubble(c,x,y-dw*.23f,names[id],FountainSequence.dialogue(sceneMs))
   }
   if(fountain && stage in listOf(FountainSequence.Stage.WORK,FountainSequence.Stage.REPAIR)){
    // Barrier ribbons, cones, pump access and tool effects remain anchored to the job.

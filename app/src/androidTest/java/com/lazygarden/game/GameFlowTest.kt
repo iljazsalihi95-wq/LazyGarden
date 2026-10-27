@@ -34,10 +34,34 @@ class GameFlowTest {
    ParcelFileDescriptor.AutoCloseInputStream(instrument.uiAutomation.executeShellCommand(command)).use{it.readBytes()}
   }
  }
+ /** ActivityScenario.recreate waits for an idle UI before requesting recreation. A live
+  * game can keep rendering for a long time; post recreation directly on the main looper
+  * and observe the actual replacement Activity instead of advancing the scene while waiting. */
+ private fun recreateLiveActivity(){
+  val main=android.os.Handler(android.os.Looper.getMainLooper())
+  val resumed=java.util.concurrent.CountDownLatch(1)
+  val error=java.util.concurrent.atomic.AtomicReference<Throwable?>()
+  main.post{
+   try {
+    val monitor=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+    val previous=monitor.getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).filterIsInstance<MainActivity>().single()
+    val observer=object:androidx.test.runner.lifecycle.ActivityLifecycleCallback {
+     override fun onActivityLifecycleChanged(activity:android.app.Activity,stage:androidx.test.runner.lifecycle.Stage){
+      if(activity is MainActivity && activity!==previous && stage==androidx.test.runner.lifecycle.Stage.RESUMED){
+       main.post{monitor.removeLifecycleCallback(this)};resumed.countDown()
+      }
+     }
+    }
+    monitor.addLifecycleCallback(observer);previous.recreate()
+   }catch(t:Throwable){error.set(t);resumed.countDown()}
+  }
+  assertTrue("The replacement Activity must resume",resumed.await(15,java.util.concurrent.TimeUnit.SECONDS))
+  error.get()?.let{throw AssertionError("Activity recreation failed",it)}
+ }
  private fun recordFountain():Thread {
   val ui=InstrumentationRegistry.getInstrumentation().uiAutomation
   ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand("mkdir -p /data/local/tmp/lazygarden-screenshots")).use{it.readBytes()}
-  val output=ui.executeShellCommand("screenrecord --bit-rate 1800000 --time-limit 35 /data/local/tmp/lazygarden-screenshots/15-fountain-sequence.mp4")
+  val output=ui.executeShellCommand("screenrecord --size 720x1280 --bit-rate 1800000 --time-limit 35 /data/local/tmp/lazygarden-screenshots/15-fountain-sequence.mp4")
   return Thread{ParcelFileDescriptor.AutoCloseInputStream(output).use{it.readBytes()}}.apply{start()}
  }
  @Test fun nativeNavigationAndBoardAreVisible(){
@@ -75,7 +99,7 @@ class GameFlowTest {
   val recording=recordFountain()
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
    SystemClock.sleep(5500);assertEquals(0,save.tasks)
-   scenario.recreate();assertEquals(0,save.tasks);assertTrue(save.constructing)
+   recreateLiveActivity();assertEquals(0,save.tasks);assertTrue(save.constructing)
    assertTrue(save.restorationElapsed>=4800);shot("12-fountain-inspect")
    SystemClock.sleep(8500);shot("13-fountain-work")
    // Emulators can render well below real-device speed. Wait for completion rather than
@@ -84,7 +108,7 @@ class GameFlowTest {
    while(save.constructing && SystemClock.uptimeMillis()<deadline)SystemClock.sleep(250)
    assertEquals(1,save.tasks);assertFalse(save.constructing);assertEquals(30,save.coins)
    save.finishRestoration();assertEquals(1,save.tasks)
-   scenario.recreate();assertTrue(GardenSave(context).fountainRestored)
+   recreateLiveActivity();assertTrue(GardenSave(context).fountainRestored)
    onView(withText("Lexo më vonë")).perform(click());shot("14-fountain-flowing");recording.join(40000)
   }
  }

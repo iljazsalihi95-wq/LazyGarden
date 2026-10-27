@@ -85,6 +85,7 @@ class MainActivity : AppCompatActivity() {
   bottom.addView(nav);root.addView(bottom,FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));attach(root)
 
   if(save.constructing){bottom.visibility=View.INVISIBLE;leftMenu.visibility=View.INVISIBLE;rightMenu.visibility=View.INVISIBLE
+   for(i in 1 until top.childCount)top.getChildAt(i).visibility=View.GONE
 
   }
  }
