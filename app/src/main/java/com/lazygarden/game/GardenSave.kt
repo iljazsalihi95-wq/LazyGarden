@@ -1,6 +1,7 @@
 package com.lazygarden.game
 
 import android.content.Context
+import java.util.Calendar
 
 class GardenSave(ctx:Context) {
  private val p=ctx.getSharedPreferences("garden_progress",Context.MODE_PRIVATE)
@@ -11,6 +12,51 @@ class GardenSave(ctx:Context) {
  val fountainRestored get()=tasks>0
  val constructing get()=p.getBoolean("constructing",false)
  val activeBoard get()=p.getString("active_board",null)
+
+ // Live-game resources. They are virtual gameplay items only and have no cash value.
+ val maxLives get()=5
+ val lives get()=p.getInt("lives",maxLives).coerceIn(0,maxLives)
+ val keys get()=p.getInt("keys",0).coerceAtLeast(0)
+ val tickets get()=p.getInt("event_tickets",0).coerceAtLeast(0)
+ val chestProgress get()=p.getInt("chest_progress",0).coerceIn(0,5)
+ val dailyStreak get()=p.getInt("daily_streak",0).coerceIn(0,7)
+
+ private fun dayStamp():Int {
+  val c=Calendar.getInstance()
+  return c.get(Calendar.YEAR)*1000+c.get(Calendar.DAY_OF_YEAR)
+ }
+ val dailyRewardAvailable get()=p.getInt("daily_claim_day",-1)!=dayStamp()
+ data class DailyReward(val coins:Int,val keys:Int,val tickets:Int,val streak:Int)
+ fun claimDailyReward():DailyReward? {
+  if(!dailyRewardAvailable)return null
+  val previous=p.getInt("daily_claim_day",-10)
+  val today=dayStamp()
+  val next=if(previous==today-1)(dailyStreak%7)+1 else 1
+  val rewardCoins=75+next*25
+  val rewardKeys=if(next==7)2 else if(next==4)1 else 0
+  val rewardTickets=if(next>=3)1 else 0
+  p.edit().putInt("daily_claim_day",today).putInt("daily_streak",next)
+   .putInt("coins",coins+rewardCoins).putInt("keys",keys+rewardKeys)
+   .putInt("event_tickets",tickets+rewardTickets).commit()
+  return DailyReward(rewardCoins,rewardKeys,rewardTickets,next)
+ }
+ fun spendLife():Boolean {
+  if(lives<=0)return false
+  return p.edit().putInt("lives",lives-1).commit()
+ }
+ fun rewardLife(){p.edit().putInt("lives",(lives+1).coerceAtMost(maxLives)).commit()}
+ fun grantRewardedCoins(amount:Int=100):Boolean {
+  if(amount<=0)return false
+  return p.edit().putInt("coins",coins+amount).commit()
+ }
+ data class ChestReward(val coins:Int,val keys:Int)
+ fun openRewardChest():ChestReward? {
+  if(chestProgress<5)return null
+  val reward=ChestReward(300,1)
+  p.edit().putInt("chest_progress",0).putInt("coins",coins+reward.coins).putInt("keys",keys+reward.keys).commit()
+  return reward
+ }
+
  fun buyBooster(board:Match3Engine, kind:Match3Engine.Booster, at:Int):List<Match3Engine.Wave> {
   if(coins<kind.cost || board.won || board.failed)return emptyList()
   val waves=board.boost(kind,at)
@@ -51,7 +97,11 @@ class GardenSave(ctx:Context) {
    return false
   }
   if(board.level!=level)return false
+  val newChest=(chestProgress+1).coerceAtMost(5)
+  val newKeys=keys+if(level%10==0)1 else 0
+  val newTickets=tickets+if(level%5==0)1 else 0
   p.edit().putInt("coins",coins+150).putInt("stars",stars+1).putInt("rewarded_level",level).putInt("rating_$level",board.earnedStars)
+   .putInt("chest_progress",newChest).putInt("keys",newKeys).putInt("event_tickets",newTickets)
    .putInt("level",(level+1).coerceAtMost(Campaign.COUNT)).remove("active_board").commit()
   return true
  }
