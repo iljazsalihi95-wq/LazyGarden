@@ -106,7 +106,7 @@ class FlowerGardenView(
     else->ResidentAnimation.State.IDLE
    }
    val workFrame=when(stage){FlowerSequence.Stage.PREPARE->((ms/300+id)%2).toInt();FlowerSequence.Stage.PLANT->2+((ms/380+id)%2).toInt();FlowerSequence.Stage.WATER->6;else->-1}
-   if(workFrame>=0){val ww=dw*.19f;val yy=y+dst.height()*.035f;val saved=c.save();c.scale(if(x<dst.centerX())1f else -1f,1f,x,yy);SpriteArt.draw(c,p,workResidents,8,4,id*8+workFrame,RectF(x-ww/2,yy-ww,x+ww/2,yy));c.restoreToCount(saved)}else drawResident(c,id,x,y,dw*.16f,ResidentAnimation.frame(state,(life*90).toInt()+id),x<dst.centerX())
+   if(workFrame>=0){val ww=dw*.19f;val yy=y+dst.height()*.035f;val saved=c.save();c.scale(if(x<dst.centerX())1f else -1f,1f,x,yy);WorkerArt.draw(c,p,workResidents,id,workFrame,RectF(x-ww/2,yy-ww,x+ww/2,yy));c.restoreToCount(saved)}else drawResident(c,id,x,y,dw*.16f,ResidentAnimation.frame(state,(life*90).toInt()+id),x<dst.centerX())
   }
   val text=FlowerSequence.dialogue(ms,language)
   if(text.isNotBlank())SceneBubble.draw(c,p,width,height,if(FlowerSequence.speaker(ms)=="merjem")"Merjem" else "Meti",text,dp(1f))
