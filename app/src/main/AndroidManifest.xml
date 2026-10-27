@@ -2,8 +2,8 @@
     <application
         android:theme="@style/Theme.LazyGarden"
         android:label="LazyGarden"
-        android:icon="@drawable/lazygarden_logo"
-        android:roundIcon="@drawable/lazygarden_logo"
+        android:icon="@drawable/lazygarden_launcher"
+        android:roundIcon="@drawable/lazygarden_launcher"
         android:allowBackup="true">
         <activity android:name=".MainActivity" android:screenOrientation="portrait" android:exported="true">
             <intent-filter>
