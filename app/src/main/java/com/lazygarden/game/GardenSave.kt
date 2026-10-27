@@ -11,6 +11,8 @@ class GardenSave(ctx:Context) {
  val tasks get()=p.getInt("tasks",if(p.getBoolean("fountain",false))1 else 0)
  val fountainRestored get()=tasks>0
  val constructing get()=p.getBoolean("constructing",false)
+ val restorationElapsed get()=p.getLong("restoration_elapsed",0L).coerceIn(0L,FountainSequence.DURATION)
+ fun checkpointRestoration(ms:Long){if(constructing)p.edit().putLong("restoration_elapsed",ms).commit()}
  val activeBoard get()=p.getString("active_board",null)
 
  // Live-game resources. They are virtual gameplay items only and have no cash value.
@@ -107,8 +109,8 @@ class GardenSave(ctx:Context) {
  }
  fun beginRestoration():Boolean {
   if(constructing || tasks>=7 || coins<120 || (tasks>0 && stars<1))return false
-  p.edit().putInt("coins",coins-120).putInt("stars",(stars-1).coerceAtLeast(0)).putBoolean("constructing",true).commit()
+  p.edit().putInt("coins",coins-120).putInt("stars",(stars-1).coerceAtLeast(0)).putBoolean("constructing",true).putLong("restoration_elapsed",0L).commit()
   return true
  }
- fun finishRestoration(){if(constructing)p.edit().putInt("tasks",tasks+1).putBoolean("constructing",false).putBoolean("fountain",true).commit()}
+ fun finishRestoration(){if(constructing)p.edit().putInt("tasks",tasks+1).putBoolean("constructing",false).putBoolean("fountain",true).remove("restoration_elapsed").commit()}
 }

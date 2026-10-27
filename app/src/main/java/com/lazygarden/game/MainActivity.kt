@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
 
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
  override fun onCreate(state:Bundle?){
-  super.onCreate(state);WindowCompat.setDecorFitsSystemWindows(window,false);save=GardenSave(this);showGarden();if(save.hasPendingStory)showStory()
+  super.onCreate(state);WindowCompat.setDecorFitsSystemWindows(window,false);save=GardenSave(this);showGarden();if(save.hasPendingStory && !save.constructing)showStory()
   onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true){override fun handleOnBackPressed(){if(screen=="garden")finish() else {engine?.let{save.saveBoard(it)};showGarden()}}})
  }
  override fun onPause(){engine?.let{save.saveBoard(it)};super.onPause()}
@@ -49,7 +49,9 @@ class MainActivity : AppCompatActivity() {
  private fun showGarden(){
   screen="garden";engine=null
   val root=FrameLayout(this)
-  root.addView(GardenWorldView(this,save.tasks,save.constructing,save.decorations).apply{contentDescription="Shiko pronën";setOnClickListener{if(!save.constructing)showEstate()}},FrameLayout.LayoutParams(-1,-1))
+  root.addView(GardenWorldView(this,save.tasks,save.constructing,save.decorations,onRestorationComplete={
+   if(save.constructing){save.finishRestoration();showGarden()}
+  },initialElapsed=save.restorationElapsed,checkpoint={save.checkpointRestoration(it)}).apply{contentDescription="Shiko pronën";setOnClickListener{if(!save.constructing)showEstate()}},FrameLayout.LayoutParams(-1,-1))
   val top=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(8),dp(12),0)}
   val balances=LinearLayout(this).apply{gravity=Gravity.CENTER;background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,18f);setPadding(dp(12),0,dp(12),0)}
   balances.addView(label("${save.coins} Game Coins",16f,0xff64401b.toInt()),LinearLayout.LayoutParams(0,dp(44),1f))
@@ -83,7 +85,7 @@ class MainActivity : AppCompatActivity() {
   bottom.addView(nav);root.addView(bottom,FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));attach(root)
 
   if(save.constructing){bottom.visibility=View.INVISIBLE;leftMenu.visibility=View.INVISIBLE;rightMenu.visibility=View.INVISIBLE
-   root.postDelayed({if(root.isAttachedToWindow && screen=="garden" && save.constructing){save.finishRestoration();showGarden();showStory()}},2200)
+
   }
  }
  private fun profile(){AlertDialog.Builder(this).setTitle("Profili lokal").setMessage("Niveli ${save.level}/250\nGame Coins: ${save.coins}\nYje për restaurim: ${save.stars}\nRestaurime: ${save.tasks}/7\n\nProgresi ruhet në këtë pajisje.").setPositiveButton("Mbyll",null).show()}

@@ -16,10 +16,14 @@ jobs:
         with:
           gradle-version: '8.9'
       - run: gradle testDebugUnitTest assembleDebug
+      - name: Record APK provenance
+        run: |
+          git rev-parse HEAD > app/build/outputs/apk/debug/commit-sha.txt
+          sha256sum app/build/outputs/apk/debug/app-debug.apk > app/build/outputs/apk/debug/apk-sha256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: LazyGarden-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: LazyGarden-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/
   device-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 20

@@ -65,6 +65,22 @@ class GameFlowTest {
    shot("05-fountain-restored")
   }
  }
+ @Test fun fountainChoreographyCompletesOnlyAfterWaterAndSurvivesInterruption(){
+  context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE).edit().putInt("coins",150).putInt("stars",1).commit()
+  val save=GardenSave(context);assertTrue(save.beginRestoration())
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   SystemClock.sleep(5500);assertEquals(0,save.tasks);shot("12-fountain-inspect")
+   scenario.recreate();assertEquals(0,save.tasks);assertTrue(save.constructing)
+   assertTrue(save.restorationElapsed>=4800)
+   SystemClock.sleep(8500);assertEquals(0,save.tasks);shot("13-fountain-work")
+   SystemClock.sleep(13000)
+   InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+   assertEquals(1,save.tasks);assertFalse(save.constructing);assertEquals(30,save.coins)
+   save.finishRestoration();assertEquals(1,save.tasks)
+   scenario.recreate();assertTrue(GardenSave(context).fountainRestored)
+   onView(withText("Lexo më vonë")).perform(click());shot("14-fountain-flowing")
+  }
+ }
  @Test fun allRestorationPurchasesAndBoostersPersist(){
   context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE).edit().putInt("coins",2000).putInt("stars",7).commit()
   val save=GardenSave(context)

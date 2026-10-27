@@ -9,27 +9,33 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /** Living estate: residents walk, talk and work inside the garden instead of story-only screens. */
-class GardenWorldView(context:Context,private val tasks:Int,private val constructing:Boolean=false,private val decorations:List<DecorItem> = emptyList(),private val focus:DecorItem?=null):View(context){
+class GardenWorldView(context:Context,private val tasks:Int,private val constructing:Boolean=false,private val decorations:List<DecorItem> = emptyList(),private val focus:DecorItem?=null,private val onRestorationComplete:()->Unit={},initialElapsed:Long=0L,private val checkpoint:(Long)->Unit={}):View(context){
  private val decorationArt=mutableMapOf<Int,Bitmap>()
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val after=BitmapFactory.decodeResource(resources,R.drawable.garden_estate)
  private val before=BitmapFactory.decodeResource(resources,R.drawable.garden_before)
  private val mask=Bitmap.createBitmap(256,384,Bitmap.Config.ARGB_8888)
- private val cast=listOf(
-  BitmapFactory.decodeResource(resources,R.drawable.character_meti),BitmapFactory.decodeResource(resources,R.drawable.character_bejdi),
-  BitmapFactory.decodeResource(resources,R.drawable.character_meli),BitmapFactory.decodeResource(resources,R.drawable.character_lina)
- )
  private val names=listOf("Meti","Bejdi","Meli","Lina")
- private val taskTalk=listOf("Ta pastrojmë shatërvanin!","Shtegu është këtu poshtë.","Lulet duan pak kujdes.","Ky stol mund të shpëtohet.","Ta rikthejmë gjelbërimin.","Porta po merr jetë!","Edhe fasada do të shkëlqejë.")
  private var progress=0f; private var life=0f
- private var animator:ValueAnimator?=null; private var lifeAnimator:ValueAnimator?=null
+ private var sceneMs=initialElapsed; private var completed=false
+ private val sprites by lazy { BitmapFactory.decodeResource(resources,R.drawable.resident_atlas) }
+ private var lifeAnimator:ValueAnimator?=null
  private val regions=arrayOf(RectF(.32f,.425f,.80f,.635f),RectF(.12f,.63f,.91f,1.04f),RectF(.75f,.31f,1.04f,.99f),RectF(-.04f,.46f,.32f,.65f),RectF(-.04f,.28f,.36f,.48f),RectF(.34f,.36f,.79f,.46f),RectF(.37f,.14f,1.04f,.415f))
- private data class Walker(val art:Int,val start:Float,val end:Float,val ground:Float,val size:Float,val speed:Float,val phase:Float)
- private val walkers=listOf(Walker(0,.12f,.80f,.84f,.095f,.72f,.00f),Walker(1,.82f,.24f,.77f,.082f,.55f,.19f),Walker(2,.25f,.68f,.69f,.076f,.43f,.41f),Walker(3,.72f,.39f,.61f,.072f,.38f,.67f))
- override fun onAttachedToWindow(){super.onAttachedToWindow();lifeAnimator=ValueAnimator.ofFloat(0f,1f).apply{duration=12000;repeatCount=ValueAnimator.INFINITE;interpolator=LinearInterpolator();addUpdateListener{life=it.animatedValue as Float;invalidate()};start()};if(constructing)animator=ValueAnimator.ofFloat(0f,1f).apply{duration=4200;addUpdateListener{progress=it.animatedValue as Float;invalidate()};start()}}
- override fun onDetachedFromWindow(){animator?.cancel();lifeAnimator?.cancel();super.onDetachedFromWindow()}
- private fun triangle(t:Float):Float{val x=((t%1f)+1f)%1f;return 1f-abs(x*2f-1f)}
- private fun character(c:Canvas,b:Bitmap,cx:Float,ground:Float,size:Float,bob:Float,working:Boolean=false){val h=size*b.height/b.width;val y=ground-h+bob;p.alpha=255;p.xfermode=null;p.shader=null;if(working){c.save();c.rotate(sin(life*55f)*2.5f,cx,ground);c.drawBitmap(b,null,RectF(cx-size/2,y,cx+size/2,ground+bob),p);c.restore()}else c.drawBitmap(b,null,RectF(cx-size/2,y,cx+size/2,ground+bob),p)}
+ override fun onAttachedToWindow(){super.onAttachedToWindow();startClock()}
+ private fun startClock(){
+  if(windowVisibility!=VISIBLE || !isAttachedToWindow || lifeAnimator!=null)return
+  var previous=android.os.SystemClock.uptimeMillis()
+  lifeAnimator=ValueAnimator.ofFloat(0f,1f).apply{duration=12000;repeatCount=ValueAnimator.INFINITE;interpolator=LinearInterpolator();addUpdateListener{
+   val now=android.os.SystemClock.uptimeMillis();val dt=(now-previous).coerceAtMost(80);previous=now
+   life=(life+dt/12000f)%1f
+   if(constructing && !completed){sceneMs+=dt;progress=(sceneMs/FountainSequence.DURATION.toFloat()).coerceIn(0f,1f)
+    if(sceneMs>=FountainSequence.DURATION){completed=true;post{if(isAttachedToWindow)onRestorationComplete()}}
+   };invalidate()
+  };start()}
+ }
+ override fun onWindowVisibilityChanged(visibility:Int){super.onWindowVisibilityChanged(visibility);if(visibility==VISIBLE)startClock() else stopClock()}
+ private fun stopClock(){if(constructing)checkpoint(sceneMs);lifeAnimator?.removeAllUpdateListeners();lifeAnimator?.cancel();lifeAnimator=null}
+ override fun onDetachedFromWindow(){stopClock();super.onDetachedFromWindow()}
  private fun bubble(c:Canvas,x:Float,y:Float,name:String,text:String){
   val w=(width*.48f).coerceAtMost(dp(210).toFloat());val h=dp(58).toFloat();val left=(x-w/2).coerceIn(dp(8).toFloat(),width-w-dp(8));val top=(y-h-dp(12)).coerceAtLeast(dp(72).toFloat())
   p.color=0xf5fff8e7.toInt();p.style=Paint.Style.FILL;c.drawRoundRect(RectF(left,top,left+w,top+h),dp(14).toFloat(),dp(14).toFloat(),p)
@@ -38,18 +44,64 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   p.color=0xff4c3927.toInt();p.typeface=Typeface.DEFAULT;p.textSize=dp(11).toFloat();c.drawText(text.take(34),left+dp(12),top+dp(42),p)
  }
  override fun onDraw(c:Canvas){super.onDraw(c);val scale=maxOf(width.toFloat()/after.width,height.toFloat()/after.height);val dw=after.width*scale;val dh=after.height*scale;val dst=RectF((width-dw)/2,(height-dh)/2,(width+dw)/2,(height+dh)/2);focus?.let{dst.offset(0f,height*.39f-(dst.top+it.y*dh))};p.alpha=255;p.xfermode=null;p.shader=null;c.drawBitmap(before,null,dst,p)
-  if(tasks>=7)c.drawBitmap(after,null,dst,p) else if(tasks>0||constructing){mask.eraseColor(Color.TRANSPARENT);val mc=Canvas(mask);val mp=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.WHITE;maskFilter=BlurMaskFilter(3f,BlurMaskFilter.Blur.NORMAL)};for(i in regions.indices)if(i<tasks||(i==tasks&&constructing)){mp.alpha=if(i<tasks)255 else (255*progress).toInt();val r=regions[i];mc.drawRoundRect(RectF(r.left*256,r.top*384,r.right*256,r.bottom*384),5f,5f,mp)};val layer=c.saveLayer(dst,null);c.drawBitmap(after,null,dst,p);p.xfermode=PorterDuffXfermode(PorterDuff.Mode.DST_IN);c.drawBitmap(mask,null,dst,p);p.xfermode=null;c.restoreToCount(layer)}
+  if(tasks>=7)c.drawBitmap(after,null,dst,p) else if(tasks>0||constructing){mask.eraseColor(Color.TRANSPARENT);val mc=Canvas(mask);val mp=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.WHITE;maskFilter=BlurMaskFilter(3f,BlurMaskFilter.Blur.NORMAL)};for(i in regions.indices)if(i<tasks||(i==tasks&&constructing)){mp.alpha=if(i<tasks)255 else (255*if(tasks==0)((sceneMs-17400)/2000f).coerceIn(0f,1f) else progress).toInt();val r=regions[i];mc.drawRoundRect(RectF(r.left*256,r.top*384,r.right*256,r.bottom*384),5f,5f,mp)};val layer=c.saveLayer(dst,null);c.drawBitmap(after,null,dst,p);p.xfermode=PorterDuffXfermode(PorterDuff.Mode.DST_IN);c.drawBitmap(mask,null,dst,p);p.xfermode=null;c.restoreToCount(layer)}
   for(item in decorations){val bitmap=decorationArt.getOrPut(item.art){BitmapFactory.decodeResource(resources,item.art)};val w=dw*item.width;val h=w*bitmap.height/bitmap.width;val x=dst.left+item.x*dw;val y=dst.top+item.y*dh;p.alpha=255;p.shader=null;c.drawBitmap(bitmap,null,RectF(x-w/2,y-h,x+w/2,y),p)}
-  if(tasks>0||constructing){val active=regions[tasks.coerceAtMost(6)];val workX=dst.left+dw*active.centerX().coerceIn(.10f,.90f);val workY=dst.top+dh*active.bottom.coerceIn(.45f,.88f);val positions=ArrayList<Pair<Float,Float>>()
-   walkers.forEachIndexed{index,w->val travel=triangle(life*w.speed+w.phase);var x=dst.left+dw*(w.start+(w.end-w.start)*travel);var y=dst.top+dh*w.ground;val assigned=constructing&&index<3;if(assigned){val settle=(progress/.28f).coerceAtMost(1f);val slot=(index-1)*dw*.075f;x+=(workX+slot-x)*settle;y+=(workY-y)*settle};val working=assigned&&progress>.48f;val step=if(working)0f else sin((life*w.speed+w.phase)*Math.PI.toFloat()*22f)*dp(2);character(c,cast[w.art],x,y,dw*w.size,step,working);positions.add(x to y)}
-   // In-world conversation: after walking to the job, residents stop and speak above their heads.
-   if(constructing&&progress in .29f..48f){val a=positions[0];val b=positions[1];bubble(c,a.first,a.second-dw*.10f,names[0],taskTalk[tasks.coerceAtMost(6)]);if(progress>.38f)bubble(c,b.first,b.second-dw*.09f,names[1],"Po, fillojmë bashkë!")}
-   // Work particles make repair activity visible rather than just rotating a sprite.
-   if(constructing&&progress>.48f){for(i in 0..7){val t=(life*3f+i*.13f)%1f;p.color=if(i%2==0)0xffffd45c.toInt() else 0xffffffff.toInt();p.alpha=(220*(1f-t)).toInt();c.drawCircle(workX+sin(i*2.1f)*dp(28)*t,workY-dp(25)-t*dp(48),dp(3).toFloat(),p)};p.alpha=255}
-   p.color=0xffffffff.toInt();p.style=Paint.Style.STROKE;p.strokeWidth=dp(2).toFloat();p.alpha=210;for(i in 0..2){val t=(life+i*.27f)%1f;val bx=dst.left+dw*(.15f+.72f*t);val by=dst.top+dh*(.28f+.035f*sin(t*18f+i));c.drawArc(RectF(bx-dp(8),by-dp(4),bx,by+dp(4)),190f,150f,false,p);c.drawArc(RectF(bx,by-dp(4),bx+dp(8),by+dp(4)),200f,150f,false,p)};p.style=Paint.Style.FILL;p.alpha=255
-  }
+  drawResidentsAndWater(c,dst,dw,dh)
   p.shader=LinearGradient(0f,0f,0f,height.toFloat(),intArrayOf(0x99102b25.toInt(),0x00000000,0x990c261f.toInt()),floatArrayOf(0f,.45f,1f),Shader.TileMode.CLAMP);c.drawRect(0f,0f,width.toFloat(),height.toFloat(),p);p.shader=null
-  if(constructing){p.color=0xffffe6a3.toInt();p.textSize=18*resources.displayMetrics.density;p.textAlign=Paint.Align.CENTER;p.typeface=Typeface.DEFAULT_BOLD;val state=when{progress<.29f->"Po shkojnë te puna…";progress<.48f->"Po planifikojnë punën…";else->"Po restaurojnë kopshtin…"};c.drawText(state,width/2f,height*.55f,p)}
+
  }
+
+ private fun resident(c:Canvas,id:Int,x:Float,y:Float,w:Float,frame:Int,faceRight:Boolean){
+  val sheet=sprites;val cw=sheet.width/8;val ch=sheet.height/4
+  val src=Rect(frame*cw,id*ch,(frame+1)*cw,(id+1)*ch)
+  val h=w*ch/cw;val saved=c.save();c.scale(if(faceRight)1f else -1f,1f,x,y)
+  p.shader=null;p.alpha=255;p.colorFilter=null
+  c.drawBitmap(sheet,src,RectF(x-w/2,y-h,x+w/2,y),p);c.restoreToCount(saved)
+ }
+ private fun drawResidentsAndWater(c:Canvas,dst:RectF,dw:Float,dh:Float){
+  val stage=FountainSequence.stage(sceneMs)
+  val fountain=tasks==0 && constructing
+  val fx=dst.left+dw*.55f;val fy=dst.top+dh*.515f
+  val amount=if(tasks>0)1f else if(constructing)FountainSequence.water(sceneMs) else 0f
+  if(amount>0f)drawWater(c,fx,fy,dw,amount)
+  val xs=floatArrayOf(.40f,.68f,.30f,.77f);val ys=floatArrayOf(.59f,.59f,.64f,.64f)
+  for(id in 0..3){
+   val t=if(fountain)FountainSequence.approach(sceneMs,id) else if(tasks>0)1f else 0f
+   val startX=if(id%2==0).15f else .88f;val startY=.81f+id*.025f
+   val x=dst.left+dw*(startX+(xs[id]-startX)*t);val y=dst.top+dh*(startY+(ys[id]-startY)*t)
+   val walking=fountain && stage==FountainSequence.Stage.WALK && t<1f
+   val working=fountain && stage in listOf(FountainSequence.Stage.WORK,FountainSequence.Stage.REPAIR) && id<2
+   val speaking=fountain && FountainSequence.speaker(sceneMs)==id
+   val celebrating=fountain && stage==FountainSequence.Stage.CELEBRATE
+   val tick=(life*96).toInt()
+   val frame=when{walking->1+tick%2;working->6-tick%2;celebrating->if(tick%3==0)0 else 7;speaking->if(tick%2==0)4 else 0;fountain && stage in listOf(FountainSequence.Stage.LOOK,FountainSequence.Stage.DISCOVER)->3;else->0}
+   val bob=if(celebrating)-abs(sin(life*100+id))*dh*.009f else 0f
+   resident(c,id,x,y+bob,dw*.16f,frame,x<fx)
+   if(speaking)bubble(c,x,y-dh*.10f,names[id],FountainSequence.dialogue(sceneMs))
+  }
+  if(fountain && stage in listOf(FountainSequence.Stage.WORK,FountainSequence.Stage.REPAIR)){
+   // Barrier ribbons, cones, pump access and tool effects remain anchored to the job.
+   val by=fy+dh*.09f
+   p.style=Paint.Style.FILL;p.color=0xffe88928.toInt()
+   for(side in listOf(-1,1)){val x=fx+side*dw*.19f;val path=Path().apply{moveTo(x,by-dh*.035f);lineTo(x-dw*.018f,by);lineTo(x+dw*.018f,by);close()};c.drawPath(path,p)}
+   p.strokeWidth=dw*.009f;p.color=0xffffd553.toInt();c.drawLine(fx-dw*.19f,by-dh*.02f,fx+dw*.19f,by-dh*.02f,p)
+   p.color=0xff4b665d.toInt();c.drawRoundRect(RectF(fx+dw*.09f,by-dh*.07f,fx+dw*.15f,by-dh*.025f),4f,4f,p)
+   for(i in 0..5){val t=(life*8+i*.17f)%1f;p.color=0xffffd87a.toInt();p.alpha=((1-t)*230).toInt();c.drawCircle(fx+dw*.12f+sin(i*3f)*dw*.04f*t,by-dh*.05f-t*dh*.035f,dw*.003f,p)};p.alpha=255
+  }
+ }
+ private fun drawWater(c:Canvas,x:Float,y:Float,w:Float,amount:Float){
+  val saved=c.save();p.shader=null;p.style=Paint.Style.STROKE;p.strokeCap=Paint.Cap.ROUND
+  // Continuous parabolic jets with flowing highlights and basin ripples.
+  for(i in -3..3){val spread=i*w*.018f;val height=w*(.065f+.006f*sin(life*45+i))*amount
+   val jet=Path().apply{moveTo(x,y-w*.055f);quadTo(x+spread*.4f,y-height-w*.055f,x+spread,y+w*.035f)}
+   p.color=0xaa53cde9.toInt();p.strokeWidth=w*.005f*amount;c.drawPath(jet,p)
+   p.color=0xdde6ffff.toInt();p.strokeWidth=w*.0018f*amount;c.drawPath(jet,p)
+   val t=(life*10+i*.13f+1)%1f;val dx=x+spread*t;val dy=(1-t)*(1-t)*(y-w*.055f)+2*(1-t)*t*(y-height-w*.055f)+t*t*(y+w*.035f)
+   p.style=Paint.Style.FILL;c.drawCircle(dx,dy,w*.0025f*amount,p);p.style=Paint.Style.STROKE
+  }
+  for(i in 0..4){val t=(life*4+i*.2f)%1f;p.color=0xffb5f7ff.toInt();p.alpha=((1-t)*170*amount).toInt();p.strokeWidth=w*.0018f;c.drawOval(RectF(x-w*(.025f+.095f*t),y+w*.025f-w*.018f*t,x+w*(.025f+.095f*t),y+w*.042f+w*.018f*t),p)}
+  p.alpha=255;p.style=Paint.Style.FILL;p.strokeCap=Paint.Cap.BUTT;c.restoreToCount(saved)
+ }
+
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
 }
