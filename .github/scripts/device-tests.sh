@@ -6,7 +6,7 @@ adb shell wm dismiss-keyguard
 status=0
 runner_args=()
 if [[ $# -gt 0 ]]; then
-  runner_args=("-Pandroid.testInstrumentationRunnerArguments.numShards=2" "-Pandroid.testInstrumentationRunnerArguments.shardIndex=$1")
+  runner_args=("-Pandroid.testInstrumentationRunnerArguments.numShards=3" "-Pandroid.testInstrumentationRunnerArguments.shardIndex=$1")
 fi
 gradle "${runner_args[@]}" connectedDebugAndroidTest || status=$?
 mkdir -p device-screenshots

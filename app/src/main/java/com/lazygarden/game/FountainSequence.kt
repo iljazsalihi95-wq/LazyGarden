@@ -16,6 +16,9 @@ object FountainSequence {
   ms<DURATION -> Stage.CELEBRATE
   else -> Stage.COMPLETED
  }
+ private fun smooth(value:Float):Float { val t=value.coerceIn(0f,1f);return t*t*(3-2*t) }
+ fun camera(ms:Long):Float = smooth((ms-4000)/2500f)*(1-smooth((ms-24000)/2000f))
+ fun repair(ms:Long):Float = ((ms-12400)/7000f).coerceIn(0f,1f)
  fun water(ms:Long) = ((ms-19400)/2800f).coerceIn(0f,1f)
  fun approach(ms:Long,actor:Int):Float = ((ms-800-actor*180)/ (3400f-actor*180)).coerceIn(0f,1f)
  fun speaker(ms:Long):Int = when(stage(ms)) {

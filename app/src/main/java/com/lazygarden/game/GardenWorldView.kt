@@ -15,16 +15,21 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
  private val after=BitmapFactory.decodeResource(resources,R.drawable.garden_estate)
  private val before=BitmapFactory.decodeResource(resources,R.drawable.garden_before)
  private val mask=Bitmap.createBitmap(256,384,Bitmap.Config.ARGB_8888)
+ private val worksite by lazy { GameSkin.bitmap(context,R.drawable.fountain_worksite) }
  private val leafArt by lazy { GameSkin.bitmap(context,R.drawable.tile_leaf) }
  private val names=listOf("Meti","Bejdi","Meli","Lina")
  private var progress=0f; private var life=0f
  private var sceneMs=initialElapsed; private var completed=false
+ internal val sceneElapsedMillis get()=sceneMs
  private val sprites by lazy { BitmapFactory.decodeResource(resources,R.drawable.resident_atlas) }
  private var lifeAnimator:ValueAnimator?=null
+ private var lifecyclePaused=false
+ internal fun pauseScene(){lifecyclePaused=true;stopClock()}
+ internal fun resumeScene(){lifecyclePaused=false;startClock()}
  private val regions=arrayOf(RectF(.32f,.425f,.80f,.635f),RectF(.12f,.63f,.91f,1.04f),RectF(.75f,.31f,1.04f,.99f),RectF(-.04f,.46f,.32f,.65f),RectF(-.04f,.28f,.36f,.48f),RectF(.34f,.36f,.79f,.46f),RectF(.37f,.14f,1.04f,.415f))
  override fun onAttachedToWindow(){super.onAttachedToWindow();startClock()}
  private fun startClock(){
-  if(windowVisibility!=VISIBLE || !isAttachedToWindow || lifeAnimator!=null)return
+  if(lifecyclePaused || windowVisibility!=VISIBLE || !isAttachedToWindow || lifeAnimator!=null)return
   var previous=android.os.SystemClock.uptimeMillis()
   lifeAnimator=ValueAnimator.ofFloat(0f,1f).apply{duration=12000;repeatCount=ValueAnimator.INFINITE;interpolator=LinearInterpolator();addUpdateListener{
    val now=android.os.SystemClock.uptimeMillis();val dt=(now-previous).coerceIn(0L,1000L);previous=now
@@ -44,7 +49,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   p.color=0xff2f7d45.toInt();p.textAlign=Paint.Align.LEFT;p.typeface=Typeface.DEFAULT_BOLD;p.textSize=dp(12).toFloat();c.drawText(name,left+dp(12),top+dp(20),p)
   p.color=0xff4c3927.toInt();p.typeface=Typeface.DEFAULT;p.textSize=dp(11).toFloat();c.drawText(text.take(34),left+dp(12),top+dp(42),p)
  }
- override fun onDraw(c:Canvas){super.onDraw(c);val scale=maxOf(width.toFloat()/after.width,height.toFloat()/after.height);val dw=after.width*scale;val dh=after.height*scale;val dst=RectF((width-dw)/2,(height-dh)/2,(width+dw)/2,(height+dh)/2);focus?.let{dst.offset(0f,height*.39f-(dst.top+it.y*dh))};p.alpha=255;p.xfermode=null;p.shader=null;c.drawBitmap(before,null,dst,p)
+ override fun onDraw(c:Canvas){super.onDraw(c);val camera=if(constructing && tasks==0)FountainSequence.camera(sceneMs) else 0f;val scale=maxOf(width.toFloat()/after.width,height.toFloat()/after.height)*(1+camera*.28f);val dw=after.width*scale;val dh=after.height*scale;val dst=RectF((width-dw)/2,(height-dh)/2,(width+dw)/2,(height+dh)/2);if(camera>0)dst.offset(0f,(height*.46f-(dst.top+dh*.515f))*camera);focus?.let{dst.offset(0f,height*.39f-(dst.top+it.y*dh))};p.alpha=255;p.xfermode=null;p.shader=null;c.drawBitmap(before,null,dst,p)
   if(tasks>=7)c.drawBitmap(after,null,dst,p) else if(tasks>0||constructing){mask.eraseColor(Color.TRANSPARENT);val mc=Canvas(mask);val mp=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.WHITE;maskFilter=BlurMaskFilter(3f,BlurMaskFilter.Blur.NORMAL)};for(i in regions.indices)if(i<tasks||(i==tasks&&constructing)){mp.alpha=if(i<tasks)255 else (255*if(tasks==0)FountainSequence.water(sceneMs) else progress).toInt();val r=regions[i];mc.drawRoundRect(RectF(r.left*256,r.top*384,r.right*256,r.bottom*384),5f,5f,mp)};val layer=c.saveLayer(dst,null);c.drawBitmap(after,null,dst,p);p.xfermode=PorterDuffXfermode(PorterDuff.Mode.DST_IN);c.drawBitmap(mask,null,dst,p);p.xfermode=null;c.restoreToCount(layer)}
   for(item in decorations){val bitmap=decorationArt.getOrPut(item.art){BitmapFactory.decodeResource(resources,item.art)};val w=dw*item.width;val h=w*bitmap.height/bitmap.width;val x=dst.left+item.x*dw;val y=dst.top+item.y*dh;p.alpha=255;p.shader=null;c.drawBitmap(bitmap,null,RectF(x-w/2,y-h,x+w/2,y),p)}
   drawResidentsAndWater(c,dst,dw,dh)
@@ -72,6 +77,16 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
    for(i in 0..3){val x=fx+dw*(.095f+i*.012f);val y=fy+dh*(.035f+(i%2)*.006f)
     c.drawBitmap(leafArt,null,RectF(x-dw*.018f,y-dw*.018f,x+dw*.018f,y+dw*.018f),p)
    };p.alpha=255
+  }
+  val equipmentVisible=fountain && stage.ordinal>=FountainSequence.Stage.DISCOVER.ordinal && stage.ordinal<=FountainSequence.Stage.WATER_START.ordinal
+  val equipmentAlpha=if(stage==FountainSequence.Stage.WATER_START)((1-FountainSequence.water(sceneMs))*255).toInt() else 255
+  if(equipmentVisible){
+   val w=dw*.28f;val h=w*(worksite.height/2f)/(worksite.width/2f);val bottom=fy+dh*.085f
+   val rect=RectF(fx-w/2,bottom-h,fx+w/2,bottom)
+   val repaired=((sceneMs-17400)/2000f).coerceIn(0f,1f)
+   prop(c,0,rect,((1-repaired)*equipmentAlpha).toInt());prop(c,1,rect,(repaired*equipmentAlpha).toInt())
+   val tw=dw*.10f;val th=tw*worksite.height/worksite.width
+   prop(c,2,RectF(fx-dw*.19f,fy+dh*.12f-th,fx-dw*.19f+tw,fy+dh*.12f),equipmentAlpha)
   }
   val xs=floatArrayOf(.40f,.68f,.30f,.77f);val ys=floatArrayOf(.59f,.59f,.64f,.64f)
   for(id in 0..3){
@@ -101,17 +116,26 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
    val saved=c.save();val breath=1f+sin(life*18+id)*.006f;c.scale(1f,breath,x,y)
    val faceRight=if(visit>0)if(life<.75f)id==3 else id==2 else x<fx
    resident(c,id,x,y+bob,dw*.16f*(1-visit*.12f),frame,faceRight);c.restoreToCount(saved)
-   if(speaking)bubble(c,x,y-dw*.23f,names[id],FountainSequence.dialogue(sceneMs))
+   if(speaking){val clearOfFaces=minOf(y-dw*.23f,dst.top+dh*.59f-dw*.25f);bubble(c,x,clearOfFaces,names[id],FountainSequence.dialogue(sceneMs))}
   }
   if(fountain && stage in listOf(FountainSequence.Stage.WORK,FountainSequence.Stage.REPAIR)){
-   // Barrier ribbons, cones, pump access and tool effects remain anchored to the job.
    val by=fy+dh*.09f
-   p.style=Paint.Style.FILL;p.color=0xffe88928.toInt()
-   for(side in listOf(-1,1)){val x=fx+side*dw*.19f;val path=Path().apply{moveTo(x,by-dh*.035f);lineTo(x-dw*.018f,by);lineTo(x+dw*.018f,by);close()};c.drawPath(path,p)}
-   p.strokeWidth=dw*.009f;p.color=0xffffd553.toInt();c.drawLine(fx-dw*.19f,by-dh*.02f,fx+dw*.19f,by-dh*.02f,p)
-   p.color=0xff4b665d.toInt();c.drawRoundRect(RectF(fx+dw*.09f,by-dh*.07f,fx+dw*.15f,by-dh*.025f),4f,4f,p)
+   val w=dw*.18f;val h=w*worksite.height/worksite.width
+   for(side in listOf(-1,1)){val x=fx+side*dw*.20f;prop(c,3,RectF(x-w/2,by+dh*.045f-h,x+w/2,by+dh*.045f))}
+   // A live repair meter belongs to the world, beneath the tools and actors.
+   val bar=RectF(fx-dw*.12f,by+dh*.085f,fx+dw*.12f,by+dh*.098f)
+   p.color=0xcc173e30.toInt();c.drawRoundRect(bar,dh*.006f,dh*.006f,p)
+   p.shader=LinearGradient(bar.left,bar.top,bar.left,bar.bottom,intArrayOf(0xffc3f67b.toInt(),0xff4ba72d.toInt()),null,Shader.TileMode.CLAMP)
+   val fill=RectF(bar.left,bar.top,bar.left+bar.width()*FountainSequence.repair(sceneMs),bar.bottom);c.drawRoundRect(fill,dh*.006f,dh*.006f,p);p.shader=null
+   p.style=Paint.Style.STROKE;p.strokeWidth=dp(1).toFloat();p.color=0xffffdb8c.toInt();c.drawRoundRect(bar,dh*.006f,dh*.006f,p);p.style=Paint.Style.FILL
    for(i in 0..5){val t=(life*8+i*.17f)%1f;p.color=0xffffd87a.toInt();p.alpha=((1-t)*230).toInt();c.drawCircle(fx+dw*.12f+sin(i*3f)*dw*.04f*t,by-dh*.05f-t*dh*.035f,dw*.003f,p)};p.alpha=255
   }
+ }
+ private fun prop(c:Canvas,index:Int,dst:RectF,alpha:Int=255){
+  val b=worksite;val cw=b.width/2;val ch=b.height/2
+  if(alpha<=0)return
+  p.shader=null;p.alpha=alpha.coerceIn(0,255);p.style=Paint.Style.FILL
+  c.drawBitmap(b,Rect(index%2*cw,index/2*ch,(index%2+1)*cw,(index/2+1)*ch),dst,p);p.alpha=255
  }
  private fun drawWater(c:Canvas,x:Float,y:Float,w:Float,amount:Float){
   val saved=c.save();p.shader=null;p.style=Paint.Style.STROKE;p.strokeCap=Paint.Cap.ROUND
@@ -123,6 +147,14 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
    val t=(life*10+i*.13f+1)%1f;val dx=x+spread*t;val dy=(1-t)*(1-t)*(y-w*.055f)+2*(1-t)*t*(y-height-w*.055f)+t*t*(y+w*.035f)
    p.style=Paint.Style.FILL;c.drawCircle(dx,dy,w*.0025f*amount,p);p.style=Paint.Style.STROKE
   }
+  // Falling water follows the bowl contour as well as the upward jets.
+  for(side in listOf(-1,1))for(k in 0..3){
+   val sx=x+side*w*(.025f+k*.007f);val sy=y-w*.035f;val ex=sx+side*w*(.022f+.003f*sin(life*35+k));val ey=y+w*.045f
+   val path=Path().apply{moveTo(sx,sy);quadTo(ex,y,ex,ey)}
+   p.shader=LinearGradient(sx,sy,ex,ey,intArrayOf(0x44c5ffff,0xccb5f2ff.toInt(),0x7779cfe3),null,Shader.TileMode.CLAMP)
+   p.strokeWidth=w*.005f*amount;p.alpha=(255*amount).toInt();c.drawPath(path,p);p.shader=null
+   val t=(life*12+k*.23f)%1f;p.style=Paint.Style.FILL;p.color=0xffefffff.toInt();c.drawCircle(sx+(ex-sx)*t,sy+(ey-sy)*t,w*.0018f*amount,p);p.style=Paint.Style.STROKE
+  };p.alpha=255
   for(i in 0..4){val t=(life*4+i*.2f)%1f;p.color=0xffb5f7ff.toInt();p.alpha=((1-t)*170*amount).toInt();p.strokeWidth=w*.0018f;c.drawOval(RectF(x-w*(.025f+.095f*t),y+w*.025f-w*.018f*t,x+w*(.025f+.095f*t),y+w*.042f+w*.018f*t),p)}
   p.alpha=255;p.style=Paint.Style.FILL;p.strokeCap=Paint.Cap.BUTT;c.restoreToCount(saved)
  }

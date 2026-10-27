@@ -29,3 +29,15 @@ Production prompt:
 
 The atlas is pose animation, not a high-frame-count skeletal animation system. Additional
 walk cycles and facial frames can be added without changing the scene/save timeline.
+
+## Fountain repair hardware
+
+`app/src/main/res/drawable-nodpi/fountain_worksite.webp`: a transparent 2 × 2 atlas
+containing the clogged pump, repaired pump, toolbox and work barrier. The user supplied
+storyboard is used as a style/hardware reference. The running scene samples these props
+individually, crossfades the repair state, renders a live progress meter and animates its
+camera/water independently. It never displays the storyboard as the game.
+
+Production prompt (built-in imagegen, reference image supplied by the user):
+
+> Use case: stylized-concept. The reference is STYLE AND REPAIR HARDWARE reference only. Generate a PRODUCTION GAME SPRITE ATLAS, NOT a comic, not a screenshot, no characters, no text, no scenery. Exactly 2 columns x 2 rows equal rectangular cells, generous transparent spacing. Entire background must be genuine transparent alpha. Polished detailed painted dimensional 2D game art with the warm garden restoration material quality in reference. Upper left cell: ONE broken exposed fountain pump assembly, worn turquoise cylindrical mechanical pump centered with two horizontal curved metal pipes extending left/right, brass flange bolts, red valve wheel, visible leaf clog in an open pipe, small broken pressure gauge. Upper right: EXACT same pump assembly same placement scale perspective and silhouette, now repaired polished turquoise, unblocked pipes, new brass bolts, green valve and working gauge. Lower left: one red open toolbox with visible wrench, screwdriver, pliers, small replacement pipe couplings, detached as a single ground prop. Lower right: one work-zone foreground barrier with two small wooden posts, draped rope, two orange-white cones and one small yellow triangular digging pictogram sign, no lettering. Front three-quarter slightly elevated view, flat orthographic camera suitable for placing over the garden path. No base platforms, no backgrounds, no panels or dividing lines, no people, no fountains. Four separate isolated high-detail props. Do NOT recreate the reference storyboard. This is artwork for a native Android game, assets only.

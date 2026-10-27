@@ -34,30 +34,6 @@ class GameFlowTest {
    ParcelFileDescriptor.AutoCloseInputStream(instrument.uiAutomation.executeShellCommand(command)).use{it.readBytes()}
   }
  }
- /** ActivityScenario.recreate waits for an idle UI before requesting recreation. A live
-  * game can keep rendering for a long time; post recreation directly on the main looper
-  * and observe the actual replacement Activity instead of advancing the scene while waiting. */
- private fun recreateLiveActivity(){
-  val main=android.os.Handler(android.os.Looper.getMainLooper())
-  val resumed=java.util.concurrent.CountDownLatch(1)
-  val error=java.util.concurrent.atomic.AtomicReference<Throwable?>()
-  main.post{
-   try {
-    val monitor=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
-    val previous=monitor.getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).filterIsInstance<MainActivity>().single()
-    val observer=object:androidx.test.runner.lifecycle.ActivityLifecycleCallback {
-     override fun onActivityLifecycleChanged(activity:android.app.Activity,stage:androidx.test.runner.lifecycle.Stage){
-      if(activity is MainActivity && activity!==previous && stage==androidx.test.runner.lifecycle.Stage.RESUMED){
-       main.post{monitor.removeLifecycleCallback(this)};resumed.countDown()
-      }
-     }
-    }
-    monitor.addLifecycleCallback(observer);previous.recreate()
-   }catch(t:Throwable){error.set(t);resumed.countDown()}
-  }
-  assertTrue("The replacement Activity must resume",resumed.await(15,java.util.concurrent.TimeUnit.SECONDS))
-  error.get()?.let{throw AssertionError("Activity recreation failed",it)}
- }
  private fun recordFountain():Thread {
   val ui=InstrumentationRegistry.getInstrumentation().uiAutomation
   ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand("mkdir -p /data/local/tmp/lazygarden-screenshots")).use{it.readBytes()}
@@ -96,20 +72,73 @@ class GameFlowTest {
  @Test fun fountainChoreographyCompletesOnlyAfterWaterAndSurvivesInterruption(){
   context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE).edit().putInt("coins",150).putInt("stars",1).commit()
   val save=GardenSave(context);assertTrue(save.beginRestoration())
+  val main=android.os.Handler(android.os.Looper.getMainLooper())
+  val finished=java.util.concurrent.CountDownLatch(1)
+  val registered=java.util.concurrent.CountDownLatch(1)
+  val error=java.util.concurrent.atomic.AtomicReference<Throwable?>()
+  val pictures=java.util.concurrent.ConcurrentLinkedQueue<Thread>()
+  val seen=java.util.Collections.newSetFromMap(java.util.IdentityHashMap<android.app.Activity,Boolean>())
+  val monitor=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+  fun checked(block:()->Unit){try{block()}catch(t:Throwable){error.compareAndSet(null,t);finished.countDown()}}
+  fun capture(name:String){pictures.add(Thread{shot(name)}.apply{start()})}
+  fun garden(v:android.view.View):GardenWorldView? {
+   if(v is GardenWorldView)return v
+   if(v is android.view.ViewGroup)for(i in 0 until v.childCount)garden(v.getChildAt(i))?.let{return it}
+   return null
+  }
+  val observer=object:androidx.test.runner.lifecycle.ActivityLifecycleCallback {
+   override fun onActivityLifecycleChanged(activity:android.app.Activity,stage:androidx.test.runner.lifecycle.Stage){
+    if(activity !is MainActivity || stage!=androidx.test.runner.lifecycle.Stage.RESUMED || !seen.add(activity))return
+    checked {
+     when(seen.size){
+      1 -> main.postDelayed({checked{assertEquals(0,save.tasks);assertTrue(save.constructing);activity.recreate()}},5500)
+      2 -> {
+       assertEquals(0,save.tasks);assertTrue(save.constructing);assertTrue(save.restorationElapsed>=1000)
+       val live=garden(activity.findViewById(android.R.id.content))!!
+       assertTrue("The replacement scene must resume its checkpoint",kotlin.math.abs(live.sceneElapsedMillis-save.restorationElapsed)<500)
+       capture("12-fountain-inspect");main.postDelayed({capture("13-fountain-work")},8000)
+       lateinit var poll:Runnable
+       poll=Runnable{checked {
+        if(save.constructing)main.postDelayed(poll,200) else {
+         assertEquals(1,save.tasks);assertEquals(30,save.coins)
+         save.finishRestoration();assertEquals(1,save.tasks);activity.recreate()
+        }
+       }};main.postDelayed(poll,500)
+      }
+      3 -> {
+       assertTrue(GardenSave(context).fountainRestored);assertFalse(save.constructing)
+       assertEquals(1,save.tasks);assertEquals(30,save.coins)
+       activity.onBackPressedDispatcher.onBackPressed();capture("14-fountain-flowing");finished.countDown()
+      }
+     }
+    }
+   }
+  }
   val recording=recordFountain()
-  ActivityScenario.launch(MainActivity::class.java).use{scenario->
-   SystemClock.sleep(5500);assertEquals(0,save.tasks)
-   recreateLiveActivity();assertEquals(0,save.tasks);assertTrue(save.constructing)
-   assertTrue(save.restorationElapsed>=4800);shot("12-fountain-inspect")
-   SystemClock.sleep(8500);shot("13-fountain-work")
-   // Emulators can render well below real-device speed. Wait for completion rather than
-   // assuming every animation frame fits into a fixed wall-clock budget.
-   val deadline=SystemClock.uptimeMillis()+90000
-   while(save.constructing && SystemClock.uptimeMillis()<deadline)SystemClock.sleep(250)
-   assertEquals(1,save.tasks);assertFalse(save.constructing);assertEquals(30,save.coins)
-   save.finishRestoration();assertEquals(1,save.tasks)
-   recreateLiveActivity();assertTrue(GardenSave(context).fountainRestored)
-   onView(withText("Lexo më vonë")).perform(click());shot("14-fountain-flowing");recording.join(40000)
+  main.post{monitor.addLifecycleCallback(observer);registered.countDown()}
+  assertTrue(registered.await(5,java.util.concurrent.TimeUnit.SECONDS))
+  try {
+   // Launch directly: ActivityScenario.launch itself waits for idle, which a continuously
+   // animated game need not reach until long after the entire choreography has completed.
+   context.startActivity(android.content.Intent(context,MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK))
+   assertTrue("The live restoration must finish",finished.await(100,java.util.concurrent.TimeUnit.SECONDS))
+   error.get()?.let{throw AssertionError("Native scene verification failed",it)}
+   recording.join(40000);pictures.forEach{it.join(5000)}
+  }finally{
+   val closed=java.util.concurrent.CountDownLatch(1)
+   main.post{monitor.removeLifecycleCallback(observer);monitor.getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).filterIsInstance<MainActivity>().forEach{it.finish()};main.removeCallbacksAndMessages(null);closed.countDown()}
+   closed.await(5,java.util.concurrent.TimeUnit.SECONDS)
+  }
+ }
+ @Test fun fountainReplayNeverChangesRewardsOrProgress(){
+  context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE).edit().putInt("coins",300).putInt("stars",4).putInt("tasks",1).putInt("story_position",3).commit()
+  val save=GardenSave(context)
+  ActivityScenario.launch(MainActivity::class.java).use{
+   onView(withText("Historia")).perform(click())
+   onView(withText("▶ Riluaj shatërvanin")).perform(click())
+   SystemClock.sleep(29000)
+   assertEquals(300,save.coins);assertEquals(4,save.stars);assertEquals(1,save.tasks);assertFalse(save.constructing)
+   assertEquals(3,save.storyPosition)
   }
  }
  @Test fun allRestorationPurchasesAndBoostersPersist(){

@@ -5,7 +5,7 @@ android {
     compileSdk = 35
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
-    defaultConfig { testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"; applicationId = "com.lazygarden.game"; minSdk = 24; targetSdk = 35; versionCode = 9; versionName = "0.8.1" }
+    defaultConfig { testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"; applicationId = "com.lazygarden.game"; minSdk = 24; targetSdk = 35; versionCode = 10; versionName = "0.9.0" }
 }
 
 dependencies {

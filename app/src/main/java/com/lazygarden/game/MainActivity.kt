@@ -20,8 +20,10 @@ import androidx.core.view.WindowInsetsCompat
 class MainActivity : AppCompatActivity() {
  private lateinit var save:GardenSave
  private var engine:Match3Engine?=null
+ private var world:GardenWorldView?=null
  private var screen="garden"
  private var rewardAnimator:ValueAnimator?=null
+ private var completionDialog:AlertDialog?=null
  private val names=arrayOf("Rikthe ujin e shatërvanit","Rregullo shtegun","Mbille kopshtin me lule","Riparo stolin","Rikthe gjelbërimin","Restauro hyrjen","Restauro fasadën e pronës")
 
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
@@ -29,13 +31,19 @@ class MainActivity : AppCompatActivity() {
   super.onCreate(state);WindowCompat.setDecorFitsSystemWindows(window,false);save=GardenSave(this);showGarden();if(save.hasPendingStory && !save.constructing)showStory()
   onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true){override fun handleOnBackPressed(){if(screen=="garden")finish() else {engine?.let{save.saveBoard(it)};showGarden()}}})
  }
- override fun onPause(){engine?.let{save.saveBoard(it)};super.onPause()}
- override fun onDestroy(){rewardAnimator?.cancel();super.onDestroy()}
+ override fun onResume(){super.onResume();world?.resumeScene()}
+ override fun onPause(){world?.pauseScene();engine?.let{save.saveBoard(it)};super.onPause()}
+ override fun onDestroy(){completionDialog?.dismiss();world?.pauseScene();rewardAnimator?.cancel();super.onDestroy()}
+ private fun findWorld(view:View):GardenWorldView? {
+  if(view is GardenWorldView)return view
+  if(view is android.view.ViewGroup)for(i in 0 until view.childCount)findWorld(view.getChildAt(i))?.let{return it}
+  return null
+ }
  private fun attach(view:View){
   rewardAnimator?.cancel()
   val host=FrameLayout(this).apply{setBackgroundColor(0xff142f28.toInt());addView(view,FrameLayout.LayoutParams(-1,-1))}
   ViewCompat.setOnApplyWindowInsetsListener(host){v,insets->val bars=insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout());v.setPadding(bars.left,bars.top,bars.right,bars.bottom);insets}
-  setContentView(host);ViewCompat.requestApplyInsets(host)
+  setContentView(host);world=findWorld(view);ViewCompat.requestApplyInsets(host)
   WindowInsetsControllerCompat(window,host).apply{systemBarsBehavior=WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE;hide(WindowInsetsCompat.Type.systemBars())}
  }
  private fun label(value:String,size:Float=18f,color:Int=Color.WHITE)=TextView(this).apply{text=value;textSize=size;setTextColor(color);gravity=Gravity.CENTER;typeface=Typeface.DEFAULT_BOLD;setShadowLayer(2f,0f,1f,0x77253020)}
@@ -50,7 +58,7 @@ class MainActivity : AppCompatActivity() {
   screen="garden";engine=null
   val root=FrameLayout(this)
   root.addView(GardenWorldView(this,save.tasks,save.constructing,save.decorations,onRestorationComplete={
-   if(save.constructing){save.finishRestoration();showGarden()}
+   if(save.constructing){val fountain=save.tasks==0;save.finishRestoration();showGarden();if(fountain)showFountainComplete()}
   },initialElapsed=save.restorationElapsed,checkpoint={save.checkpointRestoration(it)}).apply{contentDescription="Shiko pronën";setOnClickListener{if(!save.constructing)showEstate()}},FrameLayout.LayoutParams(-1,-1))
   val top=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(8),dp(12),0)}
   val balances=LinearLayout(this).apply{gravity=Gravity.CENTER;background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,18f);setPadding(dp(12),0,dp(12),0)}
@@ -145,10 +153,37 @@ class MainActivity : AppCompatActivity() {
    else if(save.advanceStory(position)){if(save.hasPendingStory)showStory() else showGarden()}
   },{if(replayChapter!=null)showStoryArchive() else showGarden()}))
  }
+ private fun showFountainComplete(){
+  val dialog=AlertDialog.Builder(this).create();completionDialog=dialog
+  val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(dp(18),dp(20),dp(18),dp(16));background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,26f)}
+  card.addView(label("Detyra e përfunduar!",25f,0xff654123.toInt()))
+  card.addView(label("Shatërvani është përsëri gjallë!",16f,0xff50713b.toInt()).apply{setPadding(0,dp(8),0,dp(12))})
+  val comparison=LinearLayout(this)
+  listOf("Para" to R.drawable.garden_before,"Pas" to R.drawable.garden_estate).forEach{(title,art)->
+   val tile=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
+   tile.addView(label(title,14f,0xff654123.toInt()))
+   tile.addView(ImageView(this).apply{setImageBitmap(GameSkin.bitmap(this@MainActivity,art));scaleType=ImageView.ScaleType.CENTER_CROP;contentDescription="Shatërvani: $title"},LinearLayout.LayoutParams(-1,dp(112)))
+   comparison.addView(tile,LinearLayout.LayoutParams(0,-2,1f).apply{setMargins(dp(3),0,dp(3),0)})
+  }
+  card.addView(comparison)
+  card.addView(premiumButton("Vazhdo ▶",true){dialog.dismiss()})
+  dialog.setView(card);dialog.show();dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+  dialog.setOnDismissListener{if(completionDialog===dialog)completionDialog=null}
+ }
+ private fun showFountainReplay(){
+  screen="fountain_replay";engine=null
+  val root=FrameLayout(this)
+  // This choreography has no save/payment callbacks: replay never changes progression.
+  root.addView(GardenWorldView(this,0,true,onRestorationComplete={showGarden()}),FrameLayout.LayoutParams(-1,-1))
+  val back=premiumButton("‹ Kopshti"){showGarden()}
+  root.addView(back,FrameLayout.LayoutParams(dp(130),dp(48),Gravity.TOP or Gravity.START).apply{setMargins(dp(10),dp(8),0,0)})
+  attach(root)
+ }
  private fun showStoryArchive(){
   screen="story_archive";engine=null
   val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(8),dp(12),dp(10));setBackgroundColor(0xff204d40.toInt())}
   root.addView(premiumButton("‹ Kopshti"){showGarden()});root.addView(label("Historia e pronës",26f,0xffffdf83.toInt()))
+  if(save.fountainRestored)root.addView(premiumButton("▶ Riluaj shatërvanin"){showFountainReplay()})
   val list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
   GardenStory.chapters.forEachIndexed{i,chapter->
    val unlocked=i<save.tasks;val read=save.storyPosition>=(i+1)*3

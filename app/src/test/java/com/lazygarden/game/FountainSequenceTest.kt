@@ -8,6 +8,13 @@ class FountainSequenceTest {
   assertEquals(0f,FountainSequence.water(19399),0f)
   assertEquals(1f,FountainSequence.water(22200),0f)
  }
+ @Test fun closeupAndRepairProgressReturnToStableGarden(){
+  assertEquals(0f,FountainSequence.camera(0),0f)
+  assertEquals(1f,FountainSequence.camera(10000),0f)
+  assertEquals(0f,FountainSequence.camera(FountainSequence.DURATION),0f)
+  assertEquals(0f,FountainSequence.repair(12400),0f)
+  assertEquals(1f,FountainSequence.repair(19400),0f)
+ }
  @Test fun everyoneArrivesBeforeInspectionAndSpeaksOnlyInScene(){
   for(actor in 0..3){assertEquals(0f,FountainSequence.approach(0,actor),0f);assertEquals(1f,FountainSequence.approach(4800,actor),0f)}
   for(ms in listOf(7000L,10000L,20000L,23000L)){assertTrue(FountainSequence.speaker(ms) in 0..3);assertTrue(FountainSequence.dialogue(ms).isNotEmpty())}
