@@ -12,17 +12,16 @@ class GardenSave(ctx:Context) {
  val fountainRestored get()=tasks>0
  val constructing get()=p.getBoolean("constructing",false)
  val restorationElapsed get()=p.getLong("restoration_elapsed",0L).coerceAtLeast(0L)
- val flowerChoiceId get()=p.getString("flower_choice",null)
- val flowerSceneActive get()=constructing && tasks==2
- val flowerSceneComplete get()=tasks>2 && flowerChoiceId!=null
+ val flowerChoice get()=p.getString("flower_choice",null)
+ val flowerSceneActive get()=constructing && tasks==1
+ val flowerSceneComplete get()=tasks>1 && flowerChoice!=null
  fun checkpointRestoration(ms:Long){if(constructing)p.edit().putLong("restoration_elapsed",ms.coerceAtLeast(0L)).commit()}
- fun chooseFlowers(id:String):Boolean {
+ fun chooseFlower(id:String):Boolean {
   if(!flowerSceneActive || FlowerSequence.choices.none{it.id==id})return false
   return p.edit().putString("flower_choice",id).commit()
  }
  val activeBoard get()=p.getString("active_board",null)
 
- // Live-game resources. They are virtual gameplay items only and have no cash value.
  val maxLives get()=5
  val lives get()=p.getInt("lives",maxLives).coerceIn(0,maxLives)
  val keys get()=p.getInt("keys",0).coerceAtLeast(0)
@@ -73,7 +72,7 @@ class GardenSave(ctx:Context) {
  fun beginRestoration():Boolean {
   if(constructing || tasks>=7 || coins<120 || (tasks>0 && stars<1))return false
   val edit=p.edit().putInt("coins",coins-120).putInt("stars",(stars-1).coerceAtLeast(0)).putBoolean("constructing",true).putLong("restoration_elapsed",0L)
-  if(tasks==2)edit.remove("flower_choice")
+  if(tasks==1)edit.remove("flower_choice")
   return edit.commit()
  }
  fun finishRestoration(){if(constructing)p.edit().putInt("tasks",tasks+1).putBoolean("constructing",false).putBoolean("fountain",true).remove("restoration_elapsed").commit()}
