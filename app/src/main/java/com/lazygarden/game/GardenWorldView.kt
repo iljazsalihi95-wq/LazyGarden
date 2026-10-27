@@ -31,7 +31,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
  private var lifecyclePaused=false
  override fun pauseScene(){lifecyclePaused=true;stopClock()}
  override fun resumeScene(){lifecyclePaused=false;startClock()}
- private val regions=arrayOf(RectF(.32f,.425f,.80f,.635f),RectF(.12f,.63f,.91f,1.04f),RectF(.75f,.31f,1.04f,.99f),RectF(-.04f,.46f,.32f,.65f),RectF(-.04f,.28f,.36f,.48f),RectF(.34f,.36f,.79f,.46f),RectF(.37f,.14f,1.04f,.415f))
+ private val regions=arrayOf(RectF(.32f,.425f,.80f,.635f),RectF(.12f,.63f,.91f,1.04f),RectF(.75f,.60f,1.04f,.99f),RectF(-.04f,.46f,.32f,.65f),RectF(-.04f,.28f,.36f,.48f),RectF(.34f,.36f,.79f,.46f),RectF(.37f,.14f,1.04f,.415f))
  override fun onAttachedToWindow(){super.onAttachedToWindow();startClock()}
  private fun startClock(){
   if(lifecyclePaused || windowVisibility!=VISIBLE || !isAttachedToWindow || lifeAnimator!=null)return

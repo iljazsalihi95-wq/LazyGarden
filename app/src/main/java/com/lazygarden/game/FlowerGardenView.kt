@@ -18,6 +18,7 @@ class FlowerGardenView(
  private val onComplete:()->Unit={}
 ):View(context),SceneLifecycle{
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+ private val backdrop=GardenBackdrop(context,1)
  private val garden=GameSkin.bitmap(context,R.drawable.garden_estate)
  private val workResidents=GameSkin.bitmap(context,R.drawable.resident_work_atlas)
  private val residents=BitmapFactory.decodeResource(resources,R.drawable.resident_atlas)
@@ -67,7 +68,7 @@ class FlowerGardenView(
   val s=maxOf(width.toFloat()/garden.width,height.toFloat()/garden.height)
   val dw=garden.width*s;val dh=garden.height*s
   val dst=RectF((width-dw)/2,(height-dh)/2,(width+dw)/2,(height+dh)/2)
-  c.drawBitmap(garden,null,dst,p)
+  backdrop.draw(c,dst);WorldRestorationArt.water(c,p,dst,life*12000f)
   bed.set(dst.left+dw*.12f,dst.top+dh*.61f,dst.left+dw*.88f,dst.top+dh*.78f)
   drawBed(c);drawPeople(c,dst,dw)
   val st=FlowerSequence.stage(ms)
