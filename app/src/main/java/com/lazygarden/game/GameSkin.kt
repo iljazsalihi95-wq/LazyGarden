@@ -10,7 +10,7 @@ import kotlin.math.min
 
 /** Production raster chrome, sliced rather than stretching carved edges or corner ornaments. */
 object GameSkin {
- private val cache=object:LruCache<Int,Bitmap>(16*1024){override fun sizeOf(key:Int,value:Bitmap)=value.byteCount/1024}
+ private val cache=object:LruCache<Int,Bitmap>((Runtime.getRuntime().maxMemory()/4096).toInt().coerceIn(16*1024,64*1024)){override fun sizeOf(key:Int,value:Bitmap)=value.byteCount/1024}
  fun bitmap(context:Context,id:Int):Bitmap=cache.get(id) ?: BitmapFactory.decodeResource(context.resources,id,BitmapFactory.Options().apply{inScaled=false}).also{cache.put(id,it)}
  fun nine(c:Canvas,b:Bitmap,dst:RectF,corner:Float,p:Paint,fraction:Float=.22f,center:Boolean=true){
   val sx=(min(b.width,b.height)*fraction).toInt().coerceAtLeast(1)

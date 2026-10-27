@@ -181,14 +181,14 @@ class GameFlowTest {
   context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE).edit().putInt("tasks",1).commit()
   val save=GardenSave(context)
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
-   onView(withContentDescription("Personazhi Meli")).check(matches(isDisplayed()));shot("09-story-meli")
+   onView(withContentDescription("Personazhi Meti")).check(matches(isDisplayed()));shot("09-story-meli")
    onView(withText("Vazhdo tregimin")).perform(click());assertEquals(1,save.storyPosition)
-   scenario.recreate();onView(withContentDescription("Personazhi Bejdi")).check(matches(isDisplayed()));shot("10-story-resumed")
+   scenario.recreate();onView(withContentDescription("Personazhi Merjem")).check(matches(isDisplayed()));shot("10-story-resumed")
    assertFalse(save.advanceStory(0));assertEquals(1,save.storyPosition)
    onView(withText("Vazhdo tregimin")).perform(click())
    onView(withText("Vazhdo tregimin")).perform(click());assertEquals(3,save.storyPosition);assertFalse(save.hasPendingStory)
    onView(withText("Historia")).perform(click());onView(withContentDescription("Kapitulli 1")).perform(click())
-   onView(withContentDescription("Personazhi Meli")).check(matches(isDisplayed()))
+   onView(withContentDescription("Personazhi Meti")).check(matches(isDisplayed()))
    onView(withText("Vazhdo tregimin")).perform(click());assertEquals(3,save.storyPosition)
   }
  }

@@ -20,9 +20,9 @@ object FlowerSequence {
  fun planting(ms:Long)=((ms-16000)/6000f).coerceIn(0f,1f)
  fun watering(ms:Long)=((ms-22000)/3500f).coerceIn(0f,1f)
  fun bloom(ms:Long)=((ms-25500)/3000f).coerceIn(0f,1f)
- fun speaker(ms:Long)=when(ms){in 4000..5799->"merjem";in 5800..7499->"meli";in 28500..DURATION->"merjem";else->null}
+ fun speaker(ms:Long)=when(ms){in 4000..5799->"meti";in 5800..7499->"merjem";in 28500..DURATION->"merjem";else->null}
  fun dialogue(ms:Long,lang:String="sq")=when(stage(ms)){
-  Stage.TALK->if(ms<5800)tr(lang,"Këtu do t’i mbjellim lulet. Le t’i zgjedhim bashkë!","Hier pflanzen wir die Blumen. Suchen wir sie gemeinsam aus!","Qui pianteremo i fiori. Scegliamoli insieme!","Тука ќе ги засадиме цвеќињата. Да ги избереме заедно!","Çiçekleri buraya dikeceğiz. Birlikte seçelim!") else tr(lang,"Dua shumë ngjyra pranë shatërvanit!","Ich möchte viele Farben am Brunnen!","Voglio tanti colori vicino alla fontana!","Сакам многу бои покрај фонтаната!","Çeşmenin yanında bol renk istiyorum!")
+  Stage.TALK->if(ms<5800)tr(lang,"Merjem, Meli, zgjidhni lulet!","Merjem, Meli, sucht die Blumen aus!","Merjem, Meli, scegliete i fiori!","Мерјем, Мели, изберете ги цвеќињата!","Merjem, Meli, çiçekleri seçin!") else tr(lang,"Meli, do t’i mbjellim bashkë!","Meli, wir pflanzen sie zusammen!","Meli, li pianteremo insieme!","Мели, ќе ги засадиме заедно!","Meli, birlikte dikeceğiz!")
   Stage.CELEBRATE->tr(lang,"Sa bukur! Kopshti po merr jetë.","Wie schön! Der Garten wird lebendig.","Che bello! Il giardino prende vita.","Колку убаво! Градината оживува.","Ne güzel! Bahçe canlanıyor.")
   else->""
  }

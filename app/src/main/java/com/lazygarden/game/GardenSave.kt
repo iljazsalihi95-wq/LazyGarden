@@ -20,6 +20,17 @@ class GardenSave(ctx:Context) {
   if(!flowerSceneActive || FlowerSequence.choices.none{it.id==id})return false
   return p.edit().putString("flower_choice",id).commit()
  }
+ val language get()=p.getString("language","sq")?:"sq"
+ val voiceEnabled get()=p.getBoolean("voice_enabled",true)
+ val sfxEnabled get()=p.getBoolean("sfx_enabled",true)
+ fun setLanguage(value:String){if(value in listOf("sq","de","it","mk","tr"))p.edit().putString("language",value).commit()}
+ fun setAudio(voice:Boolean,sfx:Boolean){p.edit().putBoolean("voice_enabled",voice).putBoolean("sfx_enabled",sfx).commit()}
+ /** A pending receipt is minted before one SDK show. Only that completed impression can settle it. */
+ fun beginAdReward(kind:String):String? {if(constructing||kind !in setOf("coins","star","moves","life"))return null;val id=java.util.UUID.randomUUID().toString();return if(p.edit().putString("ad_pending",id).putString("ad_kind",kind).commit())id else null}
+ fun settleAdReward(id:String):Boolean {if(p.getString("ad_pending",null)!=id)return false;val kind=p.getString("ad_kind","");val edit=p.edit().remove("ad_pending").remove("ad_kind")
+  when(kind){"coins"->edit.putInt("coins",coins+100);"star"->edit.putInt("stars",stars+1);"life"->edit.putInt("lives",(lives+1).coerceAtMost(maxLives));"moves"->{val board=Match3Engine(level);if(activeBoard==null||!board.restore(activeBoard!!)||!board.addMoves(5))return false;edit.putString("active_board",board.encode())};else->return false};return edit.commit()
+ }
+ fun cancelAdReward(id:String){if(p.getString("ad_pending",null)==id)p.edit().remove("ad_pending").remove("ad_kind").commit()}
  val activeBoard get()=p.getString("active_board",null)
 
  val maxLives get()=5

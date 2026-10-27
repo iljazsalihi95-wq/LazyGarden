@@ -9,7 +9,7 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /** Living estate: residents walk, talk and work inside the garden instead of story-only screens. */
-class GardenWorldView(context:Context,private val tasks:Int,private val constructing:Boolean=false,private val decorations:List<DecorItem> = emptyList(),private val focus:DecorItem?=null,private val onRestorationComplete:()->Unit={},initialElapsed:Long=0L,private val checkpoint:(Long)->Unit={}):View(context){
+class GardenWorldView(context:Context,private val tasks:Int,private val constructing:Boolean=false,private val decorations:List<DecorItem> = emptyList(),private val focus:DecorItem?=null,private val onRestorationComplete:()->Unit={},initialElapsed:Long=0L,private val checkpoint:(Long)->Unit={}):View(context),SceneLifecycle{
  private val decorationArt=mutableMapOf<Int,Bitmap>()
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val after=BitmapFactory.decodeResource(resources,R.drawable.garden_estate)
@@ -17,6 +17,11 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
  private val mask=Bitmap.createBitmap(256,384,Bitmap.Config.ARGB_8888)
  private val worksite by lazy { GameSkin.bitmap(context,R.drawable.fountain_worksite) }
  private val leafArt by lazy { GameSkin.bitmap(context,R.drawable.tile_leaf) }
+ private val settings=GardenSave(context)
+ private val voice=GardenVoice(context){settings.voiceEnabled}
+ private val sfx=GardenSfx(context)
+ private var lastDialogue=""
+ private var lastSoundStage:FountainSequence.Stage?=null
  private val names=listOf("Meti","Bejdi","Meli","Lina")
  private var progress=0f; private var life=0f
  private var sceneMs=initialElapsed; private var completed=false
@@ -24,8 +29,8 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
  private val sprites by lazy { BitmapFactory.decodeResource(resources,R.drawable.resident_atlas) }
  private var lifeAnimator:ValueAnimator?=null
  private var lifecyclePaused=false
- internal fun pauseScene(){lifecyclePaused=true;stopClock()}
- internal fun resumeScene(){lifecyclePaused=false;startClock()}
+ override fun pauseScene(){lifecyclePaused=true;stopClock()}
+ override fun resumeScene(){lifecyclePaused=false;startClock()}
  private val regions=arrayOf(RectF(.32f,.425f,.80f,.635f),RectF(.12f,.63f,.91f,1.04f),RectF(.75f,.31f,1.04f,.99f),RectF(-.04f,.46f,.32f,.65f),RectF(-.04f,.28f,.36f,.48f),RectF(.34f,.36f,.79f,.46f),RectF(.37f,.14f,1.04f,.415f))
  override fun onAttachedToWindow(){super.onAttachedToWindow();startClock()}
  private fun startClock(){
@@ -36,12 +41,14 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
    life=(life+dt/12000f)%1f
    if(constructing && !completed){sceneMs+=dt;progress=(sceneMs/FountainSequence.DURATION.toFloat()).coerceIn(0f,1f)
     if(sceneMs>=FountainSequence.DURATION){completed=true;post{if(isAttachedToWindow)onRestorationComplete()}}
-   };invalidate()
+   }
+   if(constructing&&tasks==0){val line=FountainSequence.dialogue(sceneMs);if(line!=lastDialogue){lastDialogue=line;if(line.isNotBlank())voice.speak(SceneText.line(line,settings.language),settings.language,when(FountainSequence.speaker(sceneMs)){0->GardenVoice.Role.MAN;1->GardenVoice.Role.BOY;2->GardenVoice.Role.WOMAN;else->GardenVoice.Role.GIRL},"fountain-$sceneMs")};val st=FountainSequence.stage(sceneMs);if(st!=lastSoundStage){lastSoundStage=st;if(settings.sfxEnabled)sfx.play(when(st){FountainSequence.Stage.WORK,FountainSequence.Stage.REPAIR->"hammer";FountainSequence.Stage.WATER_START->"water";FountainSequence.Stage.CELEBRATE->"reward";else->""})}}
+   invalidate()
   };start()}
  }
  override fun onWindowVisibilityChanged(visibility:Int){super.onWindowVisibilityChanged(visibility);if(visibility==VISIBLE)startClock() else stopClock()}
- private fun stopClock(){if(constructing)checkpoint(sceneMs);lifeAnimator?.removeAllUpdateListeners();lifeAnimator?.cancel();lifeAnimator=null}
- override fun onDetachedFromWindow(){stopClock();super.onDetachedFromWindow()}
+ private fun stopClock(){voice.stop();sfx.pause();if(constructing)checkpoint(sceneMs);lifeAnimator?.removeAllUpdateListeners();lifeAnimator?.cancel();lifeAnimator=null}
+ override fun onDetachedFromWindow(){stopClock();voice.release();sfx.release();super.onDetachedFromWindow()}
  private fun bubble(c:Canvas,x:Float,y:Float,name:String,text:String){
   val w=(width*.48f).coerceAtMost(dp(210).toFloat());val h=dp(58).toFloat();val left=(x-w/2).coerceIn(dp(8).toFloat(),width-w-dp(8));val top=(y-h-dp(12)).coerceAtLeast(dp(72).toFloat())
   p.color=0xf5fff8e7.toInt();p.style=Paint.Style.FILL;c.drawRoundRect(RectF(left,top,left+w,top+h),dp(14).toFloat(),dp(14).toFloat(),p)
@@ -50,8 +57,9 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   p.color=0xff4c3927.toInt();p.typeface=Typeface.DEFAULT;p.textSize=dp(11).toFloat();c.drawText(text.take(34),left+dp(12),top+dp(42),p)
  }
  override fun onDraw(c:Canvas){super.onDraw(c);val camera=if(constructing && tasks==0)FountainSequence.camera(sceneMs) else 0f;val scale=maxOf(width.toFloat()/after.width,height.toFloat()/after.height)*(1+camera*.28f);val dw=after.width*scale;val dh=after.height*scale;val dst=RectF((width-dw)/2,(height-dh)/2,(width+dw)/2,(height+dh)/2);if(camera>0)dst.offset(0f,(height*.46f-(dst.top+dh*.515f))*camera);focus?.let{dst.offset(0f,height*.39f-(dst.top+it.y*dh))};p.alpha=255;p.xfermode=null;p.shader=null;c.drawBitmap(before,null,dst,p)
-  if(tasks>=7)c.drawBitmap(after,null,dst,p) else if(tasks>0||constructing){mask.eraseColor(Color.TRANSPARENT);val mc=Canvas(mask);val mp=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.WHITE;maskFilter=BlurMaskFilter(3f,BlurMaskFilter.Blur.NORMAL)};for(i in regions.indices)if(i<tasks||(i==tasks&&constructing)){mp.alpha=if(i<tasks)255 else (255*if(tasks==0)FountainSequence.water(sceneMs) else progress).toInt();val r=regions[i];mc.drawRoundRect(RectF(r.left*256,r.top*384,r.right*256,r.bottom*384),5f,5f,mp)};val layer=c.saveLayer(dst,null);c.drawBitmap(after,null,dst,p);p.xfermode=PorterDuffXfermode(PorterDuff.Mode.DST_IN);c.drawBitmap(mask,null,dst,p);p.xfermode=null;c.restoreToCount(layer)}
+  if(tasks>=7)c.drawBitmap(after,null,dst,p) else if(tasks>0||constructing){mask.eraseColor(Color.TRANSPARENT);val mc=Canvas(mask);val mp=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.WHITE;maskFilter=BlurMaskFilter(3f,BlurMaskFilter.Blur.NORMAL)};for(i in regions.indices)if(i<tasks||(i==tasks&&constructing)){mp.alpha=if(i<tasks)255 else (255*if(tasks==0)FountainSequence.water(sceneMs) else progress).toInt();val r=regions[if(i==1)2 else if(i==2)1 else i];mc.drawRoundRect(RectF(r.left*256,r.top*384,r.right*256,r.bottom*384),5f,5f,mp)};val layer=c.saveLayer(dst,null);c.drawBitmap(after,null,dst,p);p.xfermode=PorterDuffXfermode(PorterDuff.Mode.DST_IN);c.drawBitmap(mask,null,dst,p);p.xfermode=null;c.restoreToCount(layer)}
   for(item in decorations){val bitmap=decorationArt.getOrPut(item.art){BitmapFactory.decodeResource(resources,item.art)};val w=dw*item.width;val h=w*bitmap.height/bitmap.width;val x=dst.left+item.x*dw;val y=dst.top+item.y*dh;p.alpha=255;p.shader=null;c.drawBitmap(bitmap,null,RectF(x-w/2,y-h,x+w/2,y),p)}
+  WorldRestorationArt.draw(context,c,dst,tasks,life)
   drawResidentsAndWater(c,dst,dw,dh)
   p.shader=LinearGradient(0f,0f,0f,height.toFloat(),intArrayOf(0x99102b25.toInt(),0x00000000,0x990c261f.toInt()),floatArrayOf(0f,.45f,1f),Shader.TileMode.CLAMP);c.drawRect(0f,0f,width.toFloat(),height.toFloat(),p);p.shader=null
 
@@ -116,7 +124,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
    val saved=c.save();val breath=1f+sin(life*18+id)*.006f;c.scale(1f,breath,x,y)
    val faceRight=if(visit>0)if(life<.75f)id==3 else id==2 else x<fx
    resident(c,id,x,y+bob,dw*.16f*(1-visit*.12f),frame,faceRight);c.restoreToCount(saved)
-   if(speaking){val clearOfFaces=minOf(y-dw*.23f,dst.top+dh*.59f-dw*.25f);bubble(c,x,clearOfFaces,names[id],FountainSequence.dialogue(sceneMs))}
+   if(speaking){val clearOfFaces=minOf(y-dw*.23f,dst.top+dh*.59f-dw*.25f);bubble(c,x,clearOfFaces,names[id],SceneText.line(FountainSequence.dialogue(sceneMs),settings.language))}
   }
   if(fountain && stage in listOf(FountainSequence.Stage.WORK,FountainSequence.Stage.REPAIR)){
    val by=fy+dh*.09f

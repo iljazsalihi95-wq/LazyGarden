@@ -7,23 +7,33 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
     val spec = Campaign.level(level)
     val board = Array(8) { IntArray(8) }
     val ice = Array(8) { IntArray(8) }
+    val terrain=Array(8){IntArray(8)} // 1 crate, 2/3 stone layers, 4 soil, 5 flower to water
+    val cargo=Array(8){IntArray(8)} // 1 seed parcel, 2 bird basket; fall through the board
+    var rescued=0;private set
+    private var modernGoals=true
+    val rescueTarget get()=if(modernGoals)spec.rescue else 0
+    val terrainRemaining get()=terrain.sumOf{row->row.count{it>0}}
     val collected = IntArray(6)
     var moves = spec.moves; private set
     var score = 0; private set
     var clearedIce = 0; private set
     var combo = 0; private set
     var revision = 0; private set
-    val won get() = score >= spec.target && clearedIce >= spec.ice && collected[spec.collectColor] >= spec.collectCount
+    val won get() = score >= spec.target && clearedIce >= spec.ice && collected[spec.collectColor] >= spec.collectCount && terrainRemaining==0 && rescued>=rescueTarget
     val earnedStars get() = if (!won) 0 else if (moves >= spec.moves / 3) 3 else if (moves >= spec.moves / 6) 2 else 1
     val failed get() = moves == 0 && !won
     data class Wave(val cells: List<Int>, val before: Array<IntArray>, val after: Array<IntArray>, val combo: Int,
         val origins:Array<IntArray> = Array(8){r->IntArray(8){r}},
         val iceBefore:Array<IntArray> = Array(8){IntArray(8)},val iceAfter:Array<IntArray> = Array(8){IntArray(8)},
-        val scoreAfter:Int=0,val shuffled:Boolean=false)
+        val scoreAfter:Int=0,val shuffled:Boolean=false,
+        val terrainBefore:Array<IntArray> = Array(8){IntArray(8)},val terrainAfter:Array<IntArray> = Array(8){IntArray(8)},
+        val cargoBefore:Array<IntArray> = Array(8){IntArray(8)},val cargoAfter:Array<IntArray> = Array(8){IntArray(8)})
     init {
         refill()
         val positions = (0..63).shuffled(random)
         positions.take(spec.ice).forEach { ice[it / 8][it % 8] = 1 }
+        positions.reversed().take(spec.terrainCount).forEach{terrain[it/8][it%8]=spec.terrainKind}
+        for(i in 0 until spec.rescue)cargo[0][1+i*3]=if(level>=126)2 else 1
     }
     private fun color(v: Int) = v % 6
     private fun matches(): Set<Int> {
@@ -80,7 +90,7 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
         if(kind==Booster.SHUFFLE){
             val before=Array(8){board[it].clone()}
             refill()
-            return listOf(Wave(emptyList(),before,Array(8){board[it].clone()},0,iceBefore=Array(8){ice[it].clone()},iceAfter=Array(8){ice[it].clone()},scoreAfter=score,shuffled=true))
+            return listOf(Wave(emptyList(),before,Array(8){board[it].clone()},0,iceBefore=Array(8){ice[it].clone()},iceAfter=Array(8){ice[it].clone()},scoreAfter=score,shuffled=true,terrainBefore=Array(8){terrain[it].clone()},terrainAfter=Array(8){terrain[it].clone()},cargoBefore=Array(8){cargo[it].clone()},cargoAfter=Array(8){cargo[it].clone()}))
         }
         val r=at/8;val c=at%8
         val hits=when(kind){
@@ -92,15 +102,16 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
             Booster.COLOR -> (0..63).filter{color(board[it/8][it%8])==color(board[r][c])}.toSet()
             Booster.SHUFFLE -> emptySet()
         }
-        return resolve(hits, at)
+        return resolve(hits, at,true)
     }
-    private fun resolve(initial:Set<Int>, b:Int):List<Wave> {
+    private fun resolve(initial:Set<Int>, b:Int,boosted:Boolean=false):List<Wave> {
         val waves = mutableListOf<Wave>()
         var hits = initial.toMutableSet()
         while (hits.isNotEmpty()) {
             combo++
             val before=Array(8){board[it].clone()}
             val iceBefore=Array(8){ice[it].clone()}
+            val terrainBefore=Array(8){terrain[it].clone()};val cargoBefore=Array(8){cargo[it].clone()}
             // Four creates a line rocket; five or intersecting runs create a blast.
             val specials=mutableMapOf<Int,Int>()
             for (axis in 0..1) for (line in 0..7) {
@@ -128,11 +139,17 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
                     if(kind>=3) for(r in (i/8-1).coerceAtLeast(0)..(i/8+1).coerceAtMost(7)) for(c in (i%8-1).coerceAtLeast(0)..(i%8+1).coerceAtMost(7)) hits.add(r*8+c)
                 }
             } while(pending.isNotEmpty())
+            // Crates break next to matches; stone takes two impacts, soil one, flowers need water or a power-up.
+            val adjacent=hits.flatMap{i->listOf(i-8,i+8,i-1,i+1).filter{it in 0..63 && kotlin.math.abs(it/8-i/8)+kotlin.math.abs(it%8-i%8)==1}}.toSet()
+            val waterHits=hits.filter{color(before[it/8][it%8])==3}.toSet()
+            val watered=waterHits.flatMap{i->listOf(i,i-8,i+8,i-1,i+1).filter{it in 0..63 && kotlin.math.abs(it/8-i/8)+kotlin.math.abs(it%8-i%8)<=1}}.toSet()
+            for(i in 0..63){val v=terrain[i/8][i%8];if((i in hits && v in 1..4)||(v==1&&i in adjacent)||(v==5&&(i in watered || ((boosted||initial.any{before[it/8][it%8]>=6})&&i in hits))))terrain[i/8][i%8]=if(v==3)2 else 0}
             for(i in hits) {
                 collected[color(board[i/8][i%8])]++
                 if(ice[i/8][i%8]>0){ice[i/8][i%8]=0;clearedIce++}
                 score+=10*combo
                 board[i/8][i%8]=-1
+
             }
             for((i,v) in specials) board[i/8][i%8]=v
             val origins=Array(8){IntArray(8)}
@@ -142,20 +159,25 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
                 val spawned=write+1
                 while(write>=0){board[write][c]=random.nextInt(6);origins[write][c]=write-spawned;write--}
             }
-            waves.add(Wave(hits.toList(),before,Array(8){board[it].clone()},combo,origins,iceBefore,Array(8){ice[it].clone()},score))
+            for(c in 0..7){val next=IntArray(8);for(r in 7 downTo 0){val item=cargoBefore[r][c];if(item>0){var to=(r+hits.count{it%8==c&&it/8>r}).coerceAtMost(7);while(to>r&&next[to]>0)to--;if(to==7)rescued++ else next[to]=item}};for(r in 0..7)cargo[r][c]=next[r]}
+            waves.add(Wave(hits.toList(),before,Array(8){board[it].clone()},combo,origins,iceBefore,Array(8){ice[it].clone()},score,terrainBefore=terrainBefore,terrainAfter=Array(8){terrain[it].clone()},cargoBefore=cargoBefore,cargoAfter=Array(8){cargo[it].clone()}))
             hits=matches().toMutableSet()
         }
         if(!won && !failed && !hasMove()) {
             val before=Array(8){board[it].clone()};refill()
             waves.add(Wave(emptyList(),before,Array(8){board[it].clone()},combo,
-                iceBefore=Array(8){ice[it].clone()},iceAfter=Array(8){ice[it].clone()},scoreAfter=score,shuffled=true))
+                iceBefore=Array(8){ice[it].clone()},iceAfter=Array(8){ice[it].clone()},scoreAfter=score,shuffled=true,terrainBefore=Array(8){terrain[it].clone()},terrainAfter=Array(8){terrain[it].clone()},cargoBefore=Array(8){cargo[it].clone()},cargoAfter=Array(8){cargo[it].clone()}))
         }
         return waves
     }
-    fun encode(): String = (listOf(level,moves,score,clearedIce) + collected.toList() + board.flatMap{it.toList()} + ice.flatMap{it.toList()}).joinToString(",")
+    fun addMoves(count:Int):Boolean {if(won||count !in 1..5||moves>spec.moves+10)return false;moves+=count;revision++;return true}
+    fun encode(): String = (listOf(level,moves,score,clearedIce) + collected.toList() + board.flatMap{it.toList()} + ice.flatMap{it.toList()} + listOf(rescued,if(modernGoals)1 else 0) + terrain.flatMap{it.toList()} + cargo.flatMap{it.toList()}).joinToString(",")
     fun restore(raw:String):Boolean {
         val v=raw.split(',').map{it.toIntOrNull() ?: return false}
-        if(v.size!=138 || v[0]!=level || v[1] !in 0..spec.moves || v[2]<0 || v[3] !in 0..spec.ice || v.slice(4..9).any{it<0} || v.slice(10..73).any{it !in 0..23} || v.slice(74..137).any{it !in 0..1}) return false
+        if(v.size !in listOf(138,268) || v[0]!=level || v[1] !in 0..(spec.moves+15) || v[2]<0 || v[3] !in 0..spec.ice || v.slice(4..9).any{it<0} || v.slice(10..73).any{it !in 0..23} || v.slice(74..137).any{it !in 0..1}) return false
+        if(v.size==268&&(v[138] !in 0..spec.rescue || v[139] !in 0..1 || v.slice(140..203).any{it !in 0..5} || v.slice(204..267).any{it !in 0..2}))return false
+        modernGoals=v.size==268&&v[139]==1;rescued=if(v.size==268)v[138] else 0
+        for(i in 0..63){terrain[i/8][i%8]=if(modernGoals)v[140+i] else 0;cargo[i/8][i%8]=if(modernGoals)v[204+i] else 0}
         moves=v[1];score=v[2];clearedIce=v[3]
         for(i in 0..5) collected[i]=v[4+i]
         for(i in 0..63){board[i/8][i%8]=v[10+i];ice[i/8][i%8]=v[74+i]}
@@ -163,7 +185,7 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
     }
 }
 
-data class LevelSpec(val moves:Int,val target:Int,val ice:Int,val collectColor:Int,val collectCount:Int)
+data class LevelSpec(val moves:Int,val target:Int,val ice:Int,val collectColor:Int,val collectCount:Int,val terrainKind:Int=0,val terrainCount:Int=0,val rescue:Int=0)
 object Campaign {
     const val COUNT=250
     // Ten chapters introduce collection, frost, mixed goals and tighter move budgets.
@@ -176,6 +198,9 @@ object Campaign {
             650+chapter*170+stage*18,
             if(chapter==0 && stage<5)0 else (4+chapter*4+pattern*2).coerceAtMost(48),
             (chapter+stage)%6,
-            if(chapter==0 && stage<3)0 else 8+chapter*3+pattern*3)
+            if(chapter==0 && stage<3)0 else 8+chapter*3+pattern*3,
+            when {number<8->0;number<26->1;number<51->3;number<76->4;else->5},
+            if(number<8)0 else (3+chapter+pattern).coerceAtMost(14),
+            if(number>=101)if(number>=176)2 else 1 else 0)
     }
 }
