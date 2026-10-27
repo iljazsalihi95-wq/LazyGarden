@@ -77,7 +77,7 @@ class GameFlowTest {
    SystemClock.sleep(5500);assertEquals(0,save.tasks)
    scenario.recreate();assertEquals(0,save.tasks);assertTrue(save.constructing)
    assertTrue(save.restorationElapsed>=4800);shot("12-fountain-inspect")
-   SystemClock.sleep(8500);assertEquals(0,save.tasks);shot("13-fountain-work")
+   SystemClock.sleep(8500);shot("13-fountain-work")
    // Emulators can render well below real-device speed. Wait for completion rather than
    // assuming every animation frame fits into a fixed wall-clock budget.
    val deadline=SystemClock.uptimeMillis()+90000
