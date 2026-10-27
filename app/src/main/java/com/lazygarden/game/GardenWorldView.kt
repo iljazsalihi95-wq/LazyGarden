@@ -15,6 +15,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
  private val after=BitmapFactory.decodeResource(resources,R.drawable.garden_estate)
  private val before=BitmapFactory.decodeResource(resources,R.drawable.garden_before)
  private val mask=Bitmap.createBitmap(256,384,Bitmap.Config.ARGB_8888)
+ private val leafArt by lazy { GameSkin.bitmap(context,R.drawable.tile_leaf) }
  private val names=listOf("Meti","Bejdi","Meli","Lina")
  private var progress=0f; private var life=0f
  private var sceneMs=initialElapsed; private var completed=false
@@ -26,7 +27,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   if(windowVisibility!=VISIBLE || !isAttachedToWindow || lifeAnimator!=null)return
   var previous=android.os.SystemClock.uptimeMillis()
   lifeAnimator=ValueAnimator.ofFloat(0f,1f).apply{duration=12000;repeatCount=ValueAnimator.INFINITE;interpolator=LinearInterpolator();addUpdateListener{
-   val now=android.os.SystemClock.uptimeMillis();val dt=(now-previous).coerceAtMost(80);previous=now
+   val now=android.os.SystemClock.uptimeMillis();val dt=(now-previous).coerceIn(0L,1000L);previous=now
    life=(life+dt/12000f)%1f
    if(constructing && !completed){sceneMs+=dt;progress=(sceneMs/FountainSequence.DURATION.toFloat()).coerceIn(0f,1f)
     if(sceneMs>=FountainSequence.DURATION){completed=true;post{if(isAttachedToWindow)onRestorationComplete()}}
@@ -44,7 +45,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   p.color=0xff4c3927.toInt();p.typeface=Typeface.DEFAULT;p.textSize=dp(11).toFloat();c.drawText(text.take(34),left+dp(12),top+dp(42),p)
  }
  override fun onDraw(c:Canvas){super.onDraw(c);val scale=maxOf(width.toFloat()/after.width,height.toFloat()/after.height);val dw=after.width*scale;val dh=after.height*scale;val dst=RectF((width-dw)/2,(height-dh)/2,(width+dw)/2,(height+dh)/2);focus?.let{dst.offset(0f,height*.39f-(dst.top+it.y*dh))};p.alpha=255;p.xfermode=null;p.shader=null;c.drawBitmap(before,null,dst,p)
-  if(tasks>=7)c.drawBitmap(after,null,dst,p) else if(tasks>0||constructing){mask.eraseColor(Color.TRANSPARENT);val mc=Canvas(mask);val mp=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.WHITE;maskFilter=BlurMaskFilter(3f,BlurMaskFilter.Blur.NORMAL)};for(i in regions.indices)if(i<tasks||(i==tasks&&constructing)){mp.alpha=if(i<tasks)255 else (255*if(tasks==0)((sceneMs-17400)/2000f).coerceIn(0f,1f) else progress).toInt();val r=regions[i];mc.drawRoundRect(RectF(r.left*256,r.top*384,r.right*256,r.bottom*384),5f,5f,mp)};val layer=c.saveLayer(dst,null);c.drawBitmap(after,null,dst,p);p.xfermode=PorterDuffXfermode(PorterDuff.Mode.DST_IN);c.drawBitmap(mask,null,dst,p);p.xfermode=null;c.restoreToCount(layer)}
+  if(tasks>=7)c.drawBitmap(after,null,dst,p) else if(tasks>0||constructing){mask.eraseColor(Color.TRANSPARENT);val mc=Canvas(mask);val mp=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.WHITE;maskFilter=BlurMaskFilter(3f,BlurMaskFilter.Blur.NORMAL)};for(i in regions.indices)if(i<tasks||(i==tasks&&constructing)){mp.alpha=if(i<tasks)255 else (255*if(tasks==0)FountainSequence.water(sceneMs) else progress).toInt();val r=regions[i];mc.drawRoundRect(RectF(r.left*256,r.top*384,r.right*256,r.bottom*384),5f,5f,mp)};val layer=c.saveLayer(dst,null);c.drawBitmap(after,null,dst,p);p.xfermode=PorterDuffXfermode(PorterDuff.Mode.DST_IN);c.drawBitmap(mask,null,dst,p);p.xfermode=null;c.restoreToCount(layer)}
   for(item in decorations){val bitmap=decorationArt.getOrPut(item.art){BitmapFactory.decodeResource(resources,item.art)};val w=dw*item.width;val h=w*bitmap.height/bitmap.width;val x=dst.left+item.x*dw;val y=dst.top+item.y*dh;p.alpha=255;p.shader=null;c.drawBitmap(bitmap,null,RectF(x-w/2,y-h,x+w/2,y),p)}
   drawResidentsAndWater(c,dst,dw,dh)
   p.shader=LinearGradient(0f,0f,0f,height.toFloat(),intArrayOf(0x99102b25.toInt(),0x00000000,0x990c261f.toInt()),floatArrayOf(0f,.45f,1f),Shader.TileMode.CLAMP);c.drawRect(0f,0f,width.toFloat(),height.toFloat(),p);p.shader=null
@@ -64,19 +65,42 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   val fx=dst.left+dw*.55f;val fy=dst.top+dh*.515f
   val amount=if(tasks>0)1f else if(constructing)FountainSequence.water(sceneMs) else 0f
   if(amount>0f)drawWater(c,fx,fy,dw,amount)
+  if(tasks==0 && amount<1f){
+   // Debris marks the blocked intake; it clears progressively during the repair.
+   val debris=if(constructing)((19400-sceneMs)/2000f).coerceIn(0f,1f) else 1f
+   p.alpha=(255*debris).toInt()
+   for(i in 0..3){val x=fx+dw*(.095f+i*.012f);val y=fy+dh*(.035f+(i%2)*.006f)
+    c.drawBitmap(leafArt,null,RectF(x-dw*.018f,y-dw*.018f,x+dw*.018f,y+dw*.018f),p)
+   };p.alpha=255
+  }
   val xs=floatArrayOf(.40f,.68f,.30f,.77f);val ys=floatArrayOf(.59f,.59f,.64f,.64f)
   for(id in 0..3){
    val t=if(fountain)FountainSequence.approach(sceneMs,id) else if(tasks>0)1f else 0f
    val startX=if(id%2==0).15f else .88f;val startY=.81f+id*.025f
-   val x=dst.left+dw*(startX+(xs[id]-startX)*t);val y=dst.top+dh*(startY+(ys[id]-startY)*t)
-   val walking=fountain && stage==FountainSequence.Stage.WALK && t<1f
+   var x=dst.left+dw*(startX+(xs[id]-startX)*t);var y=dst.top+dh*(startY+(ys[id]-startY)*t)
+   val visit=if(tasks>0 && !constructing && id>=2)ResidentAnimation.flowerVisit(life) else 0f
+   if(visit>0){val targetX=if(id==2).21f else .86f;val targetY=if(id==2).50f else .48f
+    x+=(dst.left+dw*targetX-x)*visit;y+=(dst.top+dh*targetY-y)*visit
+   }
+   val walking=(fountain && stage==FountainSequence.Stage.WALK && t<1f) || visit>0f && visit<1f
    val working=fountain && stage in listOf(FountainSequence.Stage.WORK,FountainSequence.Stage.REPAIR) && id<2
    val speaking=fountain && FountainSequence.speaker(sceneMs)==id
    val celebrating=fountain && stage==FountainSequence.Stage.CELEBRATE
    val tick=(life*96).toInt()
-   val frame=when{walking->1+tick%2;working->6-tick%2;celebrating->if(tick%3==0)0 else 7;speaking->if(tick%2==0)4 else 0;fountain && stage in listOf(FountainSequence.Stage.LOOK,FountainSequence.Stage.DISCOVER)->3;else->0}
-   val bob=if(celebrating)-abs(sin(life*100+id))*dh*.009f else 0f
-   resident(c,id,x,y+bob,dw*.16f,frame,x<fx)
+   val motion=when {
+    walking -> ResidentAnimation.State.WALK
+    working -> ResidentAnimation.State.WORK
+    celebrating -> ResidentAnimation.State.CELEBRATE
+    speaking -> ResidentAnimation.State.TALK
+    fountain && stage==FountainSequence.Stage.WATER_START -> ResidentAnimation.State.HAPPY
+    fountain && stage in listOf(FountainSequence.Stage.LOOK,FountainSequence.Stage.DISCOVER) || visit==1f -> ResidentAnimation.State.LOOK
+    else -> ResidentAnimation.State.IDLE
+   }
+   val frame=ResidentAnimation.frame(motion,tick+id)
+   val bob=if(celebrating)-abs(sin(life*100+id))*dh*.009f else if(walking)-abs(sin(life*100+id))*dh*.002f else 0f
+   val saved=c.save();val breath=1f+sin(life*18+id)*.006f;c.scale(1f,breath,x,y)
+   val faceRight=if(visit>0)if(life<.75f)id==3 else id==2 else x<fx
+   resident(c,id,x,y+bob,dw*.16f*(1-visit*.12f),frame,faceRight);c.restoreToCount(saved)
    if(speaking)bubble(c,x,y-dh*.10f,names[id],FountainSequence.dialogue(sceneMs))
   }
   if(fountain && stage in listOf(FountainSequence.Stage.WORK,FountainSequence.Stage.REPAIR)){

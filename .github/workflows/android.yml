@@ -52,9 +52,11 @@ jobs:
             adb shell settings put secure immersive_mode_confirmations confirmed
             adb shell input keyevent KEYCODE_WAKEUP
             adb shell wm dismiss-keyguard
-            gradle connectedDebugAndroidTest
+            test_status=0
+            gradle connectedDebugAndroidTest || test_status=$?
             mkdir -p device-screenshots
-            adb pull /data/local/tmp/lazygarden-screenshots/. device-screenshots/
+            adb pull /data/local/tmp/lazygarden-screenshots/. device-screenshots/ || true
+            exit "$test_status"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

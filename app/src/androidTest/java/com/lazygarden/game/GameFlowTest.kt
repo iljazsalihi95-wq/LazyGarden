@@ -25,9 +25,7 @@ class GameFlowTest {
  @Before fun reset(){context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE).edit().clear().commit()}
  private fun shot(name:String){
   val instrument=InstrumentationRegistry.getInstrumentation()
-  instrument.waitForIdleSync()
-  SystemClock.sleep(1000) // Let the Android window entrance and reward animation finish.
-  instrument.waitForIdleSync()
+  SystemClock.sleep(1000) // Let window entrance/reward finish; a living scene never becomes idle.
   val image=instrument.uiAutomation.takeScreenshot()
   val file=File(context.getExternalFilesDir(null),"$name.png")
   file.outputStream().use{image.compress(Bitmap.CompressFormat.PNG,100,it)}
@@ -35,6 +33,12 @@ class GameFlowTest {
   for(command in listOf("mkdir -p /data/local/tmp/lazygarden-screenshots","cp ${file.absolutePath} /data/local/tmp/lazygarden-screenshots/$name.png")){
    ParcelFileDescriptor.AutoCloseInputStream(instrument.uiAutomation.executeShellCommand(command)).use{it.readBytes()}
   }
+ }
+ private fun recordFountain():Thread {
+  val ui=InstrumentationRegistry.getInstrumentation().uiAutomation
+  ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand("mkdir -p /data/local/tmp/lazygarden-screenshots")).use{it.readBytes()}
+  val output=ui.executeShellCommand("screenrecord --bit-rate 1800000 --time-limit 35 /data/local/tmp/lazygarden-screenshots/15-fountain-sequence.mp4")
+  return Thread{ParcelFileDescriptor.AutoCloseInputStream(output).use{it.readBytes()}}.apply{start()}
  }
  @Test fun nativeNavigationAndBoardAreVisible(){
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
@@ -68,17 +72,20 @@ class GameFlowTest {
  @Test fun fountainChoreographyCompletesOnlyAfterWaterAndSurvivesInterruption(){
   context.getSharedPreferences("garden_progress",Context.MODE_PRIVATE).edit().putInt("coins",150).putInt("stars",1).commit()
   val save=GardenSave(context);assertTrue(save.beginRestoration())
+  val recording=recordFountain()
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
-   SystemClock.sleep(5500);assertEquals(0,save.tasks);shot("12-fountain-inspect")
+   SystemClock.sleep(5500);assertEquals(0,save.tasks)
    scenario.recreate();assertEquals(0,save.tasks);assertTrue(save.constructing)
-   assertTrue(save.restorationElapsed>=4800)
+   assertTrue(save.restorationElapsed>=4800);shot("12-fountain-inspect")
    SystemClock.sleep(8500);assertEquals(0,save.tasks);shot("13-fountain-work")
-   SystemClock.sleep(13000)
-   InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+   // Emulators can render well below real-device speed. Wait for completion rather than
+   // assuming every animation frame fits into a fixed wall-clock budget.
+   val deadline=SystemClock.uptimeMillis()+90000
+   while(save.constructing && SystemClock.uptimeMillis()<deadline)SystemClock.sleep(250)
    assertEquals(1,save.tasks);assertFalse(save.constructing);assertEquals(30,save.coins)
    save.finishRestoration();assertEquals(1,save.tasks)
    scenario.recreate();assertTrue(GardenSave(context).fountainRestored)
-   onView(withText("Lexo më vonë")).perform(click());shot("14-fountain-flowing")
+   onView(withText("Lexo më vonë")).perform(click());shot("14-fountain-flowing");recording.join(40000)
   }
  }
  @Test fun allRestorationPurchasesAndBoostersPersist(){
