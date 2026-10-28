@@ -86,7 +86,6 @@ class FountainQuestFlowTest {
    assertTrue(drawn.any{it.id=="rexha"&&it.state==CharacterAnimation.State.WORK})
    assertTrue(drawn.filter{it.id=="rexha"&&it.state==CharacterAnimation.State.WALK}.let{it.isNotEmpty()&&it.all{pose->pose.facingRight}})
    assertFalse(save.restorationMaterialsReady());val oldCoins=save.coins;action(s);assertEquals(FountainQuest.Stage.COLLECT,save.fountainQuestStage);assertEquals(oldCoins,save.coins)
-   // Earn through the actual Match-3 win transaction; no test stock injection.
    repeat(5){assertTrue(save.win(solve(save.level)))}
    assertTrue(save.restorationMaterialsReady());shot("premium-03-materials-ready")
    val stock=save.restorationNeeds().associate{it.material to save.materialCount(it.material)}
@@ -130,21 +129,31 @@ class FountainQuestFlowTest {
    var flight:MaterialRewardFlightView?=null
    var coinsFlight:RewardFlightView?=null
    onUi{a->flight=views(a.window.decorView).filterIsInstance<MaterialRewardFlightView>().single();coinsFlight=views(a.window.decorView).filterIsInstance<RewardFlightView>().single()}
-   // ActivityScenario.moveToState waits for UI idleness before stopping the Activity,
-   // which lets a reward finish. A system Home event interrupts the actual live flight.
    val stopped=java.util.concurrent.CountDownLatch(1)
    onUi{a->a.lifecycle.addObserver(object:androidx.lifecycle.LifecycleEventObserver{
     override fun onStateChanged(owner:androidx.lifecycle.LifecycleOwner,event:androidx.lifecycle.Lifecycle.Event){
      if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP){owner.lifecycle.removeObserver(this);stopped.countDown()}
     }
    })}
-   ParcelFileDescriptor.AutoCloseInputStream(InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("input keyevent KEYCODE_HOME")).use{it.readBytes()}
+   val ui=InstrumentationRegistry.getInstrumentation().uiAutomation
+   ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand("input keyevent KEYCODE_HOME")).use{it.readBytes()}
    assertTrue("The system must stop the Activity",stopped.await(10,java.util.concurrent.TimeUnit.SECONDS))
    val pausedMaterial=flight!!.animationFraction;val pausedCoins=coinsFlight!!.animationFraction
    assertTrue("Material flight is paused before arrival",pausedMaterial<1f);assertTrue("Coin flight is paused before arrival",pausedCoins<1f)
    SystemClock.sleep(700)
    assertEquals(pausedMaterial,flight!!.animationFraction,0f);assertEquals(pausedCoins,coinsFlight!!.animationFraction,0f)
-   s.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+   val resumed=java.util.concurrent.CountDownLatch(1)
+   val monitor=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+   val callback=object:androidx.test.runner.lifecycle.ActivityLifecycleCallback{
+    override fun onActivityLifecycleChanged(a:android.app.Activity,state:androidx.test.runner.lifecycle.Stage){
+     if(a is MainActivity&&state==androidx.test.runner.lifecycle.Stage.RESUMED){currentActivity=a;resumed.countDown()}
+    }
+   }
+   monitor.addLifecycleCallback(callback)
+   try{
+    ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand("am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x10200000 -n com.lazygarden.game/.MainActivity")).use{it.readBytes()}
+    assertTrue("Launcher must bring LazyGarden back to RESUMED",resumed.await(15,java.util.concurrent.TimeUnit.SECONDS))
+   }finally{monitor.removeLifecycleCallback(callback)}
    shot("premium-07-match-material-reward");SystemClock.sleep(2000)
    onUi{a->assertTrue(views(a.window.decorView).filterIsInstance<TextView>().any{it.text.toString()=="Tuba  2/4"})}
    assertFalse(save.win(solve(1)));assertEquals(2,save.materialCount(Material.PIPE));pauseForTeardown()
