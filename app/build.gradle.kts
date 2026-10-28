@@ -9,9 +9,15 @@ android {
     }
     buildFeatures { buildConfig = true }
     defaultConfig {
-        val adApp = providers.gradleProperty("admobAppId").orNull
-        manifestPlaceholders["admobAppId"] = adApp ?: "ca-app-pub-3940256099942544~3347511713"
-        buildConfigField("boolean", "ADMOB_CONFIGURED", (adApp != null).toString())
+        val adApp = providers.gradleProperty("admobAppId").orNull ?: "ca-app-pub-9794339868092490~7051142351"
+        val rewarded = providers.gradleProperty("admobRewardedId").orNull ?: "ca-app-pub-9794339868092490/1798815672"
+        val banner = providers.gradleProperty("admobBannerId").orNull ?: "ca-app-pub-9794339868092490/5546488993"
+        val interstitial = providers.gradleProperty("admobInterstitialId").orNull ?: "ca-app-pub-9794339868092490/6788960466"
+        manifestPlaceholders["admobAppId"] = adApp
+        buildConfigField("String", "ADMOB_REWARDED_ID", "\"$rewarded\"")
+        buildConfigField("String", "ADMOB_BANNER_ID", "\"$banner\"")
+        buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"$interstitial\"")
+        buildConfigField("boolean", "ADMOB_CONFIGURED", "true")
         buildConfigField("boolean", "ADS_TEST_MODE", providers.gradleProperty("adsTestMode").orElse("false").get())
     }
     namespace = "com.lazygarden.game"
