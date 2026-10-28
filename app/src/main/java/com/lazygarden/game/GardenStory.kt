@@ -42,7 +42,55 @@ object GardenStory {
   StoryChapter("Kapitulli 2 · Brenda shtëpisë",listOf(
    StoryLine(GardenCharacter.HAFSA,"Mami, a mund ta bëjmë një kënd me libra në dhomë?"),
    StoryLine(GardenCharacter.UNEJSI,"Edhe unë dua një vend për lodrat!"),
-   StoryLine(GardenCharacter.LAZI,"Po. Kopshti ishte vetëm fillimi. Tani hyjmë brenda dhe secila dhomë ka tregimin e vet.")))
+   StoryLine(GardenCharacter.LAZI,"Po. Kopshti ishte vetëm fillimi. Tani hyjmë brenda dhe secila dhomë ka tregimin e vet."))),
+  StoryChapter("Dritaret që sjellin dritë",listOf(
+   StoryLine(GardenCharacter.MEDINA,"Mami, kjo dritare mezi hapet dhe dhoma është e errët."),
+   StoryLine(GardenCharacter.MELI,"Lazi, thirre Besin. Duam dritë, por edhe dritare të sigurta për fëmijët."),
+   StoryLine(GardenCharacter.BESI,"Më duhen xhami, doreza dhe izolim. Kur t'i fitoni, i ndërrojmë një nga një."))),
+  StoryChapter("Çatia pas shiut",listOf(
+   StoryLine(GardenCharacter.REJANI,"Babi, këtu ra një pikë uji kur binte shi."),
+   StoryLine(GardenCharacter.LAZI,"Askush nuk ngjitet lart. Nermiri do ta kontrollojë çatinë."),
+   StoryLine(GardenCharacter.NERMIRI,"Ka tjegulla të dëmtuara. Mblidhni materialet; punën lart e bëj unë."))),
+  StoryChapter("Dhoma e fëmijëve",listOf(
+   StoryLine(GardenCharacter.HAFSA,"Dua raft për libra dhe një tavolinë ku mund të vizatojmë."),
+   StoryLine(GardenCharacter.UNEJSI,"Dhe kuti për lodrat, që të mos jenë gjithandej!"),
+   StoryLine(GardenCharacter.LULI,"Do të ndërtojmë raftin, tavolinën dhe kutitë. Na duhen dru, vida dhe bojë."))),
+  StoryChapter("Kuzhina e vjetër",listOf(
+   StoryLine(GardenCharacter.MELI,"Kuzhina ka nevojë për rregullim para se ta përdorim si duhet."),
+   StoryLine(GardenCharacter.LAZI,"Rexha kontrollon ujin, Mevludini rrymën. Pastaj zgjedhim mobiliet."),
+   StoryLine(GardenCharacter.REXHA,"Fillojmë me tubat dhe lavamanin. Materialet duhet t'i kemi gati para montimit."))),
+  StoryChapter("Drita në kuzhinë",listOf(
+   StoryLine(GardenCharacter.METI,"Këtu është errët edhe kur jemi të gjithë brenda."),
+   StoryLine(GardenCharacter.MEVLUDINI,"Do të vendosim ndriçim të ri dhe priza të sigurta."),
+   StoryLine(GardenCharacter.LAZI,"Mirë. Pjesët i fitojmë me nivelet dhe pastaj fillon puna."))),
+  StoryChapter("Salloni i familjes",listOf(
+   StoryLine(GardenCharacter.MELI,"Këtu dua një vend ku të mblidhemi të gjithë, jo vetëm mobilie të shpërndara."),
+   StoryLine(GardenCharacter.BEJDI,"Mund të ndihmojmë të zgjedhim këndin e leximit."),
+   StoryLine(GardenCharacter.LULI,"Së pari dyshemeja dhe raftet; pastaj vendosim pjesët dekorative."))),
+  StoryChapter("Ballkoni i harruar",listOf(
+   StoryLine(GardenCharacter.RONA,"Nga këtu shihet gjithë kopshti, por ballkoni është bosh."),
+   StoryLine(GardenCharacter.MELI,"Do ta bëjmë një kënd të qetë me lule dhe ulëse."),
+   StoryLine(GardenCharacter.GEZIMI,"Më sillni vazot, dheun dhe fidanët. Pastaj e gjelbërojmë."))),
+  StoryChapter("Punishtja e vogël",listOf(
+   StoryLine(GardenCharacter.CUFI,"Babi, ku do t'i mbajmë biçikletat dhe veglat?"),
+   StoryLine(GardenCharacter.LAZI,"Garazhi i vogël do të bëhet punishte dhe depo."),
+   StoryLine(GardenCharacter.GREKU,"Duhet pastrim, rafte dhe një derë që mbyllet mirë. Fillojmë pasi të kemi materialet."))),
+  StoryChapter("Këndi i biçikletave",listOf(
+   StoryLine(GardenCharacter.CUFI,"Tani dua një vend ku biçikleta të mos bjerë në tokë."),
+   StoryLine(GardenCharacter.BEJDI,"Edhe helmetat mund t'i varim pranë tyre."),
+   StoryLine(GardenCharacter.GREKU,"Mbajtëset, grepat dhe dërrasat fitohen në nivelet e ardhshme."))),
+  StoryChapter("Oborri i mbrëmjes",listOf(
+   StoryLine(GardenCharacter.MELI,"Kopshti është bukur ditën. Tani duhet të jetë i këndshëm edhe në mbrëmje."),
+   StoryLine(GardenCharacter.LAZI,"Mevludini vendos ndriçimin e jashtëm dhe Gëzimi rregullon bimët rreth tij."),
+   StoryLine(GardenCharacter.MEVLUDINI,"Fenerët dhe kabllot i vendosim vetëm pasi të kontrollojmë çdo lidhje."))),
+  StoryChapter("Zona e lojës",listOf(
+   StoryLine(GardenCharacter.UNEJSI,"A mund të kemi një vend vetëm për lojë?"),
+   StoryLine(GardenCharacter.RONA,"Dhe një tavolinë të vogël për vizatime jashtë."),
+   StoryLine(GardenCharacter.LAZI,"Po. Do ta ndërtojmë pasi të fitojmë materialet dhe yjet e nevojshëm."))),
+  StoryChapter("Festa e kopshtit",listOf(
+   StoryLine(GardenCharacter.MELI,"Shiko sa shumë ndryshoi shtëpia. Por kemi ende punë përpara."),
+   StoryLine(GardenCharacter.LAZI,"Sot familja e provon kopshtin e restauruar; nesër hapim zonën tjetër të pronës."),
+   StoryLine(GardenCharacter.BEJDI,"Atëherë le ta festojmë këtë pjesë dhe pastaj vazhdojmë me aventurën tjetër!")))
  )
  const val LINES_PER_CHAPTER=3
 }
