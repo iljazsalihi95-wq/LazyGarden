@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check native source integrity
+        run: python3 .github/scripts/check-native-source.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -16,6 +18,13 @@ jobs:
         with:
           gradle-version: '8.9'
       - run: gradle testDebugUnitTest assembleDebug
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: LazyGarden-unit-tests-${{ github.sha }}
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
       - name: Record APK provenance
         run: |
           git rev-parse HEAD > app/build/outputs/apk/debug/commit-sha.txt
@@ -34,6 +43,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Check native source integrity
+        run: python3 .github/scripts/check-native-source.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
