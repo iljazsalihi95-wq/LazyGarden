@@ -79,7 +79,25 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
      cy=top+(source+(r-source)*u*u)*cell
     }
     materialArt.draw(c,p,material,RectF(x+cell*.12f,cy+cell*.12f,x+cell*.88f,cy+cell*.88f))
-    if(terrain>0)SpriteArt.draw(c,p,obstacleArt,3,2,0,RectF(x,y,x+cell,y+cell),210)
+    if(terrain>0)SpriteArt.draw(c,p,obstacleArt,3,2,0,RectF(x,y,x+cell,y+cell),255)
+   }
+  }
+  // Released parts leaving the bottom of the board remain visible until collected.
+  if(active!=null&&!active.shuffled&&effect>=.35f){
+   val u=((effect-.35f)/.65f).coerceIn(0f,1f)
+   val material=RestorationInventory.rewardForLevel(engine.level,save.tasks)?.first?:Material.TOOL
+   for(col in 0..7){
+    val beforeCount=(0..7).count{active.cargoBefore[it][col]>0}
+    val afterCount=(0..7).count{active.cargoAfter[it][col]>0}
+    if(beforeCount>afterCount){
+     val source=(0..7).last{active.cargoBefore[it][col]>0}
+     val x=left+(col+.5f)*cell;val y=top+(source+.5f+(8-source)*u*u)*cell
+     val size=cell*(.76f-.30f*u)
+     materialArt.draw(c,p,material,RectF(x-size/2,y-size/2,x+size/2,y+size/2))
+     p.color=0xffffdc7a.toInt();p.alpha=((1-u)*190).toInt()
+     for(k in 0..4)c.drawCircle(x+sin(k*2f)*cell*.25f*u,y-k*cell*.15f,cell*.035f,p)
+     p.alpha=255
+    }
    }
   }
   if(active!=null && boostOrigin>=0 && boostEffect!=null && effect<.48f){
