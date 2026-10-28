@@ -58,7 +58,7 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
   if(engine.spec.terrainCount>0||engine.rescueTarget>0){
    val idx=when(engine.spec.terrainKind){1->0;2,3->1;4->2;else->3}
    SpriteArt.draw(c,p,obstacleArt,3,2,idx,RectF(w*.13f,112*d,w*.13f+24*d,136*d));text(c,"${engine.terrainRemaining}",w*.31f,130*d,16*d)
-   if(engine.rescueTarget>0){SpriteArt.draw(c,p,obstacleArt,3,2,if(engine.level>=126)5 else 4,RectF(w*.42f,112*d,w*.42f+26*d,138*d));text(c,"${engine.rescued}/${engine.rescueTarget}",w*.59f,130*d,16*d)}
+   if(engine.rescueTarget>0){materialArt.draw(c,p,RestorationInventory.rewardForLevel(engine.level,save.tasks)?.first?:Material.TOOL,RectF(w*.42f,112*d,w*.42f+26*d,138*d));text(c,"${engine.rescued}/${engine.rescueTarget}",w*.59f,130*d,16*d)}
   }
   val bounds=RectF(left-12*d,top-12*d,left+8*cell+12*d,top+8*cell+12*d);p.color=0xff082d39.toInt();c.drawRoundRect(bounds,18*d,18*d,p)
   for(r in 0..7)for(col in 0..7){val x=left+col*cell;val y=top+r*cell;p.colorFilter=if((r+col)%2==0)null else darkSocket;c.drawBitmap(socket,null,RectF(x-.6f*d,y-.6f*d,x+cell+.6f*d,y+cell+.6f*d),p);p.colorFilter=null;if(selected==r*8+col){p.shader=RadialGradient(x+cell/2,y+cell/2,cell*.72f,intArrayOf(0xccfff09a.toInt(),0x00fff09a),null,Shader.TileMode.CLAMP);c.drawCircle(x+cell/2,y+cell/2,cell*.72f,p);p.shader=null}}
