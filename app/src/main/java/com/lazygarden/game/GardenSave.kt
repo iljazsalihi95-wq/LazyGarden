@@ -6,6 +6,7 @@ import java.util.Calendar
 class GardenSave(ctx:Context) {
  private val p=ctx.getSharedPreferences("garden_progress",Context.MODE_PRIVATE)
  val coins get()=p.getInt("coins",0)
+ val xp get()=p.getInt("xp",0).coerceAtLeast(0)
  val stars get()=p.getInt("stars",0)
  val level get()=p.getInt("level",1).coerceIn(1,Campaign.COUNT)
  val tasks get()=p.getInt("tasks",if(p.getBoolean("fountain",false))1 else 0)
@@ -80,6 +81,43 @@ class GardenSave(ctx:Context) {
  fun saveBoard(board:Match3Engine){if(board.level==level&&p.getInt("rewarded_level",0)<board.level)p.edit().putString("active_board",board.encode()).commit()}
  fun clearBoard(){p.edit().remove("active_board").commit()}
  fun win(board:Match3Engine):Boolean {if(!board.won)return false;if(board.level<level||p.getInt("rewarded_level",0)>=board.level){p.edit().putInt("rating_${board.level}",maxOf(rating(board.level),board.earnedStars)).commit();return false};if(board.level!=level)return false;val newChest=(chestProgress+1).coerceAtMost(5);val newKeys=keys+if(level%10==0)1 else 0;val newTickets=tickets+if(level%5==0)1 else 0;val edit=p.edit().putInt("coins",coins+150).putInt("stars",stars+1).putInt("rewarded_level",level).putInt("rating_$level",board.earnedStars).putInt("chest_progress",newChest).putInt("keys",newKeys).putInt("event_tickets",newTickets).putInt("level",(level+1).coerceAtMost(Campaign.COUNT)).remove("active_board");RestorationInventory.rewardForLevel(level,tasks)?.let{grantMaterial(it.first,it.second,edit)};return edit.commit()}
- fun beginRestoration():Boolean {if(constructing||tasks>=7||coins<120||(tasks>0&&stars<1)||!restorationMaterialsReady())return false;val edit=p.edit().putInt("coins",coins-120).putInt("stars",(stars-1).coerceAtLeast(0)).putBoolean("constructing",true).putLong("restoration_elapsed",0L);consumeRestorationMaterials(tasks,edit);if(tasks==1)edit.remove("flower_choice");return edit.commit()}
+ fun beginRestoration(fountainQuest:Boolean=false):Boolean {if(fountainQuest&&tasks!=0)return false;if(constructing||tasks>=7||coins<120||(tasks>0&&stars<1)||!restorationMaterialsReady())return false;val edit=p.edit().putInt("coins",coins-120).putInt("stars",(stars-1).coerceAtLeast(0)).putBoolean("constructing",true).putLong("restoration_elapsed",0L);consumeRestorationMaterials(tasks,edit);if(fountainQuest)edit.putString("fountain_quest_stage",FountainQuest.Stage.REPAIR.name).putLong("fountain_quest_elapsed",0);if(tasks==1)edit.remove("flower_choice");return edit.commit()}
  fun finishRestoration(){if(constructing)p.edit().putInt("tasks",tasks+1).putBoolean("constructing",false).putBoolean("fountain",true).remove("restoration_elapsed").commit()}
+ val fountainQuestActive get()=tasks==0&&p.getBoolean("fountain_quest_active",false)
+ val fountainQuestStage get()=if(tasks>0)FountainQuest.Stage.COMPLETE else runCatching{FountainQuest.Stage.valueOf(p.getString("fountain_quest_stage",null)?:"MELI_APPROACH")}.getOrDefault(FountainQuest.Stage.MELI_APPROACH)
+ val fountainQuestElapsed get()=p.getLong("fountain_quest_elapsed",0).coerceAtLeast(0)
+ val fountainCleanedMask get()=p.getInt("fountain_cleaned_mask",0) and 7
+ fun startFountainQuest():Boolean {
+  if(tasks>0||constructing&&!fountainQuestActive)return false
+  return p.edit().putBoolean("fountain_quest_active",true).commit()
+ }
+ fun checkpointFountain(stage:FountainQuest.Stage,elapsed:Long){
+  if(fountainQuestActive&&fountainQuestStage==stage)p.edit().putLong("fountain_quest_elapsed",elapsed.coerceAtLeast(0)).commit()
+ }
+ fun advanceFountainTimed(stage:FountainQuest.Stage,elapsed:Long):Boolean {
+  if(!fountainQuestActive||fountainQuestStage!=stage||stage.duration<=0||elapsed<stage.duration)return false
+  val next=FountainQuest.timedNext(stage)?:return false
+  return p.edit().putString("fountain_quest_stage",next.name).putLong("fountain_quest_elapsed",0).commit()
+ }
+ fun actFountain(action:FountainQuest.Action,leaf:Int=-1):Boolean {
+  if(!fountainQuestActive)return false
+  val stage=fountainQuestStage
+  if(stage==FountainQuest.Stage.COLLECT&&action==FountainQuest.Action.RESTORE)return beginRestoration(true)
+  if(stage==FountainQuest.Stage.CLEAN&&action==FountainQuest.Action.CLEAN_LEAF){
+   if(leaf !in 0..2||fountainCleanedMask and (1 shl leaf)!=0)return false
+   val mask=fountainCleanedMask or (1 shl leaf)
+   val edit=p.edit().putInt("fountain_cleaned_mask",mask)
+   if(mask==7)edit.putString("fountain_quest_stage",FountainQuest.Stage.START_WATER.name).putLong("fountain_quest_elapsed",0)
+   return edit.commit()
+  }
+  if(stage==FountainQuest.Stage.CLAIM&&action==FountainQuest.Action.CLAIM){
+   if(!constructing||tasks!=0)return false
+   return p.edit().putInt("tasks",1).putBoolean("constructing",false).putBoolean("fountain",true)
+    .putString("fountain_quest_stage",FountainQuest.Stage.COMPLETE.name).putInt("coins",coins+75)
+    .putInt("stars",stars+1).putInt("xp",xp+50).remove("restoration_elapsed").putLong("fountain_quest_elapsed",0).commit()
+  }
+  val next=FountainQuest.actionNext(stage,action)?:return false
+  return p.edit().putString("fountain_quest_stage",next.name).putLong("fountain_quest_elapsed",0).commit()
+ }
+
 }
