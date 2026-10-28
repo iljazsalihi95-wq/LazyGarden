@@ -1,21 +1,48 @@
 package com.lazygarden.game
 
 enum class GardenCharacter(val displayName:String,val portrait:Int){
- METI("Meti",R.drawable.character_meti),MELI("Meli",R.drawable.character_meli),BEJDI("Bejdi",R.drawable.character_bejdi),LINA("Lina",R.drawable.character_lina),
- CUFI("Cufi",R.drawable.character_bejdi),RONA("Rona",R.drawable.character_lina),MEDINA("Medina",R.drawable.character_lina),HAFSA("Hafsa",R.drawable.character_meli),
- GEZIMI("Gëzimi",R.drawable.character_meti),HURIJA("Hurija",R.drawable.character_meli),MEKANIKU("Mekaniku",R.drawable.character_meti),MERJEM("Merjem",R.drawable.character_meli)
+ LAZI("Lazi",R.drawable.character_meti),MELI("Meli",R.drawable.character_meli),
+ BEJDI("Bejdi",R.drawable.character_bejdi),METI("Meti",R.drawable.character_meti),CUFI("Cufi",R.drawable.character_bejdi),RONA("Rona",R.drawable.character_lina),
+ REJANI("Rejani",R.drawable.character_bejdi),MEDINA("Medina",R.drawable.character_lina),HAFSA("Hafsa",R.drawable.character_meli),UNEJSI("Unejsi",R.drawable.character_bejdi),
+ GREKU("Greku",R.drawable.character_meti),REXHA("Rexha",R.drawable.character_meti),NERMIRI("Nermiri",R.drawable.character_meti),BEKA("Beka",R.drawable.character_meti),
+ GEZIMI("Gëzimi",R.drawable.character_meti),BESI("Besi",R.drawable.character_meti),MEVLUDINI("Mevludini",R.drawable.character_meti),LULI("Luli",R.drawable.character_meti)
 }
 data class StoryLine(val character:GardenCharacter,val text:String)
 data class StoryChapter(val title:String,val lines:List<StoryLine>)
 object GardenStory {
  val chapters=listOf(
-  StoryChapter("Zëri i ujit",listOf(StoryLine(GardenCharacter.METI,"Uji u kthye. Tani le t’i japim ngjyra kopshtit."),StoryLine(GardenCharacter.MERJEM,"Unë do të zgjedh lulet. Meli, do të më ndihmosh t’i mbjellim?"),StoryLine(GardenCharacter.MELI,"Me kënaqësi! Fitojmë yllin tjetër dhe fillojmë mbjelljen."))),
-  StoryChapter("Lulet e Merjemit",listOf(StoryLine(GardenCharacter.MERJEM,"Lulet e zgjedhura do të qëndrojnë këtu. Do t’i ujitim çdo ditë."),StoryLine(GardenCharacter.BEJDI,"Por gurët e shtegut janë çarë. Duhet t’i rregullojmë që të kalojmë pranë tyre."),StoryLine(GardenCharacter.METI,"Fitojmë Coins dhe një yll në Match-3, pastaj fillojmë me gurët."))),
-  StoryChapter("Shtegu i kujtimeve",listOf(StoryLine(GardenCharacter.BEJDI,"Shtegu është përsëri i sigurt. Çdo gur u vendos me kujdes."),StoryLine(GardenCharacter.MELI,"Pas gjithë kësaj pune dua të ulem. Por stoli është dëmtuar!"),StoryLine(GardenCharacter.METI,"Atëherë puna tjetër është stoli. Do t’i zëvendësojmë dërrasat."))),
-  StoryChapter("Pushim në kopsht",listOf(StoryLine(GardenCharacter.MELI,"Stoli është i qëndrueshëm dhe boja u tha. Më në fund mund të pushojmë."),StoryLine(GardenCharacter.MERJEM,"Nga këtu shihet zona e tharë. Le t’i kthejmë gjelbërimin."),StoryLine(GardenCharacter.BEJDI,"Unë përgatit tokën. Ti merr pemët e reja pas nivelit tjetër."))),
-  StoryChapter("Rrënjët e së ardhmes",listOf(StoryLine(GardenCharacter.MERJEM,"Pemët janë mbjellë dhe shkurret po çelin. Kopshti ka nevojë për kujdes çdo ditë."),StoryLine(GardenCharacter.METI,"Miqtë do të vijnë ta shohin, por porta ende ngec."),StoryLine(GardenCharacter.BEJDI,"Puna tjetër: menteshat, shtyllat, boja dhe fenerët e hyrjes."))),
-  StoryChapter("Porta e hapur",listOf(StoryLine(GardenCharacter.BEJDI,"Porta hapet lirshëm dhe fenerët ndriçojnë hyrjen."),StoryLine(GardenCharacter.MELI,"Tani mbetet shtëpia. Dritaret dhe fasada duan shumë punë."),StoryLine(GardenCharacter.METI,"Do ta bëjmë së bashku: skela, riparim, suva, bojë dhe lulet e fundit."))),
-  StoryChapter("Shtëpia merr jetë",listOf(StoryLine(GardenCharacter.MERJEM,"Shtëpia ndriçon përsëri. Lulet, shtegu dhe pemët e bëjnë këtë vend tonin."),StoryLine(GardenCharacter.MELI,"E mbaj mend si dukej ditën e parë. Sa shumë kemi ndryshuar!"),StoryLine(GardenCharacter.METI,"Shtatë punë të përfunduara. Nivelet e tjera dhe dekorimet na presin.")))
+  StoryChapter("Shatërvani i vjetër",listOf(
+   StoryLine(GardenCharacter.MELI,"Lazi, shatërvani s'po jep ujë. Fëmijët po presin ta shohin duke punuar."),
+   StoryLine(GardenCharacter.LAZI,"Po e shoh. Këtu duhet Rexha. Po e thërras hidraulikun."),
+   StoryLine(GardenCharacter.REXHA,"Pompa është bllokuar. Më duhen pjesët dhe veglat; mblidhini në nivel dhe e rregullojmë."))),
+  StoryChapter("Lulet e oborrit",listOf(
+   StoryLine(GardenCharacter.RONA,"Mami, a mund të kemi lule këtu? Unë dhe Medina i ujitim."),
+   StoryLine(GardenCharacter.MELI,"Po. Lazi, për tokën më mirë ta thërrasim Gëzimin."),
+   StoryLine(GardenCharacter.GEZIMI,"Mblidhni fidanët, dheun dhe ujitësen. Pastaj i mbjellim bashkë."))),
+  StoryChapter("Shtegu i sigurt",listOf(
+   StoryLine(GardenCharacter.CUFI,"Babi, biçikleta ngec te gurët e thyer!"),
+   StoryLine(GardenCharacter.LAZI,"Mos kaloni aty derisa ta rregullojmë. Meli, po e thërras Grekun ta shohë."),
+   StoryLine(GardenCharacter.GREKU,"Duhet pastruar dhe niveluar. Na duhen gurë, rërë dhe vegla para se të fillojmë."))),
+  StoryChapter("Stoli për familjen",listOf(
+   StoryLine(GardenCharacter.MELI,"Ky stol mezi mbahet. Fëmijët s'duhet të ulen ende."),
+   StoryLine(GardenCharacter.LAZI,"Për dru e thërrasim Lulin. Ai e bën si duhet."),
+   StoryLine(GardenCharacter.LULI,"Më sillni dërrasat, vidat, letrën e zmeriles dhe bojën. Pastaj e riparojmë e e provojmë."))),
+  StoryChapter("Kopshti bëhet i gjallë",listOf(
+   StoryLine(GardenCharacter.BEJDI,"Unë e Meti mbledhim gjethet. Cufi e Rona mund t'i sjellin veglat."),
+   StoryLine(GardenCharacter.MELI,"Shumë mirë. Gëzimi na tregon çfarë duhet mbjellë."),
+   StoryLine(GardenCharacter.GEZIMI,"Na duhen fara, fidanë dhe pleh. Kur t'i kemi, fillojmë gjelbërimin."))),
+  StoryChapter("Hyrja e pronës",listOf(
+   StoryLine(GardenCharacter.LAZI,"Porta ngec dhe drita jashtë s'punon. Janë dy punë të ndryshme."),
+   StoryLine(GardenCharacter.MELI,"Thirre Grekun për portën dhe Mevludinin për rrymën."),
+   StoryLine(GardenCharacter.MEVLUDINI,"Unë kontrolloj kabllot e fenerët. Pa pjesët e duhura nuk e ndezim rrymën."))),
+  StoryChapter("Fasada e shtëpisë",listOf(
+   StoryLine(GardenCharacter.MELI,"Kopshti u bë bukur. Tani shihet sa e lodhur është shtëpia."),
+   StoryLine(GardenCharacter.LAZI,"Beka merret me fasadën, Besi me dritaret dhe Nermiri me çatinë. Po i thërrasim me radhë."),
+   StoryLine(GardenCharacter.BEKA,"Së pari materialet dhe skela. Pastaj riparojmë, suvatojmë dhe lyejmë; jo punë sa për sy e faqe."))),
+  StoryChapter("Kapitulli 2 · Brenda shtëpisë",listOf(
+   StoryLine(GardenCharacter.HAFSA,"Mami, a mund ta bëjmë një kënd me libra në dhomë?"),
+   StoryLine(GardenCharacter.UNEJSI,"Edhe unë dua një vend për lodrat!"),
+   StoryLine(GardenCharacter.LAZI,"Po. Kopshti ishte vetëm fillimi. Tani hyjmë brenda dhe secila dhomë ka tregimin e vet.")))
  )
  const val LINES_PER_CHAPTER=3
 }
