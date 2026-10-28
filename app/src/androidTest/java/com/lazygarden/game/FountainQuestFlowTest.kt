@@ -35,6 +35,19 @@ class FountainQuestFlowTest {
   android.os.Handler(android.os.Looper.getMainLooper()).post{try{block(checkNotNull(currentActivity))}catch(t:Throwable){error.set(t)}finally{done.countDown()}}
   assertTrue("Native action must reach the main thread",done.await(15,java.util.concurrent.TimeUnit.SECONDS));error.get()?.let{throw it}
  }
+ private fun recreateNative(){
+  val previous=checkNotNull(currentActivity)
+  val resumed=java.util.concurrent.CountDownLatch(1)
+  val monitor=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+  val callback=object:androidx.test.runner.lifecycle.ActivityLifecycleCallback{
+   override fun onActivityLifecycleChanged(a:android.app.Activity,state:androidx.test.runner.lifecycle.Stage){
+    if(a is MainActivity&&a!==previous&&state==androidx.test.runner.lifecycle.Stage.RESUMED){currentActivity=a;resumed.countDown()}
+   }
+  }
+  onUi{monitor.addLifecycleCallback(callback);it.recreate()}
+  try{assertTrue("Recreated native Activity must resume",resumed.await(20,java.util.concurrent.TimeUnit.SECONDS))}
+  finally{onUi{monitor.removeLifecycleCallback(callback)}}
+ }
  private fun awaitQuestLayout(){
   val end=SystemClock.uptimeMillis()+10000
   while(SystemClock.uptimeMillis()<end){var laidOut=false;onUi{a->val v=quest(a);laidOut=v.isLaidOut&&v.width>0&&v.height>0};if(laidOut)return;SystemClock.sleep(30)}
@@ -64,7 +77,7 @@ class FountainQuestFlowTest {
    val coins=save.coins;val stars=save.stars;action(s);assertEquals(stars,save.stars);assertEquals(FountainQuest.Stage.REPAIR,save.fountainQuestStage);assertEquals(coins-120,save.coins)
    save.restorationNeeds().forEach{assertEquals(stock.getValue(it.material)-it.count,save.materialCount(it.material))}
    assertFalse(save.actFountain(FountainQuest.Action.RESTORE));SystemClock.sleep(900);shot("premium-04-rexha-work")
-   s.recreate();s.onActivity{currentActivity=it};assertTrue(save.constructing);assertEquals(0,save.tasks)
+   recreateNative();assertTrue(save.constructing);assertEquals(0,save.tasks)
    waitFor(s,FountainQuest.Stage.CLEAN)
    for(i in 0..2){onUi{a->val v=quest(a);val point=v.leafCenter(i);tap(v,point.x,point.y)};assertTrue(save.fountainCleanedMask and (1 shl i)!=0)}
    waitFor(s,FountainQuest.Stage.START_WATER);action(s);waitFor(s,FountainQuest.Stage.CLAIM)
@@ -73,7 +86,7 @@ class FountainQuestFlowTest {
    action(s);assertEquals(1,save.tasks);assertFalse(save.constructing)
    assertEquals(beforeCoins+75,save.coins);assertEquals(beforeStars+1,save.stars);assertEquals(beforeXp+50,save.xp)
    assertFalse(save.actFountain(FountainQuest.Action.CLAIM));assertFalse(save.hasPendingStory);assertEquals(3,save.storyPosition);shot("premium-06-rewards-in-flight")
-   s.recreate();assertEquals(1,save.tasks);assertEquals(beforeCoins+75,save.coins);assertEquals(beforeStars+1,save.stars);assertEquals(beforeXp+50,save.xp)
+   recreateNative();assertEquals(1,save.tasks);assertEquals(beforeCoins+75,save.coins);assertEquals(beforeStars+1,save.stars);assertEquals(beforeXp+50,save.xp);onUi{a->assertTrue(views(a.window.decorView).any{it.contentDescription=="Logo LazyGarden"})}
   }
  }
  @Test fun actualResultScreenDeliversEarnedMaterialIntoItsCounter(){
