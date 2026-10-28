@@ -14,6 +14,20 @@ class MaterialArt(private val context:Context){
  fun draw(c:Canvas,p:Paint,m:Material,r:RectF){
   p.shader=null;p.colorFilter=null;p.alpha=255;p.style=Paint.Style.FILL
   when(m){
+   Material.SEEDLING->{
+    p.color=0xff786045.toInt();c.drawOval(RectF(r.left+r.width()*.08f,r.top+r.height()*.70f,r.right-r.width()*.08f,r.bottom-r.height()*.05f),p)
+    p.color=0xff548640.toInt();p.strokeWidth=r.width()*.06f;c.drawLine(r.centerX(),r.bottom-r.height()*.18f,r.centerX(),r.top+r.height()*.16f,p)
+    p.color=0xff7cc558.toInt();c.drawOval(RectF(r.left+r.width()*.12f,r.top+r.height()*.24f,r.centerX()+r.width()*.03f,r.top+r.height()*.45f),p)
+    c.drawOval(RectF(r.centerX()-r.width()*.03f,r.top+r.height()*.10f,r.right-r.width()*.12f,r.top+r.height()*.34f),p)
+   }
+   Material.FERTILIZER,Material.SAND->{
+    p.shader=LinearGradient(r.left,r.top,r.right,r.bottom,intArrayOf(0xfff7e9bb.toInt(),0xffb29761.toInt()),null,Shader.TileMode.CLAMP)
+    c.drawRoundRect(RectF(r.left+r.width()*.16f,r.top+r.height()*.22f,r.right-r.width()*.16f,r.bottom-r.height()*.08f),r.width()*.13f,r.width()*.13f,p);p.shader=null
+    p.color=if(m==Material.FERTILIZER)0xff4a8749.toInt() else 0xff9d783d.toInt()
+    if(m==Material.FERTILIZER)c.drawOval(RectF(r.left+r.width()*.34f,r.top+r.height()*.40f,r.right-r.width()*.34f,r.top+r.height()*.68f),p)
+    else for(i in 0..6)c.drawCircle(r.left+r.width()*(.3f+(i%3)*.18f),r.top+r.height()*(.43f+(i/3)*.12f),r.width()*.025f,p)
+    p.strokeWidth=r.width()*.045f;p.color=0xff8b7048.toInt();c.drawLine(r.left+r.width()*.22f,r.top+r.height()*.24f,r.right-r.width()*.22f,r.top+r.height()*.24f,p)
+   }
    Material.PAINT,Material.PLASTER->{
     val body=RectF(r.left+r.width()*.16f,r.top+r.height()*.24f,r.right-r.width()*.16f,r.bottom-r.height()*.10f)
     p.shader=LinearGradient(body.left,0f,body.right,0f,intArrayOf(0xff718e96.toInt(),0xffecf5ee.toInt(),0xff6c9099.toInt()),null,Shader.TileMode.CLAMP);c.drawRoundRect(body,r.width()*.06f,r.width()*.06f,p);p.shader=null
