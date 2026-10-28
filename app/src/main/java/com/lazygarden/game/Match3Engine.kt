@@ -36,6 +36,10 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
         for(i in 0 until spec.rescue){
             val column=1+i*3
             cargo[0][column]=if(level>=126)2 else 1
+            if(terrain[0][column]==0){
+                val replace=(0..63).firstOrNull{terrain[it/8][it%8]>0&&cargo[it/8][it%8]==0}
+                if(replace!=null)terrain[replace/8][replace%8]=0
+            }
             terrain[0][column]=1
         }
     }
@@ -241,7 +245,7 @@ object Campaign {
             (chapter+stage)%6,
             if(chapter==0 && stage<3)0 else 8+chapter*3+pattern*3,
             when {number<8->0;number<26->1;number<51->3;number<76->4;else->5},
-            if(number<8)0 else (3+chapter+pattern).coerceAtMost(14),
+            if(number<8)1 else (3+chapter+pattern).coerceAtMost(14),
             if(number>=176)2 else 1)
     }
 }
