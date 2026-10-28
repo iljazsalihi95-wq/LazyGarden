@@ -92,7 +92,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   }
   drawActors(c,w,h,fx,fy,f)
   for(i in 0..2){val x=fx+w*(i-1)*.14f;val y=fy+w*(.29f+(i%2)*.07f);leaves[i].set(x-24*d,y-24*d,x+24*d,y+24*d)
-   if(stage.ordinal<=FountainQuest.Stage.CLEAN.ordinal&&(save.fountainCleanedMask and (1 shl i))==0){c.drawBitmap(leaf,null,leaves[i],p);if(stage==FountainQuest.Stage.CLEAN)glow(c,x,y,24*d)}
+   if(stage.ordinal<=FountainQuest.Stage.CLEAN.ordinal&&(save.fountainCleanedMask and (1 shl i))==0){for(k in 0..3){val lx=x+(k%2-.5f)*16*d;val ly=y+(k/2-.5f)*11*d;val l=c.save();c.rotate(k*53f,lx,ly);c.drawBitmap(leaf,null,RectF(lx-10*d,ly-10*d,lx+10*d,ly+10*d),p);c.restoreToCount(l)};if(stage==FountainQuest.Stage.CLEAN)glow(c,x,y,24*d)}
   }
   if(stage==FountainQuest.Stage.START_WATER){
    val x=fx+w*.17f;val y=fy+w*.15f;p.color=0xffbc4931.toInt();p.style=Paint.Style.STROKE;p.strokeWidth=5*d;c.drawCircle(x,y,17*d,p)
@@ -126,7 +126,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   val m=progress(FountainQuest.Stage.MELI_APPROACH);val children=progress(FountainQuest.Stage.CHILDREN_APPROACH);val lazi=progress(FountainQuest.Stage.LAZI_APPROACH);val rexha=progress(FountainQuest.Stage.REXHA_ARRIVAL)
   fun route(x:Float,y:Float,tx:Float,ty:Float,t:Float)=CharacterAnimation.move(CharacterAnimation.Position(x,y),CharacterAnimation.Position(tx,ty),t)
   val mp=route(-w*.15f,h*.85f,fx-w*.32f,fy+w*.28f,m)
-  val lp=route(w*.88f,h*.37f,fx-w*.10f,fy+w*.30f,lazi)
+  val lp=route(w*.60f,h*.44f,fx-w*.10f,fy+w*.30f,lazi)
   val cp=route(w*1.15f,h*.88f,fx+w*.12f,fy+w*.49f,children)
   val rp=route(w*1.3f,h*.95f,fx+w*.33f,fy+w*.52f,children)
   val plumber=route(-w*.2f,h*.91f,fx+w*.20f,fy+w*.25f,rexha)
@@ -140,6 +140,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   if(index>=FountainQuest.Stage.REXHA_ARRIVAL.ordinal)people.add(Actor("rexha",0,true,plumber.x,plumber.y,rexha<1))
   actorRects.clear()
   for(base in people.sortedBy{it.y}){
+   if(base.id=="lazi"&&index<FountainQuest.Stage.LAZI_APPROACH.ordinal)continue
    val age=life-collectStarted
    val collector=if(collectedLeaf==1)"rona" else "cufi"
    val picking=collectedLeaf>=0&&base.id==collector&&age in 0..1600
@@ -166,8 +167,8 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
    val sw=sheet.width/8;val sh=(rows[a.row+1]-rows[a.row])*sheet.height
    val ah=size*sh/sw;val bob=if(happy)-abs(sin(life/140f+a.row))*8*d else if(a.moving)-abs(sin(life/100f))*2*d else sin(life/700f)*d
    val y=a.y+bob;val rect=RectF(a.x-size/2,y-ah,a.x+size/2,y);actorRects[a.id]=rect
-   p.color=0x44302010;p.alpha=255;c.drawOval(RectF(a.x-size*.3f,y-size*.07f,a.x+size*.3f,y+size*.04f),p)
-   val layer=c.save();c.scale(if(CharacterAnimation.facesRight(a.x,fx))1f else -1f,1f,a.x,y)
+   p.color=0x44302010;c.drawOval(RectF(a.x-size*.3f,y-size*.07f,a.x+size*.3f,y+size*.04f),p)
+   p.alpha=255;val layer=c.save();c.scale(if(CharacterAnimation.facesRight(a.x,fx))1f else -1f,1f,a.x,y)
    c.drawBitmap(sheet,Rect(frame*sw,(rows[a.row]*sheet.height).toInt(),(frame+1)*sw,(rows[a.row+1]*sheet.height).toInt()),rect,p);c.restoreToCount(layer)
    if(work){val x=a.x-12*d;val yy=y-ah*.28f;val tool=c.save();c.rotate(sin(life/120f)*18,x,yy);c.drawBitmap(GameSkin.bitmap(context,R.drawable.boost_hammer),null,RectF(x-18*d,yy-30*d,x+18*d,yy+6*d),p);c.restoreToCount(tool)}
   }
