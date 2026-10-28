@@ -130,7 +130,16 @@ class FountainQuestFlowTest {
    var flight:MaterialRewardFlightView?=null
    var coinsFlight:RewardFlightView?=null
    onUi{a->flight=views(a.window.decorView).filterIsInstance<MaterialRewardFlightView>().single();coinsFlight=views(a.window.decorView).filterIsInstance<RewardFlightView>().single()}
-   s.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+   // ActivityScenario.moveToState waits for UI idleness before stopping the Activity,
+   // which lets a reward finish. A system Home event interrupts the actual live flight.
+   val stopped=java.util.concurrent.CountDownLatch(1)
+   onUi{a->a.lifecycle.addObserver(object:androidx.lifecycle.LifecycleEventObserver{
+    override fun onStateChanged(owner:androidx.lifecycle.LifecycleOwner,event:androidx.lifecycle.Lifecycle.Event){
+     if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP){owner.lifecycle.removeObserver(this);stopped.countDown()}
+    }
+   })}
+   ParcelFileDescriptor.AutoCloseInputStream(InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("input keyevent KEYCODE_HOME")).use{it.readBytes()}
+   assertTrue("The system must stop the Activity",stopped.await(10,java.util.concurrent.TimeUnit.SECONDS))
    val pausedMaterial=flight!!.animationFraction;val pausedCoins=coinsFlight!!.animationFraction
    assertTrue("Material flight is paused before arrival",pausedMaterial<1f);assertTrue("Coin flight is paused before arrival",pausedCoins<1f)
    SystemClock.sleep(700)
