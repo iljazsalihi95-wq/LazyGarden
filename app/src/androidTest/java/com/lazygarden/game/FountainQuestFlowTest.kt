@@ -92,7 +92,7 @@ class FountainQuestFlowTest {
    val stock=save.restorationNeeds().associate{it.material to save.materialCount(it.material)}
    val coins=save.coins;val stars=save.stars;action(s);assertEquals(stars,save.stars);assertEquals(FountainQuest.Stage.MATERIAL_DELIVERY,save.fountainQuestStage);assertEquals(coins-120,save.coins)
    save.restorationNeeds().forEach{assertEquals(stock.getValue(it.material)-it.count,save.materialCount(it.material))}
-   assertFalse(save.actFountain(FountainQuest.Action.RESTORE));waitFor(s,FountainQuest.Stage.REPAIR);assertTrue(drawn.any{it.id=="rexha"&&it.state==CharacterAnimation.State.CARRY});SystemClock.sleep(900);shot("premium-04-rexha-work")
+   assertFalse(save.actFountain(FountainQuest.Action.RESTORE));shot("premium-11-earned-tools-handoff");waitFor(s,FountainQuest.Stage.REPAIR);assertTrue(drawn.any{it.id=="rexha"&&it.state==CharacterAnimation.State.CARRY});SystemClock.sleep(900);shot("premium-04-rexha-work")
    recreateNative();assertTrue(save.constructing);assertEquals(0,save.tasks)
    waitFor(s,FountainQuest.Stage.CLEAN)
    for(i in 0..2){
@@ -131,6 +131,25 @@ class FountainQuestFlowTest {
    onUi{a->assertTrue(views(a.window.decorView).filterIsInstance<TextView>().any{it.text.toString()=="Tuba  2/4"})}
    assertFalse(save.win(solve(1)));assertEquals(2,save.materialCount(Material.PIPE));pauseForTeardown()
   }
+ }
+ @Test fun materialDeliveryCheckpointResumesWithoutChargingTwice(){
+  assertTrue(save.startFountainQuest())
+  context.getSharedPreferences("garden_progress",0).edit().putString("fountain_quest_stage","COLLECT").commit()
+  repeat(5){assertTrue(save.win(solve(save.level)))}
+  val coins=save.coins;val stock=save.restorationNeeds().associate{it.material to save.materialCount(it.material)}
+  assertTrue(save.actFountain(FountainQuest.Action.RESTORE))
+  save.checkpointFountain(FountainQuest.Stage.MATERIAL_DELIVERY,900)
+  val reloaded=GardenSave(context)
+  assertEquals(FountainQuest.Stage.MATERIAL_DELIVERY,reloaded.fountainQuestStage)
+  assertEquals(900L,reloaded.fountainQuestElapsed);assertEquals(coins-120,reloaded.coins)
+  assertFalse(reloaded.actFountain(FountainQuest.Action.RESTORE))
+  assertFalse(reloaded.advanceFountainTimed(FountainQuest.Stage.MATERIAL_DELIVERY,1599))
+  assertTrue(reloaded.advanceFountainTimed(FountainQuest.Stage.MATERIAL_DELIVERY,1600))
+  assertEquals(FountainQuest.Stage.REPAIR,reloaded.fountainQuestStage)
+  assertFalse(reloaded.advanceFountainTimed(FountainQuest.Stage.MATERIAL_DELIVERY,1600))
+  assertEquals(coins-120,reloaded.coins)
+  reloaded.restorationNeeds().forEach{assertEquals(stock.getValue(it.material)-it.count,reloaded.materialCount(it.material))}
+  assertTrue(reloaded.constructing);assertEquals(0,reloaded.tasks)
  }
  @Test fun incompleteMaterialsAndInvalidActionsNeverConsumeInventory(){
   assertTrue(save.startFountainQuest());assertFalse(save.actFountain(FountainQuest.Action.CLAIM));assertFalse(save.actFountain(FountainQuest.Action.RESTORE))
