@@ -46,7 +46,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   var last=android.os.SystemClock.uptimeMillis()
   clock=ValueAnimator.ofFloat(0f,1f).apply{duration=12000;repeatCount=ValueAnimator.INFINITE;interpolator=LinearInterpolator();addUpdateListener{
    val now=android.os.SystemClock.uptimeMillis();val dt=(now-last).coerceIn(0L,300L);last=now;life+=dt
-   if(rewardElapsed>=0){rewardElapsed+=dt;if(rewardElapsed>=1800){rewardElapsed=-1;complete();return@addUpdateListener}}
+   if(rewardElapsed>=0){val beforeReward=rewardElapsed;rewardElapsed+=dt;if(beforeReward<1100&&rewardElapsed>=1100)sound("coin");if(beforeReward<1350&&rewardElapsed>=1350)sound("star");if(rewardElapsed>=1800){rewardElapsed=-1;complete();return@addUpdateListener}}
    else if(stage.duration>0){elapsed+=dt;if(save.advanceFountainTimed(stage,elapsed))refreshStage() else if(elapsed-checkpoint>=1000){save.checkpointFountain(stage,elapsed);checkpoint=elapsed}}
    if(stage!=lastSpoken){lastSpoken=stage;val pair=dialogue();if(pair!=null)voice.speakLine("fountain_quest",stage.name.lowercase(),pair.first,save.language,FountainText.get(save.language,pair.second),stage.duration)}
    if(stage==FountainQuest.Stage.REPAIR&&life-lastWork>850){lastWork=life;sound("hammer")}
@@ -105,6 +105,15 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
    if(stage==FountainQuest.Stage.PHONE_CALL){for(i in 0..2){val t=(life/1100f+i*.33f)%1f;p.style=Paint.Style.STROKE;p.strokeWidth=2*d;p.color=0xffc5ffe5.toInt();p.alpha=((1-t)*220).toInt();c.drawCircle(x,y,(18+20*t)*d,p)};p.style=Paint.Style.FILL;p.alpha=255}
   }}
   drawHud(c,w,h)
+  if(stage==FountainQuest.Stage.REPAIR&&elapsed<1600){
+   val u=(elapsed/1600f).coerceIn(0f,1f)
+   for((i,need)in save.restorationNeeds(0).withIndex()){
+    val sx=w*(.15f+i*.23f);val sy=h-170*d;val ex=fx+w*.17f;val ey=fy+w*.12f
+    val x=(1-u).pow(2)*sx+2*(1-u)*u*fx+u*u*ex
+    val y=(1-u).pow(2)*sy+2*(1-u)*u*(fy-w*.2f)+u*u*ey
+    val size=42*d*(1-.45f*u);materialArt.draw(c,p,need.material,RectF(x-size/2,y-size/2,x+size/2,y+size/2))
+   }
+  }
   if(stage in listOf(FountainQuest.Stage.TEST_WATER,FountainQuest.Stage.INSPECT,FountainQuest.Stage.REXHA_INSPECT))glow(c,worldTarget.centerX(),worldTarget.centerY(),worldTarget.width()*.53f)
   dialogue()?.let{(name,line)->SceneBubble.draw(c,p,width,height,name.replaceFirstChar{it.uppercase()},FountainText.get(save.language,line),d,actorRects[name]?.centerX()?:w*.5f)}
   if(rewardElapsed>=0)drawRewards(c,w,h)
@@ -123,18 +132,24 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   )
   if(index>=FountainQuest.Stage.REXHA_ARRIVAL.ordinal)people.add(Actor("rexha",0,true,-w*.2f+(fx+w*.17f+w*.2f)*rexha,h*.91f+(fy+w*.25f-h*.91f)*rexha,rexha<1))
   actorRects.clear()
-  for(a in people.sortedBy{it.y}){
+  for(base in people.sortedBy{it.y}){
+   val age=life-collectStarted
+   val collector=if(collectedLeaf==1)"rona" else "cufi"
+   val picking=collectedLeaf>=0&&base.id==collector&&age in 0..1600
+   val travel=if(age<500)age/500f else if(age<1100)1f else (1600-age)/500f
+   val a=if(picking){val t=CharacterAnimation.ease(travel);base.copy(x=base.x+(leaves[collectedLeaf].centerX()-base.x)*t,y=base.y+(leaves[collectedLeaf].bottom-base.y)*t,moving=age<500||age>1100)}else base
+
    val talking=voice.isTalking&&voice.currentLine?.characterId==a.id
    val happy=index>=FountainQuest.Stage.CELEBRATE.ordinal
    val work=a.id=="rexha"&&stage==FountainQuest.Stage.REPAIR
-   val collecting=a.child&&life-collectStarted<900&&a.id==if(collectedLeaf==1)"rona" else "cufi"
+   val collecting=picking&&age in 500..1100
    val state=when{
-    a.moving->if(a.id=="rexha")CharacterAnimation.State.CARRY else CharacterAnimation.State.WALK
+    a.moving->CharacterAnimation.State.WALK
     talking->CharacterAnimation.State.TALK
     work->CharacterAnimation.State.WORK
     collecting->CharacterAnimation.State.COLLECT
     happy->CharacterAnimation.State.HAPPY
-    a.child&&save.fountainCleanedMask>0->CharacterAnimation.State.CARRY
+    (a.child&&save.fountainCleanedMask>0)||(a.id=="rexha"&&stage==FountainQuest.Stage.REXHA_INSPECT)->CharacterAnimation.State.CARRY
     stage in listOf(FountainQuest.Stage.INSPECT,FountainQuest.Stage.TEST_WATER,FountainQuest.Stage.REXHA_INSPECT)->CharacterAnimation.State.THINK
     else->CharacterAnimation.State.IDLE
    }
@@ -153,14 +168,16 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
  private fun drawHud(c:Canvas,w:Float,h:Float){
   val top=RectF(10*d,8*d,w-10*d,58*d);panel(c,top)
   closeRect.set(12*d,10*d,54*d,55*d);text(c,"‹",closeRect.centerX(),43*d,28f)
+  val bounce=if(rewardElapsed in 900L..1550L)1f+.13f*abs(sin((rewardElapsed-900)/120f)) else 1f
+  fun counter(value:String,x:Float,y:Float,size:Float,color:Int=0xff543b25.toInt()){val layer=c.save();c.scale(bounce,bounce,x,y);text(c,value,x,y,size,color);c.restoreToCount(layer)}
   val reward=if(rewardElapsed>=0)(rewardElapsed/1400f).coerceIn(0f,1f) else 1f
-  text(c,"${if(rewardElapsed>=0)rewardCoins+(75*reward).toInt() else save.coins} ${GameText.get(save.language,"coins")}",w*.35f,39*d,15f)
-  text(c,"★ ${if(rewardElapsed>=0)rewardStars+if(reward>.7f)1 else 0 else save.stars}",w*.69f,39*d,17f)
+  counter("${if(rewardElapsed>=0)rewardCoins+(75*reward).toInt() else save.coins} ${GameText.get(save.language,"coins")}",w*.35f,39*d,15f)
+  counter("★ ${if(rewardElapsed>=0)rewardStars+if(reward>.7f)1 else 0 else save.stars}",w*.69f,39*d,17f)
   inventoryRect.set(w-58*d,12*d,w-14*d,53*d);SpriteArt.draw(c,p,hardware,2,2,2,inventoryRect)
   val objective=FountainText.objective(save.language,stage)
   val objectiveBox=RectF(12*d,65*d,w-12*d,124*d);panel(c,objectiveBox)
   wrap(c,objective,objectiveBox,14f)
-  text(c,"XP ${if(rewardElapsed>=0)rewardXp+(50*reward).toInt() else save.xp}",w*.83f,h-18*d,12f,Color.WHITE)
+  counter("XP ${if(rewardElapsed>=0)rewardXp+(50*reward).toInt() else save.xp}",w*.83f,h-18*d,12f,Color.WHITE)
   actionRect.set(30*d,h-88*d,w-30*d,h-35*d);playRect.setEmpty()
   when(stage){
    FountainQuest.Stage.COLLECT->{
