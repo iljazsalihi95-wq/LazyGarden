@@ -1,6 +1,7 @@
 package com.lazygarden.game
 
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.sin
 
 /** Reusable pose controller shared by native scene actors; movement always stops at its destination. */
@@ -11,11 +12,22 @@ object CharacterAnimation {
  fun ease(progress:Float):Float {val t=progress.coerceIn(0f,1f);return t*t*(3-2*t)}
  /** Smooth acceleration/deceleration keeps feet visually grounded instead of sliding/flying. */
  fun move(from:Position,to:Position,progress:Float):Position {val t=ease(progress);return Position(from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t)}
- /** Small gait offsets for scene renderers: restrained vertical bob + body lean + alternating step. */
+ /**
+  * Grounded stride. The body rises only a few pixels in normalized scene space, while the
+  * horizontal lean fades in/out with velocity. A distance-aware step count prevents short
+  * routes from looking like rapid moon-walking and long routes from gliding.
+  */
  fun gait(from:Position,to:Position,progress:Float):Gait {
-  val u=progress.coerceIn(0f,1f);val moving=u>0f&&u<1f&&(kotlin.math.abs(to.x-from.x)+kotlin.math.abs(to.y-from.y)>.001f)
-  val phase=(u*8f*PI).toFloat();val step=if(moving)sin(phase) else 0f
-  return Gait(move(from,to,u),if(moving)-kotlin.math.abs(step)*.008f else 0f,if(moving)step*.018f else 0f,step)
+  val u=progress.coerceIn(0f,1f);val dx=to.x-from.x;val dy=to.y-from.y;val distance=kotlin.math.sqrt(dx*dx+dy*dy)
+  val moving=u>0f&&u<1f&&distance>.001f
+  if(!moving)return Gait(move(from,to,u),0f,0f,0f)
+  val strideCount=(2.5f+distance*3.2f).coerceIn(3f,7f)
+  val phase=(u*strideCount*2f*PI).toFloat();val step=sin(phase)
+  val velocity=(6f*u*(1f-u)).coerceIn(0f,1.5f)
+  val bob=-abs(step)*.0045f
+  val direction=if(abs(dx)<.001f)0f else if(dx>0f)1f else -1f
+  val lean=direction*velocity*.008f + step*.004f
+  return Gait(move(from,to,u),bob,lean.coerceIn(-.014f,.014f),step)
  }
  fun facesRight(x:Float,targetX:Float)=x<=targetX
  fun routeFacing(from:Position,to:Position,progress:Float,targetX:Float):Boolean =
@@ -36,7 +48,7 @@ object CharacterAnimation {
   fun frame(now:Long,arrivalAtlas:Boolean)=CharacterAnimation.frame(state,elapsed(now),arrivalAtlas)
  }
  fun frame(state:State,elapsed:Long,arrivalAtlas:Boolean):Int {
-  val tick=(elapsed.coerceAtLeast(0)/(if(state==State.WALK)165 else 210)).toInt()
+  val tick=(elapsed.coerceAtLeast(0)/(if(state==State.WALK)185 else 210)).toInt()
   val poses=if(arrivalAtlas)when(state){
    State.IDLE->intArrayOf(0);State.WALK->intArrayOf(1,0,2,0);State.TALK->intArrayOf(3,0)
    State.THINK->intArrayOf(4);State.WORK,State.COLLECT->intArrayOf(5)
