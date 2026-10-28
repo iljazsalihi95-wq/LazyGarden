@@ -35,6 +35,11 @@ class FountainQuestFlowTest {
   android.os.Handler(android.os.Looper.getMainLooper()).post{try{block(checkNotNull(currentActivity))}catch(t:Throwable){error.set(t)}finally{done.countDown()}}
   assertTrue("Native action must reach the main thread",done.await(15,java.util.concurrent.TimeUnit.SECONDS));error.get()?.let{throw it}
  }
+ private fun awaitQuestLayout(){
+  val end=SystemClock.uptimeMillis()+10000
+  while(SystemClock.uptimeMillis()<end){var laidOut=false;onUi{a->val v=quest(a);laidOut=v.isLaidOut&&v.width>0&&v.height>0};if(laidOut)return;SystemClock.sleep(30)}
+  fail("Fountain scene must lay out before world coordinates are tapped")
+ }
  private fun action(s:ActivityScenario<MainActivity>){onUi{val v=quest(it);val point=v.actionCenter();tap(v,point.x,point.y)}}
  private fun waitFor(s:ActivityScenario<MainActivity>,stage:FountainQuest.Stage,timeout:Long=15000){
   val end=SystemClock.uptimeMillis()+timeout
@@ -101,9 +106,11 @@ class FountainQuestFlowTest {
   save.saveBoard(solve(1))
   ActivityScenario.launch(MainActivity::class.java).use{s->
    s.onActivity{a->currentActivity=a;views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Ndërto"}.performClick()}
+   awaitQuestLayout()
    onUi{a->val v=quest(a);val d=a.resources.displayMetrics.density;tap(v,v.width*.25f,v.height-70*d)}
    assertEquals(2,save.level);assertEquals(2,save.materialCount(Material.PIPE));assertEquals(150,save.coins)
    onUi{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Vazhdo"}.performClick();assertEquals(FountainQuest.Stage.COLLECT,quest(a).currentStage)}
+   awaitQuestLayout()
    onUi{a->val v=quest(a);val d=a.resources.displayMetrics.density;tap(v,v.width-36*d,30*d);assertTrue(views(a.window.decorView).any{it is InventoryScreen});assertTrue(views(a.window.decorView).filterIsInstance<TextView>().any{it.text.toString()=="2 / 4"})}
    shot("premium-08-earned-material-inventory")
    onUi{a->views(a.window.decorView).first{it.contentDescription=="inventory_boosters"}.performClick();assertEquals(7,views(a.window.decorView).filterIsInstance<TextView>().count{it.text.toString()=="×3"})}
