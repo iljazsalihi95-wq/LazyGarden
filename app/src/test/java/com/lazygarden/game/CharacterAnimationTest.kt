@@ -11,6 +11,12 @@ class CharacterAnimationTest {
   assertTrue(CharacterAnimation.sampleRoute(a,b,.9f,50f).moving)
   assertFalse(CharacterAnimation.sampleRoute(a,b,1f,50f).moving)
  }
+ @Test fun gaitIsGroundedAndSettlesExactlyAtDestination(){
+  val a=CharacterAnimation.Position(0f,0f);val b=CharacterAnimation.Position(10f,0f)
+  assertEquals(a,CharacterAnimation.gait(a,b,0f).position);assertEquals(b,CharacterAnimation.gait(a,b,1f).position)
+  assertEquals(0f,CharacterAnimation.gait(a,b,0f).bob,0f);assertEquals(0f,CharacterAnimation.gait(a,b,1f).bob,0f)
+  for(i in 1..9){val g=CharacterAnimation.gait(a,b,i/10f);assertTrue(g.bob<=0f);assertTrue(kotlin.math.abs(g.bob)<=.0081f);assertTrue(kotlin.math.abs(g.lean)<=.0181f)}
+ }
  @Test fun stateChangesRestartOnlyThatActorsPoseClock(){
   val actor=CharacterAnimation.Player();actor.update(CharacterAnimation.State.WALK,1000)
   actor.update(CharacterAnimation.State.WALK,1400);assertEquals(400L,actor.elapsed(1400))
