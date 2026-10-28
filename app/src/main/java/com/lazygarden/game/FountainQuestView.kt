@@ -205,7 +205,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
    val size=w*(if(a.child).15f else .23f);val sheet=if(a.new)arrivals else family
    val rows=if(a.new)floatArrayOf(0f,280/768f,536/768f,1f) else floatArrayOf(0f,.25f,.5f,.75f,1f)
    val sw=sheet.width/8;val sh=(rows[a.row+1]-rows[a.row])*sheet.height
-   val ah=size*sh/sw;val bob=if(happy)-abs(sin(life/140f+a.row))*8*d else if(a.moving)-abs(sin(life/100f))*2*d else sin(life/700f)*d
+   val ah=size*sh/sw;val poseTime=player.elapsed(life);val phase=(a.id.hashCode()%7).toFloat();val bob=if(happy)-abs(sin(poseTime/140f+phase))*8*d else if(a.moving)-abs(sin(poseTime/100f))*2*d else sin(poseTime/700f+phase)*d
    val y=a.y+bob;val rect=RectF(a.x-size/2,y-ah,a.x+size/2,y);actorRects[a.id]=rect
    p.color=0x44302010;c.drawOval(RectF(a.x-size*.3f,y-size*.07f,a.x+size*.3f,y+size*.04f),p)
    p.alpha=255;val layer=c.save();c.scale(if(facesRight)1f else -1f,1f,a.x,y)
@@ -281,7 +281,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   }
   rewardCoins=save.coins;rewardStars=save.stars;rewardXp=save.xp
   if(save.actFountain(action)){if(action==FountainQuest.Action.CLAIM){rewardElapsed=0;sound("reward")}else sound(when(action){FountainQuest.Action.START_WATER->"water";FountainQuest.Action.CALL_REXHA->"phone";else->"coin"});refreshStage()}
-  else if(action==FountainQuest.Action.RESTORE)android.widget.Toast.makeText(context,FountainText.get(save.language,"collect"),android.widget.Toast.LENGTH_SHORT).show()
+  else if(action==FountainQuest.Action.RESTORE)android.widget.Toast.makeText(context,if(save.restorationMaterialsReady())GameText.get(save.language,"insufficient_coins") else FountainText.get(save.language,"collect"),android.widget.Toast.LENGTH_SHORT).show()
   return true
  }
  override fun performClick():Boolean{super.performClick();return true}

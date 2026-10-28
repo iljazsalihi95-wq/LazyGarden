@@ -15,6 +15,7 @@ class GardenSfx(context:Context) {
  }
  fun play(key:String){if(released)return;val id=ids[key]?:return;if(id in ready)pool.play(id,.28f,.28f,1,0,1f)}
  fun pause(){if(!released)pool.autoPause()}
+ fun resume(){if(!released)pool.autoResume()}
  fun release(){if(!released){released=true;pool.release()}}
  private fun wav(key:String,index:Int):ByteArray {
   val rate=22050;val length=if(key in listOf("water","reward","win","phone")) .65 else .26;val n=(rate*length).toInt();val b=java.nio.ByteBuffer.allocate(44+n*2).order(java.nio.ByteOrder.LITTLE_ENDIAN)

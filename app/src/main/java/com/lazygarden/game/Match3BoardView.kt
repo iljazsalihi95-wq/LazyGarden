@@ -33,11 +33,12 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
  private var scenePaused=false
  internal val animationFraction get()=effect
  override fun pauseScene(){scenePaused=true;pauseMotion()}
- override fun resumeScene(){scenePaused=false;if(windowVisibility==VISIBLE){ambient?.resume();animator?.resume()}}
+ override fun resumeScene(){scenePaused=false;if(windowVisibility==VISIBLE)resumeMotion()}
+ private fun resumeMotion(){sfx.resume();ambient?.resume();animator?.resume()}
  private fun pauseMotion(){ambient?.pause();animator?.pause();sfx.pause()}
  override fun onAttachedToWindow(){super.onAttachedToWindow();ambient=ValueAnimator.ofFloat(0f,1f).apply{duration=2600;repeatCount=ValueAnimator.INFINITE;addUpdateListener{life=it.animatedValue as Float;invalidate()};start();if(scenePaused||windowVisibility!=VISIBLE)pause()}}
  override fun onWindowVisibilityChanged(visibility:Int){super.onWindowVisibilityChanged(visibility)
-  if(visibility==VISIBLE&&!scenePaused){ambient?.resume();animator?.resume()}else pauseMotion()
+  if(visibility==VISIBLE&&!scenePaused)resumeMotion()else pauseMotion()
  }
  override fun onDetachedFromWindow(){animator?.removeAllListeners();animator?.cancel();ambient?.removeAllUpdateListeners();ambient?.cancel();ambient=null;sfx.release();super.onDetachedFromWindow()}
  private fun text(c:Canvas,s:String,x:Float,y:Float,size:Float,color:Int=0xff593817.toInt()){p.shader=null;p.colorFilter=null;p.alpha=255;p.color=color;p.textSize=size;p.typeface=Typeface.create("sans-serif-condensed",Typeface.BOLD);p.textAlign=Paint.Align.CENTER;p.setShadowLayer(d,0f,d,0x44552d11);c.drawText(s,x,y,p);p.clearShadowLayer()}
