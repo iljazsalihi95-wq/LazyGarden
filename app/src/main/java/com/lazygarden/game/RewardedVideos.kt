@@ -12,7 +12,7 @@ class RewardedVideos(private val activity:Activity,private val save:GardenSave){
  companion object {
   const val UNITY_GAME="6209382";const val UNITY_REWARDED="Rewarded_Android"
   const val UNITY_INTERSTITIAL="Interstitial_Android";const val UNITY_BANNER="Banner_Android"
-  const val ADMOB_REWARDED="ca-app-pub-9794339868092490/5304189686"
+  private const val ADMOB_TEST_REWARDED="ca-app-pub-3940256099942544/5224354917"
  }
  private val main=Handler(Looper.getMainLooper());private var busy=false;private var released=false;private var generation=0
  private var receipt:String?=null;private var callback:((Boolean,String)->Unit)?=null
@@ -38,9 +38,10 @@ class RewardedVideos(private val activity:Activity,private val save:GardenSave){
  }
  private fun valid(request:Int)=!released&&busy&&generation==request&&!activity.isFinishing&&!activity.isDestroyed
  private fun admob(request:Int){
-  // An AdMob unit ID is not an app ID. Enable this fallback only with the publisher's real app ID.
   if(!BuildConfig.ADMOB_CONFIGURED){finish(false,"Nuk ka video të disponueshme tani. Nuk u dha bonus.");return}
-  MobileAds.initialize(activity){main.post{if(valid(request))RewardedAd.load(activity,if(BuildConfig.ADS_TEST_MODE)"ca-app-pub-3940256099942544/5224354917" else ADMOB_REWARDED,AdRequest.Builder().build(),object:RewardedAdLoadCallback(){
+  val unitId=if(BuildConfig.ADS_TEST_MODE)ADMOB_TEST_REWARDED else BuildConfig.ADMOB_REWARDED_ID
+  if(unitId.isBlank()){finish(false,"AdMob Rewarded nuk është konfiguruar. Nuk u dha bonus.");return}
+  MobileAds.initialize(activity){main.post{if(valid(request))RewardedAd.load(activity,unitId,AdRequest.Builder().build(),object:RewardedAdLoadCallback(){
    override fun onAdFailedToLoad(error:LoadAdError){if(valid(request))finish(false,"Videoja nuk është në dispozicion. Nuk u dha bonus.")}
    override fun onAdLoaded(ad:RewardedAd){if(!valid(request))return;main.removeCallbacks(timeout);ad.fullScreenContentCallback=object:FullScreenContentCallback(){
     override fun onAdDismissedFullScreenContent(){if(valid(request))finish(earned,"Videoja u mbyll pa bonus.")}
