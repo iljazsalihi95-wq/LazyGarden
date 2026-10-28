@@ -14,6 +14,7 @@ object CharacterSprites {
   "rexha" to Definition(R.drawable.fountain_family_atlas,0,true)
  )
  val identities get()=characters.keys.toList()
+ private val groundedSources=mutableMapOf<String,Rect>()
  private val familyRows=floatArrayOf(0f,280/768f,536/768f,1f)
  private val originalRows=floatArrayOf(0f,.25f,.5f,.75f,1f)
  fun definition(id:String)=characters[id]
@@ -27,9 +28,17 @@ object CharacterSprites {
   val rows=if(spec.arrivalAtlas)familyRows else originalRows;val width=b.width/8
   val pose=frame.coerceIn(0,7)
   val source=Rect(pose*width,(rows[spec.row]*b.height).toInt(),(pose+1)*width,(rows[spec.row+1]*b.height).toInt())
+  val grounded=groundedSources.getOrPut("$id/$pose"){
+   val pixels=IntArray(source.width()*source.height())
+   b.getPixels(pixels,0,source.width(),source.left,source.top,source.width(),source.height())
+   val first=(0 until source.height()).firstOrNull{y->(0 until source.width()).any{x->(pixels[y*source.width()+x] ushr 24)>24}}?:0
+   val last=(source.height()-1 downTo first).firstOrNull{y->(0 until source.width()).any{x->(pixels[y*source.width()+x] ushr 24)>24}}?:source.height()-1
+   Rect(source.left,source.top+first,source.right,source.top+last+1)
+  }
+  val groundedBounds=RectF(bounds.left,bounds.bottom-bounds.height()*grounded.height()/source.height(),bounds.right,bounds.bottom)
   p.shader=null;p.colorFilter=null;p.style=Paint.Style.FILL;p.alpha=255
   val layer=c.save();c.scale(if(facingRight)1f else -1f,1f,bounds.centerX(),bounds.bottom)
-  c.drawBitmap(b,source,bounds,p);c.restoreToCount(layer)
+  c.drawBitmap(b,grounded,groundedBounds,p);c.restoreToCount(layer)
   return true
  }
 }
