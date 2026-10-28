@@ -45,7 +45,7 @@ class MainActivity : AppCompatActivity() {
   }else if(save.constructing&&save.tasks>=2){
    if(save.tasks==2)PathGardenView(this,save.restorationElapsed,{save.checkpointRestoration(it)},{completeWork()}) else RestorationGardenView(this,save.tasks,save.restorationElapsed,{save.checkpointRestoration(it)},{completeWork()})
   }else{
-   GardenWorldView(this,save.tasks,save.constructing,save.decorations,onRestorationComplete={if(save.constructing){val fountain=save.tasks==0;save.finishRestoration();showGarden();if(fountain)showFountainComplete()}},initialElapsed=save.restorationElapsed,checkpoint={save.checkpointRestoration(it)}).apply{contentDescription="Shiko pronën";setOnClickListener{if(!save.constructing)showEstate()}}
+   GardenWorldView(this,save.tasks,save.constructing,save.decorations,onRestorationComplete={if(save.constructing){val fountain=save.tasks==0;save.finishRestoration();showGarden();if(fountain)showFountainComplete()}},initialElapsed=save.restorationElapsed,checkpoint={save.checkpointRestoration(it)}).apply{contentDescription="Shiko pronën";setOnClickListener{if(!save.constructing){if(save.tasks==0)showFountainQuest() else showEstate()}}}
   }
   root.addView(scene,FrameLayout.LayoutParams(-1,-1))
   val top=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(8),dp(12),0)}
@@ -106,6 +106,7 @@ class MainActivity : AppCompatActivity() {
   bar.addView(premiumButton("‹"){save.saveBoard(board);showGarden()},LinearLayout.LayoutParams(dp(48),dp(36)))
   val coins=label("${save.coins} ${t("coins")}",15f,0xff66411f.toInt())
   bar.addView(coins,LinearLayout.LayoutParams(0,dp(36),1f));root.addView(bar)
+  if(RestorationInventory.rewardForLevel(levelNumber,save.tasks)!=null&&levelNumber==save.level)root.addView(MaterialObjectiveHud(this,save,levelNumber),LinearLayout.LayoutParams(-1,dp(40)))
   val boardView=Match3BoardView(this,board,{save.saveBoard(board)},{won->
    val rewarded=if(won)save.win(board) else false
    engine=null;showResult(board,rewarded)

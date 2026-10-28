@@ -50,7 +50,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
     if(player===it&&!released&&enabled()){it.start();talking(true)}else if(player===it)stop()
    }
    media.setOnCompletionListener{if(player===it)stop()}
-   media.setOnErrorListener{it,_,_->if(player===it)stop();true}
+   media.setOnErrorListener{it,_,_->if(player===it){stop();currentLine=cue;fallback(cue)};true}
    media.prepareAsync()
    true
   }catch(_:Exception){stop();currentLine=cue;fallback(cue)}

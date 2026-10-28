@@ -219,6 +219,132 @@
       "line": "celebrate",
       "character": "meli",
       "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain_quest",
+      "line": "test_water",
+      "character": "meli",
+      "subtitles": {
+        "sq": "Nuk del ujë. Lazi, na ndihmon?",
+        "de": "Es kommt kein Wasser. Lazi, hilfst du uns?",
+        "it": "Non esce acqua. Lazi, ci aiuti?",
+        "mk": "Нема вода. Лази, ќе ни помогнеш?",
+        "tr": "Su gelmiyor. Lazi, yardım eder misin?"
+      },
+      "durationMillis": 0,
+      "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain_quest",
+      "line": "call_lazi",
+      "character": "meli",
+      "subtitles": {
+        "sq": "Nuk del ujë. Lazi, na ndihmon?",
+        "de": "Es kommt kein Wasser. Lazi, hilfst du uns?",
+        "it": "Non esce acqua. Lazi, ci aiuti?",
+        "mk": "Нема вода. Лази, ќе ни помогнеш?",
+        "tr": "Su gelmiyor. Lazi, yardım eder misin?"
+      },
+      "durationMillis": 0,
+      "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain_quest",
+      "line": "inspect",
+      "character": "lazi",
+      "subtitles": {
+        "sq": "Pompa është bllokuar. Po telefonoj Rexhën.",
+        "de": "Die Pumpe ist verstopft. Ich rufe Rexha an.",
+        "it": "La pompa è bloccata. Chiamo Rexha.",
+        "mk": "Пумпата е затната. Ќе му се јавам на Реџа.",
+        "tr": "Pompa tıkanmış. Rexha’yı arıyorum."
+      },
+      "durationMillis": 0,
+      "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain_quest",
+      "line": "call_rexha",
+      "character": "lazi",
+      "subtitles": {
+        "sq": "Pompa është bllokuar. Po telefonoj Rexhën.",
+        "de": "Die Pumpe ist verstopft. Ich rufe Rexha an.",
+        "it": "La pompa è bloccata. Chiamo Rexha.",
+        "mk": "Пумпата е затната. Ќе му се јавам на Реџа.",
+        "tr": "Pompa tıkanmış. Rexha’yı arıyorum."
+      },
+      "durationMillis": 0,
+      "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain_quest",
+      "line": "phone_call",
+      "character": "lazi",
+      "subtitles": {
+        "sq": "Pompa është bllokuar. Po telefonoj Rexhën.",
+        "de": "Die Pumpe ist verstopft. Ich rufe Rexha an.",
+        "it": "La pompa è bloccata. Chiamo Rexha.",
+        "mk": "Пумпата е затната. Ќе му се јавам на Реџа.",
+        "tr": "Pompa tıkanmış. Rexha’yı arıyorum."
+      },
+      "durationMillis": 0,
+      "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain_quest",
+      "line": "rexha_inspect",
+      "character": "rexha",
+      "subtitles": {
+        "sq": "Më duhen veglat dhe pjesët. Fitojini në Match-3!",
+        "de": "Ich brauche Werkzeug und Teile. Verdient sie in Match-3!",
+        "it": "Mi servono attrezzi e ricambi. Guadagnateli nel Match-3!",
+        "mk": "Ми требаат алат и делови. Освојте ги во Match-3!",
+        "tr": "Alet ve parçalar gerekiyor. Match-3 oynayarak kazanın!"
+      },
+      "durationMillis": 0,
+      "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain_quest",
+      "line": "collect",
+      "character": "rexha",
+      "subtitles": {
+        "sq": "Më duhen veglat dhe pjesët. Fitojini në Match-3!",
+        "de": "Ich brauche Werkzeug und Teile. Verdient sie in Match-3!",
+        "it": "Mi servono attrezzi e ricambi. Guadagnateli nel Match-3!",
+        "mk": "Ми требаат алат и делови. Освојте ги во Match-3!",
+        "tr": "Alet ve parçalar gerekiyor. Match-3 oynayarak kazanın!"
+      },
+      "durationMillis": 0,
+      "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain_quest",
+      "line": "celebrate",
+      "character": "rona",
+      "subtitles": {
+        "sq": "Ura! Shatërvani po punon!",
+        "de": "Hurra! Der Brunnen läuft!",
+        "it": "Evviva! La fontana funziona!",
+        "mk": "Ура! Фонтаната работи!",
+        "tr": "Yaşasın! Çeşme çalışıyor!"
+      },
+      "durationMillis": 0,
+      "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain_quest",
+      "line": "claim",
+      "character": "rona",
+      "subtitles": {
+        "sq": "Ura! Shatërvani po punon!",
+        "de": "Hurra! Der Brunnen läuft!",
+        "it": "Evviva! La fontana funziona!",
+        "mk": "Ура! Фонтаната работи!",
+        "tr": "Yaşasın! Çeşme çalışıyor!"
+      },
+      "durationMillis": 0,
+      "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
     }
   ],
   "clips": []

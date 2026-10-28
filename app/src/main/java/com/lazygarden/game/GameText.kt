@@ -7,6 +7,7 @@ object GameText {
 
     private val text = mapOf(
         "sq" to mapOf(
+            "level" to "Niveli", "match_board" to "Tabela Match-3", "hint_crates" to "Thyej arkat me bashkime pranë tyre", "hint_stone" to "Goditi gurët dy herë", "hint_soil" to "Pastro tokën me bashkime", "hint_water" to "Ujit lulet me figura uji", "hint_match" to "Bashko 3 figura. Krijo raketa me 4!", "invalid_swap" to "Provo një bashkim tjetër", "choose_piece" to "zgjidh figurën", "excellent" to "Shkëlqyeshëm!",
             "recorded_voices" to "Zërat (TTS i përkohshëm)",
             "locked" to "Përforcuesit përdoren në nivelin aktual", "insufficient_coins" to "Nuk ke mjaft Coins", "invalid_target" to "Zgjidh një figurë të vlefshme", "booster_HAMMER" to "Çekiçi", "booster_ROW" to "Rreshti", "booster_COLUMN" to "Kolona", "booster_CROSS" to "Kryqi", "booster_BOMB" to "Bomba", "booster_COLOR" to "Ngjyra", "booster_SHUFFLE" to "Përzieje",
             "garden" to "Kopshti", "play" to "Luaj", "continue" to "Vazhdo", "levels" to "Nivelet",
@@ -18,6 +19,7 @@ object GameText {
             "level_complete" to "Niveli i përfunduar!", "try_again" to "Provo përsëri", "moves" to "Lëvizje"
         ),
         "de" to mapOf(
+            "level" to "Level", "match_board" to "Match-3-Spielfeld", "hint_crates" to "Kisten durch benachbarte Kombinationen brechen", "hint_stone" to "Steine zweimal treffen", "hint_soil" to "Erde durch Kombinationen entfernen", "hint_water" to "Blumen mit Wassersteinen gießen", "hint_match" to "Kombiniere 3. Vier ergeben eine Rakete!", "invalid_swap" to "Versuche eine andere Kombination", "choose_piece" to "Stein auswählen", "excellent" to "Großartig!",
             "recorded_voices" to "Stimmen (vorübergehend TTS)",
             "locked" to "Booster sind nur im aktuellen Level verfügbar", "insufficient_coins" to "Nicht genügend Münzen", "invalid_target" to "Wähle ein gültiges Spielfeld", "booster_HAMMER" to "Hammer", "booster_ROW" to "Reihe", "booster_COLUMN" to "Spalte", "booster_CROSS" to "Kreuz", "booster_BOMB" to "Bombe", "booster_COLOR" to "Farbe", "booster_SHUFFLE" to "Mischen",
             "garden" to "Garten", "play" to "Spielen", "continue" to "Fortsetzen", "levels" to "Level",
@@ -29,6 +31,7 @@ object GameText {
             "level_complete" to "Level geschafft!", "try_again" to "Nochmal versuchen", "moves" to "Züge"
         ),
         "it" to mapOf(
+            "level" to "Livello", "match_board" to "Tabellone Match-3", "hint_crates" to "Rompi le casse con combinazioni vicine", "hint_stone" to "Colpisci le pietre due volte", "hint_soil" to "Elimina la terra con combinazioni", "hint_water" to "Annaffia i fiori con tessere acqua", "hint_match" to "Abbina 3. Con 4 crei un razzo!", "invalid_swap" to "Prova un’altra combinazione", "choose_piece" to "scegli una tessera", "excellent" to "Fantastico!",
             "recorded_voices" to "Voci (TTS temporaneo)",
             "locked" to "I potenziamenti sono disponibili nel livello attuale", "insufficient_coins" to "Monete insufficienti", "invalid_target" to "Scegli una casella valida", "booster_HAMMER" to "Martello", "booster_ROW" to "Riga", "booster_COLUMN" to "Colonna", "booster_CROSS" to "Croce", "booster_BOMB" to "Bomba", "booster_COLOR" to "Colore", "booster_SHUFFLE" to "Mescola",
             "garden" to "Giardino", "play" to "Gioca", "continue" to "Continua", "levels" to "Livelli",
@@ -40,6 +43,7 @@ object GameText {
             "level_complete" to "Livello completato!", "try_again" to "Riprova", "moves" to "Mosse"
         ),
         "mk" to mapOf(
+            "level" to "Ниво", "match_board" to "Табла Match-3", "hint_crates" to "Крши ги гајбите со соседни спојувања", "hint_stone" to "Удри ги камењата двапати", "hint_soil" to "Исчисти ја земјата со спојувања", "hint_water" to "Полевај ги цвеќињата со водени фигури", "hint_match" to "Спои 3. Со 4 создаваш ракета!", "invalid_swap" to "Пробај друго спојување", "choose_piece" to "избери фигура", "excellent" to "Одлично!",
             "recorded_voices" to "Гласови (привремено TTS)",
             "locked" to "Засилувачите се достапни во тековното ниво", "insufficient_coins" to "Нема доволно монети", "invalid_target" to "Избери важечко поле", "booster_HAMMER" to "Чекан", "booster_ROW" to "Ред", "booster_COLUMN" to "Колона", "booster_CROSS" to "Крст", "booster_BOMB" to "Бомба", "booster_COLOR" to "Боја", "booster_SHUFFLE" to "Измешај",
             "garden" to "Градина", "play" to "Играј", "continue" to "Продолжи", "levels" to "Нивоа",
@@ -51,6 +55,7 @@ object GameText {
             "level_complete" to "Нивото е завршено!", "try_again" to "Обиди се повторно", "moves" to "Потези"
         ),
         "tr" to mapOf(
+            "level" to "Seviye", "match_board" to "Match-3 tahtası", "hint_crates" to "Yakındaki eşleşmelerle kasaları kır", "hint_stone" to "Taşlara iki kez vur", "hint_soil" to "Eşleşmelerle toprağı temizle", "hint_water" to "Su taşlarıyla çiçekleri sula", "hint_match" to "3 taşı eşleştir. 4 taş roket oluşturur!", "invalid_swap" to "Başka bir eşleşme dene", "choose_piece" to "bir taş seç", "excellent" to "Harika!",
             "recorded_voices" to "Sesler (geçici TTS)",
             "locked" to "Güçlendiriciler mevcut seviyede kullanılabilir", "insufficient_coins" to "Yeterli jeton yok", "invalid_target" to "Geçerli bir kare seç", "booster_HAMMER" to "Çekiç", "booster_ROW" to "Satır", "booster_COLUMN" to "Sütun", "booster_CROSS" to "Çapraz", "booster_BOMB" to "Bomba", "booster_COLOR" to "Renk", "booster_SHUFFLE" to "Karıştır",
             "garden" to "Bahçe", "play" to "Oyna", "continue" to "Devam et", "levels" to "Seviyeler",

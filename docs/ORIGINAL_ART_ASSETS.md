@@ -52,3 +52,26 @@ Built-in Imagegen produced the following original production atlases (PNG → We
 - `drawable-nodpi/match_obstacles.webp`: 3×2; garden crate, layered stone, soil, flower watering objective, seed parcel, songbird in basket. Source `exec-8ae8874b-807d-490a-a5fb-9c3598d80786.png`. Prompt requested original detailed readable small mobile-game pieces, six cells, no UI or proprietary designs.
 
 Sound effects are original short PCM synthesis in `GardenSfx`; dialogue playback prefers licensed recorded assets and temporarily falls back to installed Android TTS; no human recordings are currently bundled (see RECORDED_VOICES.md). No third-party commercial game material was used.
+
+
+## Interactive fountain cast
+
+`drawable-nodpi/fountain_family_atlas.webp` is an original built-in Imagegen asset,
+2048 × 768 with 8 columns and 3 rows: Rexha, Cufi, Rona. Source:
+`exec-57efb889-5507-4c7d-aa2b-80f4e0919a81.png`. Alpha is preserved in the WebP.
+Actual row cuts are 0, 280, 536, 768 pixels to retain shoes and hair.
+`FountainQuestView` samples these frames directly; it never displays the sheet.
+`CharacterAnimation` maps idle, walk, talk, think, work, collect, carry, happy.
+Lazi and Meli retain their original adult green-vest and teal-outfit identities.
+
+Production prompt: Original native Android LazyGarden sprite atlas, exactly
+8 columns × 3 rows, full-body figures with transparent padding and consistent
+identity/scale. Row 1 Rexha: middle-aged broad plumber, silver hair, grey
+moustache, navy cap, orange shirt, teal-blue overalls, dark boots. Row 2 Cufi:
+small boy, dark curls, red hoodie, beige shorts, sneakers. Row 3 Rona: small
+girl, brown ponytail, purple shirt, denim overalls, yellow shoes. Columns:
+idle; walk left step; opposite walk step; talking gesture; thinking; kneeling
+work with wrench / children gathering leaves; carrying toolbox / flower
+basket; happy raised arms. Warm hand-painted dimensional HD 2D game art,
+three-quarter right view, genuine alpha, no text, grid, scenery, proprietary
+characters or baked shadow puddles.
