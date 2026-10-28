@@ -1,0 +1,209 @@
+package com.lazygarden.game
+
+import android.animation.ValueAnimator
+import android.content.Context
+import android.graphics.*
+import android.view.MotionEvent
+import android.view.View
+import android.view.animation.LinearInterpolator
+import kotlin.math.*
+
+/** Interactive native estate: taps are world actions, never a sequence of story cards. */
+class FountainQuestView(context:Context,private val save:GardenSave,private val play:()->Unit,private val inventory:()->Unit,private val close:()->Unit,private val complete:()->Unit):View(context),SceneLifecycle {
+ private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+ private val before=GardenBackdrop(context,0);private val restored=GardenBackdrop(context,1)
+ private val background=GameSkin.bitmap(context,R.drawable.garden_before)
+ private val family=GameSkin.bitmap(context,R.drawable.resident_atlas)
+ private val arrivals=GameSkin.bitmap(context,R.drawable.fountain_family_atlas)
+ private val hardware=GameSkin.bitmap(context,R.drawable.fountain_worksite)
+ private val leaf=GameSkin.bitmap(context,R.drawable.tile_leaf)
+ private val materialArt=MaterialArt(context)
+ private val sfx=GardenSfx(context)
+ private val voice=GardenVoice(context){save.voiceEnabled}
+ private var clock:ValueAnimator?=null;private var paused=false
+ private var stage=save.fountainQuestStage;private var elapsed=save.fountainQuestElapsed
+ private var checkpoint=elapsed;private var life=0L;private var rewardElapsed=-1L
+ private var rewardCoins=0;private var rewardStars=0;private var rewardXp=0
+ private var lastSpoken:FountainQuest.Stage?=null
+ private var lastWork=0L
+ private var collectedLeaf=-1;private var collectStarted=-1000L
+ private val actionRect=RectF();private val playRect=RectF();private val inventoryRect=RectF();private val closeRect=RectF()
+ private val worldTarget=RectF();private val leaves=Array(3){RectF()}
+ private val actorRects=mutableMapOf<String,RectF>()
+ private val d=resources.displayMetrics.density
+ internal fun leafCenter(index:Int)=PointF(leaves[index].centerX(),leaves[index].centerY())
+ internal val currentStage get()=stage
+ internal fun actionCenter()=PointF(actionRect.centerX(),actionRect.centerY())
+ init {voice.onTalkingChanged={invalidate()};isClickable=true;contentDescription=FountainText.objective(save.language,stage)}
+ override fun onAttachedToWindow(){super.onAttachedToWindow();startClock()}
+ override fun onDetachedFromWindow(){stopClock();voice.release();sfx.release();super.onDetachedFromWindow()}
+ override fun onWindowVisibilityChanged(v:Int){super.onWindowVisibilityChanged(v);if(v==VISIBLE&&!paused)startClock() else stopClock()}
+ override fun pauseScene(){paused=true;stopClock()}
+ override fun resumeScene(){paused=false;startClock()}
+ private fun stopClock(){if(rewardElapsed<0)save.checkpointFountain(stage,elapsed);clock?.removeAllUpdateListeners();clock?.cancel();clock=null;voice.stop();sfx.pause();lastSpoken=null}
+ private fun startClock(){if(paused||clock!=null||!isAttachedToWindow||windowVisibility!=VISIBLE)return
+  var last=android.os.SystemClock.uptimeMillis()
+  clock=ValueAnimator.ofFloat(0f,1f).apply{duration=12000;repeatCount=ValueAnimator.INFINITE;interpolator=LinearInterpolator();addUpdateListener{
+   val now=android.os.SystemClock.uptimeMillis();val dt=(now-last).coerceIn(0L,300L);last=now;life+=dt
+   if(rewardElapsed>=0){rewardElapsed+=dt;if(rewardElapsed>=1800){rewardElapsed=-1;complete();return@addUpdateListener}}
+   else if(stage.duration>0){elapsed+=dt;if(save.advanceFountainTimed(stage,elapsed))refreshStage() else if(elapsed-checkpoint>=1000){save.checkpointFountain(stage,elapsed);checkpoint=elapsed}}
+   if(stage!=lastSpoken){lastSpoken=stage;val pair=dialogue();if(pair!=null)voice.speakLine("fountain_quest",stage.name.lowercase(),pair.first,save.language,FountainText.get(save.language,pair.second),stage.duration)}
+   if(stage==FountainQuest.Stage.REPAIR&&life-lastWork>850){lastWork=life;sound("hammer")}
+   invalidate()
+  };start()}
+ }
+ private fun sound(key:String){if(save.sfxEnabled)sfx.play(key)}
+ private fun refreshStage(){voice.stop();stage=save.fountainQuestStage;elapsed=save.fountainQuestElapsed;checkpoint=elapsed;lastSpoken=null;contentDescription=FountainText.objective(save.language,stage);invalidate()}
+ private fun dialogue():Pair<String,String>?=when(stage){
+  FountainQuest.Stage.TEST_WATER,FountainQuest.Stage.CALL_LAZI->"meli" to "meli_line"
+  FountainQuest.Stage.INSPECT,FountainQuest.Stage.CALL_REXHA,FountainQuest.Stage.PHONE_CALL->"lazi" to "lazi_line"
+  FountainQuest.Stage.REXHA_INSPECT,FountainQuest.Stage.COLLECT->"rexha" to "rexha_line"
+  FountainQuest.Stage.CELEBRATE,FountainQuest.Stage.CLAIM->"rona" to "happy_line"
+  else->null
+ }
+ private fun text(c:Canvas,s:String,x:Float,y:Float,size:Float,color:Int=0xff543b25.toInt()){
+  p.shader=null;p.colorFilter=null;p.alpha=255;p.style=Paint.Style.FILL;p.color=color;p.textAlign=Paint.Align.CENTER;p.typeface=Typeface.DEFAULT_BOLD;p.textSize=size*d;c.drawText(s,x,y,p)
+ }
+ private fun panel(c:Canvas,r:RectF){GameSkin.nine(c,GameSkin.bitmap(context,R.drawable.hd_hud),r,18*d,p)}
+ private fun button(c:Canvas,r:RectF,label:String,enabled:Boolean=true){
+  p.alpha=if(enabled)255 else 140;GameSkin.nine(c,GameSkin.bitmap(context,if(enabled)R.drawable.hd_button_green else R.drawable.hd_button_blue),r,20*d,p,.35f);p.alpha=255
+  text(c,label,r.centerX(),r.centerY()+5*d,min(16f,r.width()/d/17),Color.WHITE)
+ }
+ override fun onDraw(c:Canvas){super.onDraw(c);val w=width.toFloat();val h=height.toFloat();if(w==0f||h==0f)return
+  val scale=max(w/background.width,h/background.height)*1.15f
+  val dw=background.width*scale;val dh=background.height*scale
+  val dst=RectF(w*.50f-dw*.55f,h*.51f-dh*.515f,w*.50f+dw*.45f,h*.51f+dh*.485f)
+  before.draw(c,dst)
+  val f=FountainQuest.fraction(stage,elapsed)
+  val water=when {stage==FountainQuest.Stage.WATER_FLOW->f;stage.ordinal>FountainQuest.Stage.WATER_FLOW.ordinal->1f;else->0f}
+  if(water>0){val layer=c.saveLayer(null,Paint().apply{alpha=(water*255).toInt()});restored.draw(c,dst);WorldRestorationArt.water(c,p,dst,life.toFloat());c.restoreToCount(layer)}
+  val fx=w*.50f;val fy=h*.51f
+  worldTarget.set(fx-w*.18f,fy-w*.10f,fx+w*.18f,fy+w*.22f)
+  if(stage.ordinal>=FountainQuest.Stage.REXHA_INSPECT.ordinal&&stage.ordinal<=FountainQuest.Stage.START_WATER.ordinal){
+   val pump=RectF(fx-w*.10f,fy+w*.07f,fx+w*.25f,fy+w*.33f)
+   SpriteArt.draw(c,p,hardware,2,2,if(stage.ordinal>=FountainQuest.Stage.CLEAN.ordinal)1 else 0,pump)
+   SpriteArt.draw(c,p,hardware,2,2,2,RectF(fx-w*.28f,fy+w*.18f,fx-w*.13f,fy+w*.31f))
+   if(stage==FountainQuest.Stage.REPAIR){
+    val layer=c.save();c.clipRect(pump.left,pump.top,pump.left+pump.width()*f,pump.bottom);SpriteArt.draw(c,p,hardware,2,2,1,pump);c.restoreToCount(layer)
+    for(i in 0..12){val t=(life/700f+i*.077f)%1f;p.color=0xffe4c38b.toInt();p.alpha=((1-t)*210).toInt();c.drawCircle(pump.centerX()+sin(i*3f)*w*.12f*t,pump.centerY()-t*w*.17f,3*d*(1-t),p)};p.alpha=255
+   }
+  }
+  drawActors(c,w,h,fx,fy,f)
+  for(i in 0..2){val x=fx+w*(i-1)*.14f;val y=fy+w*(.29f+(i%2)*.07f);leaves[i].set(x-24*d,y-24*d,x+24*d,y+24*d)
+   if(stage.ordinal<=FountainQuest.Stage.CLEAN.ordinal&&(save.fountainCleanedMask and (1 shl i))==0){c.drawBitmap(leaf,null,leaves[i],p);if(stage==FountainQuest.Stage.CLEAN)glow(c,x,y,24*d)}
+  }
+  if(stage==FountainQuest.Stage.START_WATER){
+   val x=fx+w*.17f;val y=fy+w*.15f;p.color=0xffbc4931.toInt();p.style=Paint.Style.STROKE;p.strokeWidth=5*d;c.drawCircle(x,y,17*d,p)
+   for(i in 0..3){val a=i*PI/2;c.drawLine(x,y,x+cos(a).toFloat()*17*d,y+sin(a).toFloat()*17*d,p)};p.style=Paint.Style.FILL;glow(c,x,y,25*d)
+   worldTarget.set(x-32*d,y-32*d,x+32*d,y+32*d)
+  }
+  // The phone is attached to Lazi's hand throughout the in-world call.
+  if(stage==FountainQuest.Stage.CALL_REXHA||stage==FountainQuest.Stage.PHONE_CALL){actorRects["lazi"]?.let{r->val x=r.right-8*d;val y=r.top+r.height()*.42f
+   val rotation=c.save();c.rotate(if(stage==FountainQuest.Stage.PHONE_CALL)-22f else 12f,x,y)
+   p.color=0xff143c46.toInt();c.drawRoundRect(RectF(x-8*d,y-17*d,x+8*d,y+10*d),3*d,3*d,p);p.color=0xff8ceacf.toInt();c.drawRect(x-5*d,y-13*d,x+5*d,y+4*d,p);c.restoreToCount(rotation)
+   if(stage==FountainQuest.Stage.PHONE_CALL){for(i in 0..2){val t=(life/1100f+i*.33f)%1f;p.style=Paint.Style.STROKE;p.strokeWidth=2*d;p.color=0xffc5ffe5.toInt();p.alpha=((1-t)*220).toInt();c.drawCircle(x,y,(18+20*t)*d,p)};p.style=Paint.Style.FILL;p.alpha=255}
+  }}
+  drawHud(c,w,h)
+  if(stage in listOf(FountainQuest.Stage.TEST_WATER,FountainQuest.Stage.INSPECT,FountainQuest.Stage.REXHA_INSPECT))glow(c,worldTarget.centerX(),worldTarget.centerY(),worldTarget.width()*.53f)
+  dialogue()?.let{(name,line)->SceneBubble.draw(c,p,width,height,name.replaceFirstChar{it.uppercase()},FountainText.get(save.language,line),d,actorRects[name]?.centerX()?:w*.5f)}
+  if(rewardElapsed>=0)drawRewards(c,w,h)
+ }
+ private fun glow(c:Canvas,x:Float,y:Float,r:Float){p.shader=RadialGradient(x,y,r,intArrayOf(0x44fff3a5,0x00fff3a5),null,Shader.TileMode.CLAMP);c.drawCircle(x,y,r,p);p.shader=null;p.style=Paint.Style.STROKE;p.strokeWidth=2*d;p.color=0xffffdf78.toInt();p.alpha=(140+80*sin(life/200f)).toInt().coerceIn(0,255);c.drawOval(RectF(x-r*.6f,y-r*.2f,x+r*.6f,y+r*.2f),p);p.style=Paint.Style.FILL;p.alpha=255}
+ private fun drawActors(c:Canvas,w:Float,h:Float,fx:Float,fy:Float,f:Float){
+  val index=stage.ordinal
+  fun progress(at:FountainQuest.Stage)=when{index<at.ordinal->0f;index==at.ordinal->f;else->1f}
+  val m=CharacterAnimation.ease(progress(FountainQuest.Stage.MELI_APPROACH));val children=CharacterAnimation.ease(progress(FountainQuest.Stage.CHILDREN_APPROACH));val lazi=CharacterAnimation.ease(progress(FountainQuest.Stage.LAZI_APPROACH));val rexha=CharacterAnimation.ease(progress(FountainQuest.Stage.REXHA_ARRIVAL))
+  data class Actor(val id:String,val row:Int,val new:Boolean,val x:Float,val y:Float,val moving:Boolean,val child:Boolean=false)
+  val people=mutableListOf(
+   Actor("meli",2,false,-w*.15f+(w*.43f)*m,h*.85f+(fy+w*.24f-h*.85f)*m,m<1),
+   Actor("lazi",0,false,w*.88f+(fx-w*.14f-w*.88f)*lazi,h*.37f+(fy+w*.26f-h*.37f)*lazi,lazi in .001f.. .999f),
+   Actor("cufi",1,true,w*1.15f+(fx+w*.23f-w*1.15f)*children,h*.88f+(fy+w*.45f-h*.88f)*children,children<1,true),
+   Actor("rona",2,true,w*1.3f+(fx+w*.37f-w*1.3f)*children,h*.95f+(fy+w*.51f-h*.95f)*children,children<1,true)
+  )
+  if(index>=FountainQuest.Stage.REXHA_ARRIVAL.ordinal)people.add(Actor("rexha",0,true,-w*.2f+(fx+w*.17f+w*.2f)*rexha,h*.91f+(fy+w*.25f-h*.91f)*rexha,rexha<1))
+  actorRects.clear()
+  for(a in people.sortedBy{it.y}){
+   val talking=voice.isTalking&&voice.currentLine?.characterId==a.id
+   val happy=index>=FountainQuest.Stage.CELEBRATE.ordinal
+   val work=a.id=="rexha"&&stage==FountainQuest.Stage.REPAIR
+   val collecting=a.child&&life-collectStarted<900&&a.id==if(collectedLeaf==1)"rona" else "cufi"
+   val state=when{
+    a.moving->if(a.id=="rexha")CharacterAnimation.State.CARRY else CharacterAnimation.State.WALK
+    talking->CharacterAnimation.State.TALK
+    work->CharacterAnimation.State.WORK
+    collecting->CharacterAnimation.State.COLLECT
+    happy->CharacterAnimation.State.HAPPY
+    a.child&&save.fountainCleanedMask>0->CharacterAnimation.State.CARRY
+    stage in listOf(FountainQuest.Stage.INSPECT,FountainQuest.Stage.TEST_WATER,FountainQuest.Stage.REXHA_INSPECT)->CharacterAnimation.State.THINK
+    else->CharacterAnimation.State.IDLE
+   }
+   val frame=CharacterAnimation.frame(state,life,a.new)
+   val size=w*(if(a.child).15f else .23f);val sheet=if(a.new)arrivals else family
+   val rows=if(a.new)floatArrayOf(0f,280/768f,536/768f,1f) else floatArrayOf(0f,.25f,.5f,.75f,1f)
+   val sw=sheet.width/8;val sh=(rows[a.row+1]-rows[a.row])*sheet.height
+   val ah=size*sh/sw;val bob=if(happy)-abs(sin(life/140f+a.row))*8*d else if(a.moving)-abs(sin(life/100f))*2*d else sin(life/700f)*d
+   val y=a.y+bob;val rect=RectF(a.x-size/2,y-ah,a.x+size/2,y);actorRects[a.id]=rect
+   p.color=0x44302010;p.alpha=255;c.drawOval(RectF(a.x-size*.3f,y-size*.07f,a.x+size*.3f,y+size*.04f),p)
+   val layer=c.save();c.scale(if(CharacterAnimation.facesRight(a.x,fx))1f else -1f,1f,a.x,y)
+   c.drawBitmap(sheet,Rect(frame*sw,(rows[a.row]*sheet.height).toInt(),(frame+1)*sw,(rows[a.row+1]*sheet.height).toInt()),rect,p);c.restoreToCount(layer)
+   if(work){val x=a.x-12*d;val yy=y-ah*.28f;val tool=c.save();c.rotate(sin(life/120f)*18,x,yy);c.drawBitmap(GameSkin.bitmap(context,R.drawable.boost_hammer),null,RectF(x-18*d,yy-30*d,x+18*d,yy+6*d),p);c.restoreToCount(tool)}
+  }
+ }
+ private fun drawHud(c:Canvas,w:Float,h:Float){
+  val top=RectF(10*d,8*d,w-10*d,58*d);panel(c,top)
+  closeRect.set(12*d,10*d,54*d,55*d);text(c,"‹",closeRect.centerX(),43*d,28f)
+  val reward=if(rewardElapsed>=0)(rewardElapsed/1400f).coerceIn(0f,1f) else 1f
+  text(c,"${if(rewardElapsed>=0)rewardCoins+(75*reward).toInt() else save.coins} ${GameText.get(save.language,"coins")}",w*.35f,39*d,15f)
+  text(c,"★ ${if(rewardElapsed>=0)rewardStars+if(reward>.7f)1 else 0 else save.stars}",w*.69f,39*d,17f)
+  inventoryRect.set(w-58*d,12*d,w-14*d,53*d);SpriteArt.draw(c,p,hardware,2,2,2,inventoryRect)
+  val objective=FountainText.objective(save.language,stage)
+  val objectiveBox=RectF(12*d,65*d,w-12*d,124*d);panel(c,objectiveBox)
+  wrap(c,objective,objectiveBox,14f)
+  text(c,"XP ${if(rewardElapsed>=0)rewardXp+(50*reward).toInt() else save.xp}",w*.83f,h-18*d,12f,Color.WHITE)
+  actionRect.set(30*d,h-88*d,w-30*d,h-35*d);playRect.setEmpty()
+  when(stage){
+   FountainQuest.Stage.COLLECT->{
+    val needs=save.restorationNeeds(0);val row=RectF(14*d,h-240*d,w-14*d,h-110*d);panel(c,row)
+    for((i,need)in needs.withIndex()){val x=row.left+row.width()*(i+.5f)/needs.size;materialArt.draw(c,p,need.material,RectF(x-26*d,row.top+9*d,x+26*d,row.top+62*d));text(c,"${save.materialCount(need.material)}/${need.count}",x,row.top+83*d,15f,if(save.materialCount(need.material)>=need.count)0xff267539.toInt() else 0xff985029.toInt())}
+    text(c,if(save.restorationMaterialsReady())FountainText.get(save.language,"ready") else GameText.get(save.language,"materials"),row.centerX(),row.bottom-15*d,13f)
+    playRect.set(18*d,h-99*d,w*.48f,h-40*d);actionRect.set(w*.51f,h-99*d,w-18*d,h-40*d)
+    button(c,playRect,GameText.get(save.language,"play")+" Match-3")
+    button(c,actionRect,"120 · "+FountainText.get(save.language,"repair"),save.restorationMaterialsReady()&&save.coins>=120)
+   }
+   FountainQuest.Stage.CLAIM->button(c,actionRect,FountainText.get(save.language,"claim")+" · 75 ★1 XP50")
+   FountainQuest.Stage.COMPLETE->Unit
+   else->{if(stage.duration==0L&&stage!=FountainQuest.Stage.CLEAN)button(c,actionRect,when(stage){FountainQuest.Stage.CALL_REXHA->"☎ Rexha";else->FountainText.objective(save.language,stage).substringBefore('·').trim()})
+    else if(stage.duration>0){val bar=RectF(38*d,h-68*d,w-38*d,h-53*d);p.color=0xaa173d31.toInt();c.drawRoundRect(bar,8*d,8*d,p);p.color=0xffafe06c.toInt();c.drawRoundRect(RectF(bar.left,bar.top,bar.left+bar.width()*FountainQuest.fraction(stage,elapsed),bar.bottom),8*d,8*d,p)}
+   }
+  }
+ }
+ private fun wrap(c:Canvas,value:String,box:RectF,size:Float){p.textSize=size*d;p.typeface=Typeface.DEFAULT_BOLD;val lines=mutableListOf<String>();var row="";for(word in value.split(' ')){if(row.isNotEmpty()&&p.measureText("$row $word")>box.width()-20*d){lines.add(row);row=word}else row=if(row.isEmpty())word else "$row $word"};if(row.isNotEmpty())lines.add(row);for((i,s)in lines.withIndex())text(c,s,box.centerX(),box.centerY()+(i-(lines.size-1)/2f)*18*d+5*d,size)}
+ private fun drawRewards(c:Canvas,w:Float,h:Float){val t=(rewardElapsed/1700f).coerceIn(0f,1f);for(i in 0..12){val u=((t-i*.018f)/.72f).coerceIn(0f,1f);if(u<=0||u>=1)continue;val x=(1-u).pow(2)*w*.5f+2*(1-u)*u*w*(.15f+i*.05f)+u*u*w*(if(i==12).69f else .35f);val y=(1-u).pow(2)*h*.55f+2*(1-u)*u*h*.2f+u*u*35*d
+  if(i==12)c.drawBitmap(GameSkin.bitmap(context,R.drawable.reward_star),null,RectF(x-16*d,y-16*d,x+16*d,y+16*d),p)else{p.color=0xffffd65b.toInt();c.drawCircle(x,y,9*d,p);p.color=0xfffff1a4.toInt();c.drawCircle(x-2*d,y-2*d,4*d,p)}
+ }}
+ override fun onTouchEvent(e:MotionEvent):Boolean{if(e.actionMasked==MotionEvent.ACTION_DOWN)return true;if(e.actionMasked!=MotionEvent.ACTION_UP)return true;performClick()
+  if(rewardElapsed>=0)return true
+  if(closeRect.contains(e.x,e.y)){close();return true}
+  if(inventoryRect.contains(e.x,e.y)){save.checkpointFountain(stage,elapsed);inventory();return true}
+  if(stage==FountainQuest.Stage.COLLECT&&playRect.contains(e.x,e.y)){save.checkpointFountain(stage,elapsed);play();return true}
+  if(stage==FountainQuest.Stage.CLEAN){val i=leaves.indexOfFirst{it.contains(e.x,e.y)};if(i>=0&&save.actFountain(FountainQuest.Action.CLEAN_LEAF,i)){collectedLeaf=i;collectStarted=life;sound("brush");refreshStage()};return true}
+  val actor=when(stage){FountainQuest.Stage.CALL_LAZI->actorRects["meli"];FountainQuest.Stage.CALL_REXHA->actorRects["lazi"];else->null}
+  if(!actionRect.contains(e.x,e.y)&&!worldTarget.contains(e.x,e.y)&&actor?.contains(e.x,e.y)!=true)return true
+  val action=when(stage){
+   FountainQuest.Stage.TEST_WATER->FountainQuest.Action.TEST_WATER
+   FountainQuest.Stage.CALL_LAZI->FountainQuest.Action.CALL_LAZI
+   FountainQuest.Stage.INSPECT->FountainQuest.Action.INSPECT
+   FountainQuest.Stage.CALL_REXHA->FountainQuest.Action.CALL_REXHA
+   FountainQuest.Stage.REXHA_INSPECT->FountainQuest.Action.INSPECT_PUMP
+   FountainQuest.Stage.COLLECT->FountainQuest.Action.RESTORE
+   FountainQuest.Stage.START_WATER->FountainQuest.Action.START_WATER
+   FountainQuest.Stage.CLAIM->FountainQuest.Action.CLAIM
+   else->return true
+  }
+  rewardCoins=save.coins;rewardStars=save.stars;rewardXp=save.xp
+  if(save.actFountain(action)){if(action==FountainQuest.Action.CLAIM){rewardElapsed=0;sound("reward")}else sound(if(action==FountainQuest.Action.START_WATER)"water" else "coin");refreshStage()}
+  else if(action==FountainQuest.Action.RESTORE)android.widget.Toast.makeText(context,FountainText.get(save.language,"collect"),android.widget.Toast.LENGTH_SHORT).show()
+  return true
+ }
+ override fun performClick():Boolean{super.performClick();return true}
+}
