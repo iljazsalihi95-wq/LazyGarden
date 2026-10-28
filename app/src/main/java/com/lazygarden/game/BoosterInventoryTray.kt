@@ -17,6 +17,8 @@ class BoosterInventoryTray(
 ) : LinearLayout(context) {
     private val badges = linkedMapOf<Match3Engine.Booster, TextView>()
     private val tiles = linkedMapOf<Match3Engine.Booster, View>()
+    private val lastCounts = linkedMapOf<Match3Engine.Booster, Int>()
+    private var gameplayEnabled = true
     private val icons = intArrayOf(
         R.drawable.boost_hammer, R.drawable.boost_row, R.drawable.boost_column,
         R.drawable.boost_cross, R.drawable.boost_bomb, R.drawable.boost_color,
@@ -33,7 +35,7 @@ class BoosterInventoryTray(
                 setMargins(dp(2), dp(2), dp(2), 0)
             })
         }
-        refresh()
+        refresh(false)
     }
 
     private fun makeTile(kind: Match3Engine.Booster, icon: Int): View {
@@ -55,31 +57,56 @@ class BoosterInventoryTray(
         }
         tile.addView(badge, LayoutParams(-1, dp(25)))
         tile.setOnClickListener {
-            it.animate().scaleX(.90f).scaleY(.90f).setDuration(70).withEndAction {
-                it.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
-            }.start()
+            if (!gameplayEnabled) return@setOnClickListener
+            press(tile)
             if (save.boosterCount(kind) > 0) onUse(kind) else onBuy(kind)
         }
-        tile.setOnLongClickListener { onBuy(kind); true }
+        tile.setOnLongClickListener {
+            if (!gameplayEnabled) false else { press(tile); onBuy(kind); true }
+        }
         badges[kind] = badge
         tiles[kind] = tile
         return tile
     }
 
+    private fun press(view: View) {
+        view.animate().cancel()
+        view.animate().scaleX(.90f).scaleY(.90f).setDuration(70).withEndAction {
+            view.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+        }.start()
+    }
+
+    /** Locks boosters on replay/archived levels while keeping their stock visible. */
+    fun setGameplayEnabled(enabled: Boolean) {
+        gameplayEnabled = enabled
+        refresh(false)
+    }
+
     /** Refresh immediately after use/purchase: x3 -> x2 -> x1 -> buy state. */
-    fun refresh() {
+    fun refresh(animateChanges: Boolean = true) {
         Match3Engine.Booster.entries.forEach { kind ->
             val count = save.boosterCount(kind)
+            val previous = lastCounts.put(kind, count)
             badges[kind]?.apply {
                 text = if (count > 0) "×$count" else "+ ${kind.cost}"
                 setTextColor(if (count > 0) 0xff3f6d36.toInt() else 0xff8b4a2b.toInt())
+                if (animateChanges && previous != null && previous != count) {
+                    animate().cancel()
+                    scaleX = .72f; scaleY = .72f
+                    animate().scaleX(1.18f).scaleY(1.18f).setDuration(120).withEndAction {
+                        animate().scaleX(1f).scaleY(1f).setDuration(140).start()
+                    }.start()
+                }
             }
             tiles[kind]?.apply {
-                alpha = if (count > 0) 1f else .72f
-                isActivated = count > 0
-                contentDescription = if (count > 0)
-                    "${kind.label}, $count ${t("stock")}"
-                else "${kind.label}, ${t("no_stock")}, ${t("buy")} ${kind.cost} ${t("coins")}"
+                isEnabled = gameplayEnabled
+                alpha = when { !gameplayEnabled -> .42f; count > 0 -> 1f; else -> .72f }
+                isActivated = gameplayEnabled && count > 0
+                contentDescription = when {
+                    !gameplayEnabled -> "${kind.label}, ${t("locked")}"
+                    count > 0 -> "${kind.label}, $count ${t("stock")}"
+                    else -> "${kind.label}, ${t("no_stock")}, ${t("buy")} ${kind.cost} ${t("coins")}"
+                }
             }
         }
     }
