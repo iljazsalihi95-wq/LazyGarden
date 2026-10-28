@@ -13,5 +13,15 @@ class RestorationSequenceTest {
   }
  }
  @Test fun sceneDialogueHasFiveRealTranslations(){for(task in 2..6)for(step in RestorationSequence.plan(task).steps)if(step.line.isNotBlank()){val translations=listOf("sq","de","it","mk","tr").map{SceneText.line(step.line,it)};assertEquals(5,translations.toSet().size);assertTrue(translations.all{it.length>8})}}
- @Test fun flowerChoiceAndPathBoundariesRemainStable(){assertEquals(3,FlowerSequence.choices.map{it.id}.toSet().size);assertEquals(FlowerSequence.Stage.CHOOSE,FlowerSequence.stage(8000));assertEquals(1f,FlowerSequence.bloom(FlowerSequence.DURATION),0f);assertEquals(RestorationSequence.plan(2).duration,PathSequence.DURATION)}
+ @Test fun flowerChoiceAndCraftsmanPathBoundariesRemainStable(){
+  assertEquals(3,FlowerSequence.choices.map{it.id}.toSet().size)
+  assertEquals(FlowerSequence.Stage.CALL_GEZIMI,FlowerSequence.stage(8000))
+  assertEquals(FlowerSequence.Stage.CHOOSE,FlowerSequence.stage(14500))
+  assertEquals(FlowerSequence.Stage.GEZIMI_ARRIVAL,FlowerSequence.stage(11500))
+  assertEquals(1f,FlowerSequence.bloom(FlowerSequence.DURATION),0f)
+  assertEquals(CharacterAnimation.State.WALK,FlowerSequence.actorState("gezimi",11500))
+  assertEquals(CharacterAnimation.State.WORK,FlowerSequence.actorState("gezimi",20500))
+  assertEquals(CharacterAnimation.State.HAPPY,FlowerSequence.actorState("rona",FlowerSequence.DURATION))
+  assertEquals(RestorationSequence.plan(2).duration,PathSequence.DURATION)
+ }
 }
