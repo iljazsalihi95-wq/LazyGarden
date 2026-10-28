@@ -39,6 +39,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
  internal fun actorFacesRight(id:String)=actorFacing[id]
  internal fun dispose(){stopClock();voice.release();sfx.release()}
  internal fun leafCenter(index:Int)=PointF(leaves[index].centerX(),leaves[index].centerY())
+ internal var onActorRendered:((String,CharacterAnimation.State,Int,Boolean)->Unit)?=null
  var onStageChanged:((FountainQuest.Stage)->Unit)?=null
  internal val currentStage get()=stage
  internal fun actionCenter()=PointF(actionRect.centerX(),actionRect.centerY())
@@ -90,6 +91,12 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
    val pump=pumpRect.apply{set(fx-w*.10f,fy+w*.07f,fx+w*.25f,fy+w*.33f)}
    SpriteArt.draw(c,p,hardware,2,2,if(stage.ordinal>=FountainQuest.Stage.CLEAN.ordinal)1 else 0,pump)
    SpriteArt.draw(c,p,hardware,2,2,2,RectF(fx-w*.28f,fy+w*.18f,fx-w*.13f,fy+w*.31f))
+   if(stage==FountainQuest.Stage.PUMP_DIAGNOSIS){
+    val gx=pump.left+pump.width()*.47f;val gy=pump.top+pump.height()*.18f
+    val angle=(-125+sin(elapsed/180f)*25)*PI.toFloat()/180
+    p.color=0xffb45339.toInt();p.strokeWidth=2*d
+    c.drawLine(gx,gy,gx+cos(angle)*pump.width()*.042f,gy+sin(angle)*pump.height()*.055f,p)
+   }
    if(stage==FountainQuest.Stage.REPAIR){
     val layer=c.save();c.clipRect(pump.left,pump.top,pump.left+pump.width()*f,pump.bottom);SpriteArt.draw(c,p,hardware,2,2,1,pump);c.restoreToCount(layer)
     for(i in 0..12){val t=(life/700f+i*.077f)%1f;p.color=0xffe4c38b.toInt();p.alpha=((1-t)*210).toInt();c.drawCircle(pump.centerX()+sin(i*3f)*w*.12f*t,pump.centerY()-t*w*.17f,3*d*(1-t),p)};p.alpha=255
@@ -190,6 +197,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
    p.color=0x44302010;c.drawOval(RectF(a.x-size*.3f,y-size*.07f,a.x+size*.3f,y+size*.04f),p)
    p.alpha=255;val layer=c.save();c.scale(if(facesRight)1f else -1f,1f,a.x,y)
    c.drawBitmap(sheet,Rect(frame*sw,(rows[a.row]*sheet.height).toInt(),(frame+1)*sw,(rows[a.row+1]*sheet.height).toInt()),rect,p);c.restoreToCount(layer)
+   onActorRendered?.invoke(a.id,state,frame,facesRight)
    if(a.id=="rexha"&&stage==FountainQuest.Stage.REPAIR){val x=a.x-12*d;val yy=y-ah*.28f;val tool=c.save();c.rotate(sin(life/120f)*18,x,yy);c.drawBitmap(GameSkin.bitmap(context,R.drawable.boost_hammer),null,RectF(x-18*d,yy-30*d,x+18*d,yy+6*d),p);c.restoreToCount(tool)}
   }
  }
