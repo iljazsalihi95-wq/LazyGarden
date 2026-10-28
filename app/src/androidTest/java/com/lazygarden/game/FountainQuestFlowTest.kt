@@ -49,7 +49,7 @@ class FountainQuestFlowTest {
    repeat(5){assertTrue(save.win(solve(save.level)))}
    assertTrue(save.restorationMaterialsReady());shot("premium-03-materials-ready")
    val stock=save.restorationNeeds().associate{it.material to save.materialCount(it.material)}
-   val coins=save.coins;action(s);assertEquals(FountainQuest.Stage.REPAIR,save.fountainQuestStage);assertEquals(coins-120,save.coins)
+   val coins=save.coins;val stars=save.stars;action(s);assertEquals(stars,save.stars);assertEquals(FountainQuest.Stage.REPAIR,save.fountainQuestStage);assertEquals(coins-120,save.coins)
    save.restorationNeeds().forEach{assertEquals(stock.getValue(it.material)-it.count,save.materialCount(it.material))}
    assertFalse(save.actFountain(FountainQuest.Action.RESTORE));SystemClock.sleep(900);shot("premium-04-rexha-work")
    s.recreate();assertTrue(save.constructing);assertEquals(0,save.tasks)
