@@ -31,6 +31,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
  private val worldTarget=RectF();private val leaves=Array(3){RectF()}
  private val actorRects=mutableMapOf<String,RectF>()
  private val d=resources.displayMetrics.density
+ internal fun dispose(){stopClock();voice.release();sfx.release()}
  internal fun leafCenter(index:Int)=PointF(leaves[index].centerX(),leaves[index].centerY())
  internal val currentStage get()=stage
  internal fun actionCenter()=PointF(actionRect.centerX(),actionRect.centerY())
@@ -178,8 +179,8 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   }
  }
  private fun wrap(c:Canvas,value:String,box:RectF,size:Float){p.textSize=size*d;p.typeface=Typeface.DEFAULT_BOLD;val lines=mutableListOf<String>();var row="";for(word in value.split(' ')){if(row.isNotEmpty()&&p.measureText("$row $word")>box.width()-20*d){lines.add(row);row=word}else row=if(row.isEmpty())word else "$row $word"};if(row.isNotEmpty())lines.add(row);for((i,s)in lines.withIndex())text(c,s,box.centerX(),box.centerY()+(i-(lines.size-1)/2f)*18*d+5*d,size)}
- private fun drawRewards(c:Canvas,w:Float,h:Float){val t=(rewardElapsed/1700f).coerceIn(0f,1f);for(i in 0..12){val u=((t-i*.018f)/.72f).coerceIn(0f,1f);if(u<=0||u>=1)continue;val x=(1-u).pow(2)*w*.5f+2*(1-u)*u*w*(.15f+i*.05f)+u*u*w*(if(i==12).69f else .35f);val y=(1-u).pow(2)*h*.55f+2*(1-u)*u*h*.2f+u*u*35*d
-  if(i==12)c.drawBitmap(GameSkin.bitmap(context,R.drawable.reward_star),null,RectF(x-16*d,y-16*d,x+16*d,y+16*d),p)else{p.color=0xffffd65b.toInt();c.drawCircle(x,y,9*d,p);p.color=0xfffff1a4.toInt();c.drawCircle(x-2*d,y-2*d,4*d,p)}
+ private fun drawRewards(c:Canvas,w:Float,h:Float){val t=(rewardElapsed/1700f).coerceIn(0f,1f);for(i in 0..13){val u=((t-i*.018f)/.72f).coerceIn(0f,1f);if(u<=0||u>=1)continue;val x=(1-u).pow(2)*w*.5f+2*(1-u)*u*w*(.15f+i*.05f)+u*u*w*(if(i==12).69f else if(i==13).83f else .35f);val y=(1-u).pow(2)*h*.55f+2*(1-u)*u*h*.2f+u*u*(if(i==13)h-18*d else 35*d)
+  if(i==13){p.color=0xff80d9ff.toInt();c.drawCircle(x,y,14*d,p);text(c,"XP",x,y+4*d,10f,0xff174a64.toInt())}else if(i==12)c.drawBitmap(GameSkin.bitmap(context,R.drawable.reward_star),null,RectF(x-16*d,y-16*d,x+16*d,y+16*d),p)else{p.color=0xffffd65b.toInt();c.drawCircle(x,y,9*d,p);p.color=0xfffff1a4.toInt();c.drawCircle(x-2*d,y-2*d,4*d,p)}
  }}
  override fun onTouchEvent(e:MotionEvent):Boolean{if(e.actionMasked==MotionEvent.ACTION_DOWN)return true;if(e.actionMasked!=MotionEvent.ACTION_UP)return true;performClick()
   if(rewardElapsed>=0)return true
