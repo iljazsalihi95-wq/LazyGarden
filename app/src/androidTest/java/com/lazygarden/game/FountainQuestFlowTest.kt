@@ -24,12 +24,18 @@ import kotlin.random.Random
 class FountainQuestFlowTest {
  private val context get()=ApplicationProvider.getApplicationContext<Context>()
  private val save get()=GardenSave(context)
+ private var currentActivity:MainActivity?=null
  private val observed=java.util.concurrent.ConcurrentHashMap.newKeySet<FountainQuest.Stage>()
- @Before fun clear(){observed.clear();context.getSharedPreferences("garden_progress",0).edit().clear().putBoolean("voice_enabled",false).putBoolean("sfx_enabled",false).commit()}
+ @Before fun clear(){currentActivity=null;observed.clear();context.getSharedPreferences("garden_progress",0).edit().clear().putBoolean("voice_enabled",false).putBoolean("sfx_enabled",false).commit()}
  private fun views(v:View):List<View> = listOf(v)+if(v is ViewGroup)(0 until v.childCount).flatMap{views(v.getChildAt(it))}else emptyList()
  private fun quest(a:MainActivity)=views(a.window.decorView).filterIsInstance<FountainQuestView>().single()
  private fun tap(v:View,x:Float,y:Float){val now=SystemClock.uptimeMillis();for(action in listOf(MotionEvent.ACTION_DOWN,MotionEvent.ACTION_UP)){val e=MotionEvent.obtain(now,now,action,x,y,0);v.dispatchTouchEvent(e);e.recycle()}}
- private fun action(s:ActivityScenario<MainActivity>){s.onActivity{val v=quest(it);val point=v.actionCenter();tap(v,point.x,point.y)}}
+ private fun onUi(block:(MainActivity)->Unit){
+  val done=java.util.concurrent.CountDownLatch(1);val error=java.util.concurrent.atomic.AtomicReference<Throwable?>()
+  android.os.Handler(android.os.Looper.getMainLooper()).post{try{block(checkNotNull(currentActivity))}catch(t:Throwable){error.set(t)}finally{done.countDown()}}
+  assertTrue("Native action must reach the main thread",done.await(15,java.util.concurrent.TimeUnit.SECONDS));error.get()?.let{throw it}
+ }
+ private fun action(s:ActivityScenario<MainActivity>){onUi{val v=quest(it);val point=v.actionCenter();tap(v,point.x,point.y)}}
  private fun waitFor(s:ActivityScenario<MainActivity>,stage:FountainQuest.Stage,timeout:Long=15000){
   val end=SystemClock.uptimeMillis()+timeout
   while(SystemClock.uptimeMillis()<end){if(save.fountainQuestStage==stage||stage in observed)return;SystemClock.sleep(50)}
@@ -39,7 +45,7 @@ class FountainQuestFlowTest {
  private fun solve(level:Int):Match3Engine {val e=Match3Engine(level,Random(level*71));repeat(500){if(!e.won)e.boost(Match3Engine.Booster.COLOR,it%64)};assertTrue(e.won);return e}
  @Test fun realWorldTapsArrivalEarnedMaterialsWorkCleaningWaterAndRewardsPersist(){
   ActivityScenario.launch(MainActivity::class.java).use{s->
-   s.onActivity{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Ndërto"}.performClick();quest(a).onStageChanged={observed.add(it)}}
+   s.onActivity{a->currentActivity=a;views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Ndërto"}.performClick();quest(a).onStageChanged={observed.add(it)}}
    waitFor(s,FountainQuest.Stage.TEST_WATER);shot("premium-01-meli-tests-water");action(s)
    waitFor(s,FountainQuest.Stage.CALL_LAZI);action(s);waitFor(s,FountainQuest.Stage.INSPECT);action(s)
    assertEquals(FountainQuest.Stage.CALL_REXHA,save.fountainQuestStage);action(s)
@@ -53,9 +59,9 @@ class FountainQuestFlowTest {
    val coins=save.coins;val stars=save.stars;action(s);assertEquals(stars,save.stars);assertEquals(FountainQuest.Stage.REPAIR,save.fountainQuestStage);assertEquals(coins-120,save.coins)
    save.restorationNeeds().forEach{assertEquals(stock.getValue(it.material)-it.count,save.materialCount(it.material))}
    assertFalse(save.actFountain(FountainQuest.Action.RESTORE));SystemClock.sleep(900);shot("premium-04-rexha-work")
-   s.recreate();assertTrue(save.constructing);assertEquals(0,save.tasks)
+   s.recreate();s.onActivity{currentActivity=it};assertTrue(save.constructing);assertEquals(0,save.tasks)
    waitFor(s,FountainQuest.Stage.CLEAN)
-   for(i in 0..2){s.onActivity{a->val v=quest(a);val point=v.leafCenter(i);tap(v,point.x,point.y)};assertTrue(save.fountainCleanedMask and (1 shl i)!=0)}
+   for(i in 0..2){onUi{a->val v=quest(a);val point=v.leafCenter(i);tap(v,point.x,point.y)};assertTrue(save.fountainCleanedMask and (1 shl i)!=0)}
    waitFor(s,FountainQuest.Stage.START_WATER);action(s);waitFor(s,FountainQuest.Stage.CLAIM)
    shot("premium-05-restored-fountain");assertEquals(0,save.tasks)
    val beforeCoins=save.coins;val beforeStars=save.stars;val beforeXp=save.xp
