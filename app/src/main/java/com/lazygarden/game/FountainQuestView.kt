@@ -132,7 +132,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
    if(stage!=FountainQuest.Stage.CALL_REXHA){for(i in 0..2){val t=(life/1100f+i*.33f)%1f;p.style=Paint.Style.STROKE;p.strokeWidth=2*d;p.color=0xffc5ffe5.toInt();p.alpha=((1-t)*220).toInt();c.drawCircle(x,y,(18+20*t)*d,p)};p.style=Paint.Style.FILL;p.alpha=255}
   }}
   drawHud(c,w,h)
-  if(stage==FountainQuest.Stage.REPAIR&&elapsed<1600){
+  if(stage==FountainQuest.Stage.MATERIAL_DELIVERY){
    val u=(elapsed/1600f).coerceIn(0f,1f)
    for((i,need)in save.restorationNeeds(0).withIndex()){
     val sx=w*(.15f+i*.23f);val sy=h-170*d;val ex=fx+w*.17f;val ey=fy+w*.12f
@@ -191,7 +191,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
     work->CharacterAnimation.State.WORK
     collecting->CharacterAnimation.State.COLLECT
     happy->CharacterAnimation.State.HAPPY
-    carrying||(a.id=="rexha"&&stage==FountainQuest.Stage.REXHA_INSPECT)->CharacterAnimation.State.CARRY
+    carrying||(a.id=="rexha"&&stage==FountainQuest.Stage.MATERIAL_DELIVERY)->CharacterAnimation.State.CARRY
     stage in listOf(FountainQuest.Stage.INSPECT,FountainQuest.Stage.TEST_WATER,FountainQuest.Stage.REXHA_INSPECT)->CharacterAnimation.State.THINK
     else->CharacterAnimation.State.IDLE
    }

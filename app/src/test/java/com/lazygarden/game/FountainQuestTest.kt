@@ -10,6 +10,7 @@ class FountainQuestTest {
   assertEquals(FountainQuest.Stage.PHONE_CALL,FountainQuest.actionNext(FountainQuest.Stage.CALL_REXHA,FountainQuest.Action.CALL_REXHA))
   assertNull(FountainQuest.actionNext(FountainQuest.Stage.TEST_WATER,FountainQuest.Action.CALL_REXHA))
   assertEquals(FountainQuest.Stage.CLEAN,FountainQuest.timedNext(FountainQuest.Stage.REPAIR))
+  assertEquals(FountainQuest.Stage.REPAIR,FountainQuest.timedNext(FountainQuest.Stage.MATERIAL_DELIVERY))
  }
  @Test fun everyTimedStageHasAnExitAndBoundedMovement(){
   FountainQuest.Stage.entries.filter{it.duration>0}.forEach{

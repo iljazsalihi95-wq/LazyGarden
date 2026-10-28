@@ -3,6 +3,7 @@ package com.lazygarden.game
 object FountainText {
  private val languages=listOf("sq","de","it","mk","tr")
  private val rows=mapOf(
+  "handoff" to listOf("Rexha merr materialet dhe veglat","Rexha übernimmt Material und Werkzeug","Rexha prende materiali e attrezzi","Реџа ги зема материјалите и алатот","Rexha malzemeleri ve aletleri alıyor"),
   "testing" to listOf("Meli po provon valvulën…","Meli prüft das Ventil…","Meli prova la valvola…","Мели го проверува вентилот…","Meli vanayı deniyor…"),
   "checking" to listOf("Lazi kontrollon shatërvanin…","Lazi untersucht den Brunnen…","Lazi controlla la fontana…","Лази ја проверува фонтаната…","Lazi çeşmeyi inceliyor…"),
   "diagnosing" to listOf("Rexha kontrollon presionin dhe pompën…","Rexha prüft Druck und Pumpe…","Rexha controlla pressione e pompa…","Реџа ги проверува притисокот и пумпата…","Rexha basıncı ve pompayı kontrol ediyor…"),
@@ -64,7 +65,7 @@ object FountainText {
   FountainQuest.Stage.TEST_WATER->"test_water";FountainQuest.Stage.CALL_LAZI->"call_lazi"
   FountainQuest.Stage.CALL_REXHA->"call_rexha";FountainQuest.Stage.PHONE_CALL->"phone_call"
   FountainQuest.Stage.REXHA_ARRIVAL->"arriving";FountainQuest.Stage.REXHA_INSPECT->"rexha_inspect"
-  FountainQuest.Stage.COLLECT->"collect";FountainQuest.Stage.REPAIR->"repair"
+  FountainQuest.Stage.COLLECT->"collect";FountainQuest.Stage.MATERIAL_DELIVERY->"handoff";FountainQuest.Stage.REPAIR->"repair"
   FountainQuest.Stage.CLEAN->"clean";FountainQuest.Stage.START_WATER->"start_water"
   FountainQuest.Stage.CLAIM->"claim";else->"inspect"
  })
