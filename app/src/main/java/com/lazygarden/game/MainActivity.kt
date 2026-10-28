@@ -29,7 +29,7 @@ class MainActivity : AppCompatActivity() {
  private var completionDialog:AlertDialog?=null
  private val names=arrayOf("Rikthe ujin e shatërvanit","Mbille kopshtin me lule","Rregullo shtegun","Riparo stolin","Rikthe gjelbërimin","Restauro hyrjen","Restauro fasadën e pronës")
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
- override fun onCreate(state:Bundle?){super.onCreate(state);WindowCompat.setDecorFitsSystemWindows(window,false);save=GardenSave(this);ads=RewardedVideos(this,save);sfx=GardenSfx(this);showGarden();if(save.hasPendingStory&&!save.constructing)showStory();onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true){override fun handleOnBackPressed(){if(screen=="garden")finish() else {engine?.let{save.saveBoard(it)};showGarden()}}})}
+ override fun onCreate(state:Bundle?){super.onCreate(state);WindowCompat.setDecorFitsSystemWindows(window,false);save=GardenSave(this);ads=RewardedVideos(this,save);sfx=GardenSfx(this);showGarden();if(save.hasPendingStory&&!save.constructing)showStory();onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true){override fun handleOnBackPressed(){if(screen=="garden")finish() else {engine?.let{save.saveBoard(it)};showGarden(screen=="fountain_quest")}}})}
  override fun onResume(){super.onResume();world?.resumeScene()}
  override fun onPause(){world?.pauseScene();sfx.pause();engine?.let{save.saveBoard(it)};super.onPause()}
  override fun onDestroy(){completionDialog?.dismiss();world?.pauseScene();rewardAnimator?.cancel();ads.release();sfx.release();super.onDestroy()}
@@ -37,15 +37,15 @@ class MainActivity : AppCompatActivity() {
  private fun attach(view:View){world?.pauseScene();rewardAnimator?.cancel();val host=FrameLayout(this).apply{setBackgroundColor(0xff142f28.toInt());addView(view,FrameLayout.LayoutParams(-1,-1))};ViewCompat.setOnApplyWindowInsetsListener(host){v,insets->val bars=insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout());v.setPadding(bars.left,bars.top,bars.right,bars.bottom);insets};setContentView(host);world=findWorld(view);ViewCompat.requestApplyInsets(host);WindowInsetsControllerCompat(window,host).apply{systemBarsBehavior=WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE;hide(WindowInsetsCompat.Type.systemBars())}}
  private fun label(value:String,size:Float=18f,color:Int=Color.WHITE)=TextView(this).apply{text=value;textSize=size;setTextColor(color);gravity=Gravity.CENTER;typeface=Typeface.DEFAULT_BOLD;setShadowLayer(2f,0f,1f,0x77253020)}
  private fun premiumButton(value:String,primary:Boolean=false,action:()->Unit)=GameButton(this,primary).apply{text=value;isAllCaps=false;textSize=if(primary)23f else 15f;setTextColor(Color.WHITE);typeface=Typeface.DEFAULT_BOLD;minHeight=dp(if(primary)66 else 48);setPadding(dp(10),dp(6),dp(10),dp(6));layoutParams=LinearLayout.LayoutParams(-1,-2).apply{setMargins(dp(4),dp(5),dp(4),dp(5))};setOnClickListener{performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);action()}}
- private fun showGarden(){
-  if(save.fountainQuestActive&&save.constructing){showFountainQuest();return}
+ private fun showGarden(forceHome:Boolean=false){
+  if(save.fountainQuestActive&&save.constructing&&!forceHome){showFountainQuest();return}
   screen="garden";engine=null;val root=FrameLayout(this)
   val scene:View=if(save.constructing&&save.tasks==1){
    FlowerGardenView(this,language=save.language,initialChoice=save.flowerChoice,initialElapsed=save.restorationElapsed,checkpoint={save.checkpointRestoration(it)},onChoice={save.chooseFlower(it.id)},onComplete={if(save.constructing){save.finishRestoration();showGarden();showFlowerComplete()}}).apply{contentDescription="Mbjellja e luleve"}
   }else if(save.constructing&&save.tasks>=2){
    if(save.tasks==2)PathGardenView(this,save.restorationElapsed,{save.checkpointRestoration(it)},{completeWork()}) else RestorationGardenView(this,save.tasks,save.restorationElapsed,{save.checkpointRestoration(it)},{completeWork()})
   }else{
-   GardenWorldView(this,save.tasks,save.constructing,save.decorations,onRestorationComplete={if(save.constructing){val fountain=save.tasks==0;save.finishRestoration();showGarden();if(fountain)showFountainComplete()}},initialElapsed=save.restorationElapsed,checkpoint={save.checkpointRestoration(it)}).apply{contentDescription="Shiko pronën";setOnClickListener{if(!save.constructing){if(save.tasks==0)showFountainQuest() else showEstate()}}}
+   GardenWorldView(this,save.tasks,save.constructing&&!save.fountainQuestActive,save.decorations,onRestorationComplete={if(save.constructing){val fountain=save.tasks==0;save.finishRestoration();showGarden();if(fountain)showFountainComplete()}},initialElapsed=save.restorationElapsed,checkpoint={save.checkpointRestoration(it)}).apply{contentDescription="Shiko pronën";setOnClickListener{if(!save.constructing){if(save.tasks==0)showFountainQuest() else showEstate()}}}
   }
   root.addView(scene,FrameLayout.LayoutParams(-1,-1))
   val top=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(8),dp(12),0)}
@@ -57,12 +57,12 @@ class MainActivity : AppCompatActivity() {
   val rightMenu=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};rightMenu.addView(side("Ndërto",R.drawable.boost_hammer){tasks()},LinearLayout.LayoutParams(dp(79),dp(83)));rightMenu.addView(side("Dekoro",R.drawable.tile_flower){showDecor()},LinearLayout.LayoutParams(dp(79),dp(83)).apply{topMargin=dp(8)});root.addView(rightMenu,FrameLayout.LayoutParams(-2,-2,Gravity.END or Gravity.BOTTOM).apply{setMargins(0,0,dp(9),dp(158))})
   val bottom=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(dp(10),0,dp(10),dp(10))};bottom.addView(label("Prona jonë · ${save.tasks}/7 restaurime",14f));bottom.addView(premiumButton(if(save.activeBoard!=null)"▶ Vazhdo · ${save.level}" else "▶ Luaj · ${save.level}",true){showMatch3()},LinearLayout.LayoutParams(dp(242),dp(80)).apply{setMargins(0,dp(5),0,dp(5))})
   val nav=LinearLayout(this);nav.addView(side("Nivelet",R.drawable.hd_icon_map){showMap()},LinearLayout.LayoutParams(0,dp(57),1f).apply{marginEnd=dp(8)});nav.addView(side(if(save.hasPendingStory)"Historia · E re" else "Historia",R.drawable.hd_icon_book){if(save.hasPendingStory)showStory() else showStoryArchive()},LinearLayout.LayoutParams(0,dp(57),1f));nav.addView(side(GameText.get(save.language,"inventory"),R.drawable.boost_hammer){showInventory()},LinearLayout.LayoutParams(0,dp(57),1f).apply{marginStart=dp(8)});for(i in 0 until nav.childCount)(nav.getChildAt(i) as Button).setCompoundDrawables(null,null,null,null);bottom.addView(nav);root.addView(bottom,FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));attach(root)
-  if(save.constructing){bottom.visibility=View.INVISIBLE;leftMenu.visibility=View.INVISIBLE;rightMenu.visibility=View.INVISIBLE;for(i in 1 until top.childCount)top.getChildAt(i).visibility=View.GONE}
+  if(save.constructing&&!save.fountainQuestActive){bottom.visibility=View.INVISIBLE;leftMenu.visibility=View.INVISIBLE;rightMenu.visibility=View.INVISIBLE;for(i in 1 until top.childCount)top.getChildAt(i).visibility=View.GONE}
  }
  private fun showFountainQuest(){
   if(!save.startFountainQuest()){showGarden();return}
   screen="fountain_quest";engine=null
-  attach(FountainQuestView(this,save,{showMatch3()},{showInventory()},{showGarden()},{showGarden()}))
+  attach(FountainQuestView(this,save,{showMatch3()},{showInventory()},{showGarden(true)},{showGarden()}))
  }
  private fun showInventory(category:Int=0){
   screen="inventory";engine=null

@@ -80,4 +80,14 @@ class FountainQuestFlowTest {
   assertFalse(save.advanceFountainTimed(FountainQuest.Stage.MELI_APPROACH,1));assertEquals(FountainQuest.Stage.MELI_APPROACH,save.fountainQuestStage)
   assertTrue(save.advanceFountainTimed(FountainQuest.Stage.MELI_APPROACH,2800));assertFalse(save.actFountain(FountainQuest.Action.CALL_REXHA));assertEquals(0,save.coins);assertEquals(0,save.materialCount(Material.PIPE))
  }
+ @Test fun repairCanPauseAtHomeWithoutStartingTheLegacyAutomaticScene(){
+  context.getSharedPreferences("garden_progress",0).edit().putBoolean("fountain_quest_active",true).putBoolean("constructing",true).putString("fountain_quest_stage","REPAIR").putLong("fountain_quest_elapsed",1000).commit()
+  ActivityScenario.launch(MainActivity::class.java).use{s->
+   s.onActivity{a->val v=quest(a);val d=a.resources.displayMetrics.density;tap(v,30*d,30*d);assertTrue(views(a.window.decorView).any{it.contentDescription=="Logo LazyGarden"});assertTrue(views(a.window.decorView).none{it is FountainQuestView})}
+   val checkpoint=save.fountainQuestElapsed;SystemClock.sleep(700);assertEquals(checkpoint,save.fountainQuestElapsed);assertEquals(0,save.tasks);assertTrue(save.constructing)
+   s.onActivity{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Ndërto"}.performClick();assertTrue(quest(a).currentStage in listOf(FountainQuest.Stage.REPAIR,FountainQuest.Stage.CLEAN))}
+   assertEquals(0,save.tasks);assertEquals(0,save.coins)
+  }
+ }
+
 }

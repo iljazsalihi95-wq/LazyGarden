@@ -209,7 +209,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
  }}
  override fun onTouchEvent(e:MotionEvent):Boolean{if(e.actionMasked==MotionEvent.ACTION_DOWN)return true;if(e.actionMasked!=MotionEvent.ACTION_UP)return true;performClick()
   if(rewardElapsed>=0)return true
-  if(closeRect.contains(e.x,e.y)){close();return true}
+  if(closeRect.contains(e.x,e.y)){save.checkpointFountain(stage,elapsed);close();return true}
   if(inventoryRect.contains(e.x,e.y)){save.checkpointFountain(stage,elapsed);inventory();return true}
   if(stage==FountainQuest.Stage.COLLECT&&playRect.contains(e.x,e.y)){save.checkpointFountain(stage,elapsed);play();return true}
   if(stage==FountainQuest.Stage.CLEAN){val i=leaves.indexOfFirst{it.contains(e.x,e.y)};if(i>=0&&save.actFountain(FountainQuest.Action.CLEAN_LEAF,i)){collectedLeaf=i;collectStarted=life;sound("brush");refreshStage()};return true}
