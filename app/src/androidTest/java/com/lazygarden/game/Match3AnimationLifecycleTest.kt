@@ -22,7 +22,7 @@ class Match3AnimationLifecycleTest {
  @Before fun reset(){context.getSharedPreferences("garden_progress",0).edit().clear().putInt("level",250).putInt("coins",200).putBoolean("voice_enabled",false).putBoolean("sfx_enabled",false).commit()}
  private fun onUi(block:()->Unit){val done=java.util.concurrent.CountDownLatch(1);val error=java.util.concurrent.atomic.AtomicReference<Throwable?>();android.os.Handler(android.os.Looper.getMainLooper()).post{try{block()}catch(t:Throwable){error.set(t)}finally{done.countDown()}};assertTrue(done.await(15,java.util.concurrent.TimeUnit.SECONDS));error.get()?.let{throw it}}
  private fun open(s:ActivityScenario<MainActivity>){
-  s.onActivity{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="▶ Luaj · 250"}.performClick();board=views(a.window.decorView).filterIsInstance<Match3BoardView>().single()}
+  s.onActivity{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString() in listOf("▶ Luaj · 250","▶ Vazhdo · 250")}.performClick();board=views(a.window.decorView).filterIsInstance<Match3BoardView>().single()}
   val end=SystemClock.uptimeMillis()+10000;var ready=false
   while(!ready&&SystemClock.uptimeMillis()<end){onUi{ready=board.cellCenter(0).x>0&&board.cellCenter(63).y>board.cellCenter(0).y};if(!ready)SystemClock.sleep(30)}
   assertTrue("Board must draw before a native swipe",ready)
