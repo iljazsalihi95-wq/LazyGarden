@@ -23,7 +23,7 @@ class MaterialObjectiveHud(context:Context,private val save:GardenSave,private v
    else->0
   }
   val target=when{
-   board?.rescueTarget?:0>0->board!!.rescueTarget
+   (board?.rescueTarget?:0)>0->board!!.rescueTarget
    (board?.spec?.collectCount?:0)>0->board!!.spec.collectCount
    else->1
   }
