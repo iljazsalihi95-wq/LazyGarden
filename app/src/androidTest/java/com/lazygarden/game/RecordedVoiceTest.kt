@@ -11,7 +11,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class RecordedVoiceTest {
- @Test fun absentLicensedRecordingsRemainSilentInEveryLanguage(){
+ @Test fun missingClipsKeepTheTemporaryFallbackAndPlaybackLifecycle(){
   val context=ApplicationProvider.getApplicationContext<Context>()
   val json=JSONObject(context.assets.open("voices/manifest.json").bufferedReader().use{it.readText()})
   assertEquals(18,json.getJSONArray("characters").length())
@@ -27,6 +27,9 @@ class RecordedVoiceTest {
     assertFalse(voice.isTalking)
    }
    assertEquals(0,talkingEvents)
+   assertTrue(voice.speakLine("fountain","talk","meli","de","Warum funktioniert der Brunnen nicht?",3500))
+   assertEquals("meli",voice.currentLine?.characterId)
+   assertEquals(3500L,voice.currentLine?.durationMillis)
    voice.release();assertFalse(voice.speakLine("fountain","talk","meli","sq"))
   }
  }

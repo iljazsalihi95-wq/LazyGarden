@@ -55,7 +55,7 @@ class FlowerGardenView(
     if(FlowerSequence.stage(ms)!=FlowerSequence.Stage.CHOOSE || chosen!=null)ms=(ms+dt).coerceAtMost(FlowerSequence.DURATION)
     if(ms>=FlowerSequence.DURATION && !completed){completed=true;checkpoint(ms);post{if(isAttachedToWindow)onComplete()}}
     val st=FlowerSequence.stage(ms);val line=FlowerSequence.dialogue(ms,language)
-    if(line!=lastLine){lastLine=line;if(line.isNotBlank())voice.speakLine("flowers",if(st==FlowerSequence.Stage.CELEBRATE)"celebrate" else if(ms<5800)"invite" else "plant_together",if(FlowerSequence.speaker(ms)=="merjem")"meli" else "meti",language)}
+    if(line!=lastLine){lastLine=line;if(line.isNotBlank())voice.speakLine("flowers",if(st==FlowerSequence.Stage.CELEBRATE)"celebrate" else if(ms<5800)"invite" else "plant_together",if(FlowerSequence.speaker(ms)=="merjem")"meli" else "meti",language,line)}
     if(st!=lastStage){lastStage=st;sfx.play(when(st){FlowerSequence.Stage.PREPARE->"shovel";FlowerSequence.Stage.PLANT->"plant";FlowerSequence.Stage.WATER->"water";FlowerSequence.Stage.BLOOM->"bloom";FlowerSequence.Stage.CELEBRATE->"reward";else->""})}
     invalidate()
    }

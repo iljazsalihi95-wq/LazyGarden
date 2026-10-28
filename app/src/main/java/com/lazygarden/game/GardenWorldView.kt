@@ -42,7 +42,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
    if(constructing && !completed){sceneMs+=dt;progress=(sceneMs/FountainSequence.DURATION.toFloat()).coerceIn(0f,1f)
     if(sceneMs>=FountainSequence.DURATION){completed=true;post{if(isAttachedToWindow)onRestorationComplete()}}
    }
-   if(constructing&&tasks==0){val line=FountainSequence.dialogue(sceneMs);if(line!=lastDialogue){lastDialogue=line;if(line.isNotBlank())voice.speakLine("fountain",FountainSequence.stage(sceneMs).name.lowercase(),listOf("lazi","bejdi","meli","rona")[FountainSequence.speaker(sceneMs)],settings.language)};val st=FountainSequence.stage(sceneMs);if(st!=lastSoundStage){lastSoundStage=st;if(settings.sfxEnabled)sfx.play(when(st){FountainSequence.Stage.WORK,FountainSequence.Stage.REPAIR->"hammer";FountainSequence.Stage.WATER_START->"water";FountainSequence.Stage.CELEBRATE->"reward";else->""})}}
+   if(constructing&&tasks==0){val line=FountainSequence.dialogue(sceneMs);if(line!=lastDialogue){lastDialogue=line;if(line.isNotBlank())voice.speakLine("fountain",FountainSequence.stage(sceneMs).name.lowercase(),listOf("lazi","bejdi","meli","rona")[FountainSequence.speaker(sceneMs)],settings.language,SceneText.line(line,settings.language))};val st=FountainSequence.stage(sceneMs);if(st!=lastSoundStage){lastSoundStage=st;if(settings.sfxEnabled)sfx.play(when(st){FountainSequence.Stage.WORK,FountainSequence.Stage.REPAIR->"hammer";FountainSequence.Stage.WATER_START->"water";FountainSequence.Stage.CELEBRATE->"reward";else->""})}}
    invalidate()
   };start()}
  }

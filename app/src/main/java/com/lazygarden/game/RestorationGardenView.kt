@@ -35,7 +35,7 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
   var last=android.os.SystemClock.uptimeMillis();clock=ValueAnimator.ofFloat(0f,1f).apply{duration=12000;repeatCount=ValueAnimator.INFINITE;interpolator=LinearInterpolator();addUpdateListener{
    val now=android.os.SystemClock.uptimeMillis();ms=(ms+(now-last).coerceIn(0,500)).coerceAtMost(plan.duration);last=now
    val i=plan.index(ms);val step=plan.steps[i]
-   if(i!=lastStep){lastStep=i;if(step.line.isNotBlank())voice.speakLine("restoration_$task",step.key.lowercase(),listOf("meti","bejdi","meli","rona")[step.speaker],save.language);if(save.sfxEnabled)sfx.play(step.sound)}
+   if(i!=lastStep){lastStep=i;if(step.line.isNotBlank())voice.speakLine("restoration_$task",step.key.lowercase(),listOf("meti","bejdi","meli","rona")[step.speaker],save.language,SceneText.line(step.line,save.language),step.duration);if(save.sfxEnabled)sfx.play(step.sound)}
    if(ms-lastFoley>1100&&step.sound.isNotBlank()){lastFoley=ms;if(save.sfxEnabled&&step.key !in listOf("CELEBRATE","REVEAL","LIGHT"))sfx.play(step.sound)}
    if(ms>=plan.duration&&!completed){completed=true;checkpoint(ms);post{if(isAttachedToWindow)onComplete()}}
    invalidate()
