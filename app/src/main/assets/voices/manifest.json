@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "languages": [
+    "sq",
+    "de",
+    "it",
+    "mk",
+    "tr"
+  ],
+  "characters": [
+    "lazi",
+    "meli",
+    "bejdi",
+    "meti",
+    "cufi",
+    "rona",
+    "rejani",
+    "medina",
+    "hafsa",
+    "unejsi",
+    "rexha",
+    "gezimi",
+    "greku",
+    "luli",
+    "mevludini",
+    "beka",
+    "besi",
+    "nermiri"
+  ],
+  "lines": [
+    {
+      "scene": "fountain",
+      "line": "talk",
+      "character": "meli",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain",
+      "line": "discover",
+      "character": "lazi",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain",
+      "line": "water_start",
+      "character": "bejdi",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain",
+      "line": "celebrate",
+      "character": "rona",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "flowers",
+      "line": "invite",
+      "character": "meti",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "flowers",
+      "line": "plant_together",
+      "character": "meli",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "flowers",
+      "line": "celebrate",
+      "character": "meli",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_2",
+      "line": "inspect",
+      "character": "meti",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_2",
+      "line": "place",
+      "character": "bejdi",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_2",
+      "line": "reveal",
+      "character": "meli",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_2",
+      "line": "celebrate",
+      "character": "rona",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_3",
+      "line": "inspect",
+      "character": "meti",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_3",
+      "line": "repair",
+      "character": "bejdi",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_3",
+      "line": "paint",
+      "character": "meli",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_3",
+      "line": "try",
+      "character": "rona",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_3",
+      "line": "celebrate",
+      "character": "meti",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_4",
+      "line": "inspect",
+      "character": "meli",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_4",
+      "line": "weed",
+      "character": "bejdi",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_4",
+      "line": "plant",
+      "character": "meli",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_4",
+      "line": "grow",
+      "character": "rona",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_4",
+      "line": "celebrate",
+      "character": "meti",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_5",
+      "line": "inspect",
+      "character": "meti",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_5",
+      "line": "repair",
+      "character": "bejdi",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_5",
+      "line": "decorate",
+      "character": "meli",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_5",
+      "line": "reveal",
+      "character": "rona",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_5",
+      "line": "celebrate",
+      "character": "meti",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_6",
+      "line": "inspect",
+      "character": "meti",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_6",
+      "line": "repair",
+      "character": "bejdi",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_6",
+      "line": "paint",
+      "character": "meli",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_6",
+      "line": "decorate",
+      "character": "rona",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_6",
+      "line": "reveal",
+      "character": "meti",
+      "status": "AWAITING_LICENSED_RECORDING"
+    },
+    {
+      "scene": "restoration_6",
+      "line": "celebrate",
+      "character": "meli",
+      "status": "AWAITING_LICENSED_RECORDING"
+    }
+  ],
+  "clips": []
+}

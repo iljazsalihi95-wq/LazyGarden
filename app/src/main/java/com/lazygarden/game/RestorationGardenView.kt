@@ -35,13 +35,12 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
   var last=android.os.SystemClock.uptimeMillis();clock=ValueAnimator.ofFloat(0f,1f).apply{duration=12000;repeatCount=ValueAnimator.INFINITE;interpolator=LinearInterpolator();addUpdateListener{
    val now=android.os.SystemClock.uptimeMillis();ms=(ms+(now-last).coerceIn(0,500)).coerceAtMost(plan.duration);last=now
    val i=plan.index(ms);val step=plan.steps[i]
-   if(i!=lastStep){lastStep=i;if(step.line.isNotBlank())voice.speak(SceneText.line(step.line,save.language),save.language,role(step.speaker),"$task-$i");if(save.sfxEnabled)sfx.play(step.sound)}
+   if(i!=lastStep){lastStep=i;if(step.line.isNotBlank())voice.speakLine("restoration_$task",step.key.lowercase(),listOf("meti","bejdi","meli","rona")[step.speaker],save.language);if(save.sfxEnabled)sfx.play(step.sound)}
    if(ms-lastFoley>1100&&step.sound.isNotBlank()){lastFoley=ms;if(save.sfxEnabled&&step.key !in listOf("CELEBRATE","REVEAL","LIGHT"))sfx.play(step.sound)}
    if(ms>=plan.duration&&!completed){completed=true;checkpoint(ms);post{if(isAttachedToWindow)onComplete()}}
    invalidate()
   };start()}
  }
- private fun role(id:Int)=when(id){0->GardenVoice.Role.MAN;1->GardenVoice.Role.BOY;2->GardenVoice.Role.WOMAN;else->GardenVoice.Role.GIRL}
  override fun onDraw(c:Canvas){super.onDraw(c);val scale=max(width.toFloat()/background.width,height.toFloat()/background.height);val w=background.width*scale;val h=background.height*scale
   val camera=(ms/4000f).coerceIn(0f,1f)*(1-((ms-plan.duration+3000)/3000f).coerceIn(0f,1f));val maxZoom=when(task){3->2f;4->1.5f;5->1.35f;6->1.15f;else->1.25f};val zoom=1+camera*(maxZoom-1);val d=RectF((width-w*zoom)/2,(height-h*zoom)/2,(width+w*zoom)/2,(height+h*zoom)/2)
   val anchor=WorldRestorationArt.objectRect(d,task);d.offset((width*.5f-anchor.centerX())*camera,(height*.64f-anchor.bottom)*camera)
