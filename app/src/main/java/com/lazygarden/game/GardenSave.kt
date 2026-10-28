@@ -49,7 +49,23 @@ class GardenSave(ctx:Context) {
  fun grantRewardedCoins(amount:Int=100):Boolean {if(amount<=0)return false;return p.edit().putInt("coins",coins+amount).commit()}
  data class ChestReward(val coins:Int,val keys:Int)
  fun openRewardChest():ChestReward? {if(chestProgress<5)return null;val reward=ChestReward(300,1);p.edit().putInt("chest_progress",0).putInt("coins",coins+reward.coins).putInt("keys",keys+reward.keys).commit();return reward}
- fun buyBooster(board:Match3Engine,kind:Match3Engine.Booster,at:Int):List<Match3Engine.Wave>{if(coins<kind.cost||board.won||board.failed)return emptyList();val waves=board.boost(kind,at);if(waves.isNotEmpty())p.edit().putInt("coins",coins-kind.cost).putString("active_board",board.encode()).commit();return waves}
+
+ private fun boosterKey(kind:Match3Engine.Booster)="booster_${kind.name.lowercase()}"
+ fun boosterCount(kind:Match3Engine.Booster)=p.getInt(boosterKey(kind),3).coerceAtLeast(0)
+ fun grantBooster(kind:Match3Engine.Booster,count:Int=1):Boolean {if(count<=0)return false;return p.edit().putInt(boosterKey(kind),boosterCount(kind)+count).commit()}
+ fun buyBoosterStock(kind:Match3Engine.Booster,count:Int=1):Boolean {if(count<=0)return false;val total=kind.cost*count;if(coins<total)return false;return p.edit().putInt("coins",coins-total).putInt(boosterKey(kind),boosterCount(kind)+count).commit()}
+ /** Uses owned stock first. One successful board effect consumes exactly one booster. */
+ fun useBooster(board:Match3Engine,kind:Match3Engine.Booster,at:Int):List<Match3Engine.Wave>{
+  if(board.won||board.failed||boosterCount(kind)<=0)return emptyList()
+  val waves=board.boost(kind,at)
+  if(waves.isNotEmpty())p.edit().putInt(boosterKey(kind),(boosterCount(kind)-1).coerceAtLeast(0)).putString("active_board",board.encode()).commit()
+  return waves
+ }
+ /** Kept for old callers: buying now adds stock, it no longer silently spends coins per tap. */
+ fun buyBooster(board:Match3Engine,kind:Match3Engine.Booster,at:Int):List<Match3Engine.Wave>{
+  if(boosterCount(kind)<=0&&!buyBoosterStock(kind))return emptyList()
+  return useBooster(board,kind,at)
+ }
  val storyPosition get()=p.getInt("story_position",0).coerceIn(0,21)
  val availableStoryLines get()=tasks.coerceIn(0,7)*GardenStory.LINES_PER_CHAPTER
  val hasPendingStory get()=storyPosition<availableStoryLines
