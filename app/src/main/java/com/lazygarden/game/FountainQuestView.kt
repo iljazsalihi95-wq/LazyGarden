@@ -33,6 +33,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
  private val d=resources.displayMetrics.density
  internal fun dispose(){stopClock();voice.release();sfx.release()}
  internal fun leafCenter(index:Int)=PointF(leaves[index].centerX(),leaves[index].centerY())
+ var onStageChanged:((FountainQuest.Stage)->Unit)?=null
  internal val currentStage get()=stage
  internal fun actionCenter()=PointF(actionRect.centerX(),actionRect.centerY())
  init {voice.onTalkingChanged={invalidate()};isClickable=true;contentDescription=FountainText.objective(save.language,stage)}
@@ -54,7 +55,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   };start()}
  }
  private fun sound(key:String){if(save.sfxEnabled)sfx.play(key)}
- private fun refreshStage(){voice.stop();stage=save.fountainQuestStage;elapsed=save.fountainQuestElapsed;checkpoint=elapsed;lastSpoken=null;contentDescription=FountainText.objective(save.language,stage);invalidate()}
+ private fun refreshStage(){voice.stop();stage=save.fountainQuestStage;elapsed=save.fountainQuestElapsed;checkpoint=elapsed;lastSpoken=null;contentDescription=FountainText.objective(save.language,stage);onStageChanged?.invoke(stage);invalidate()}
  private fun dialogue():Pair<String,String>?=when(stage){
   FountainQuest.Stage.TEST_WATER,FountainQuest.Stage.CALL_LAZI->"meli" to "meli_line"
   FountainQuest.Stage.INSPECT,FountainQuest.Stage.CALL_REXHA,FountainQuest.Stage.PHONE_CALL->"lazi" to "lazi_line"

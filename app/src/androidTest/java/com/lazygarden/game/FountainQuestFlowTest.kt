@@ -24,25 +24,26 @@ import kotlin.random.Random
 class FountainQuestFlowTest {
  private val context get()=ApplicationProvider.getApplicationContext<Context>()
  private val save get()=GardenSave(context)
- @Before fun clear(){context.getSharedPreferences("garden_progress",0).edit().clear().putBoolean("voice_enabled",false).putBoolean("sfx_enabled",false).commit()}
+ private val observed=java.util.concurrent.ConcurrentHashMap.newKeySet<FountainQuest.Stage>()
+ @Before fun clear(){observed.clear();context.getSharedPreferences("garden_progress",0).edit().clear().putBoolean("voice_enabled",false).putBoolean("sfx_enabled",false).commit()}
  private fun views(v:View):List<View> = listOf(v)+if(v is ViewGroup)(0 until v.childCount).flatMap{views(v.getChildAt(it))}else emptyList()
  private fun quest(a:MainActivity)=views(a.window.decorView).filterIsInstance<FountainQuestView>().single()
  private fun tap(v:View,x:Float,y:Float){val now=SystemClock.uptimeMillis();for(action in listOf(MotionEvent.ACTION_DOWN,MotionEvent.ACTION_UP)){val e=MotionEvent.obtain(now,now,action,x,y,0);v.dispatchTouchEvent(e);e.recycle()}}
  private fun action(s:ActivityScenario<MainActivity>){s.onActivity{val v=quest(it);val point=v.actionCenter();tap(v,point.x,point.y)}}
  private fun waitFor(s:ActivityScenario<MainActivity>,stage:FountainQuest.Stage,timeout:Long=15000){
   val end=SystemClock.uptimeMillis()+timeout
-  while(SystemClock.uptimeMillis()<end){var found=false;s.onActivity{a->found=quest(a).currentStage==stage};if(found)return;SystemClock.sleep(100)}
+  while(SystemClock.uptimeMillis()<end){if(save.fountainQuestStage==stage||stage in observed)return;SystemClock.sleep(50)}
   fail("Expected $stage, actual ${save.fountainQuestStage}")
  }
  private fun shot(name:String){SystemClock.sleep(250);val ui=InstrumentationRegistry.getInstrumentation().uiAutomation;val file=File(context.getExternalFilesDir(null),"$name.png");val bitmap=ui.takeScreenshot();file.outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)};bitmap.recycle();for(cmd in listOf("mkdir -p /data/local/tmp/lazygarden-screenshots","cp ${file.absolutePath} /data/local/tmp/lazygarden-screenshots/$name.png"))ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand(cmd)).use{it.readBytes()}}
  private fun solve(level:Int):Match3Engine {val e=Match3Engine(level,Random(level*71));repeat(500){if(!e.won)e.boost(Match3Engine.Booster.COLOR,it%64)};assertTrue(e.won);return e}
  @Test fun realWorldTapsArrivalEarnedMaterialsWorkCleaningWaterAndRewardsPersist(){
   ActivityScenario.launch(MainActivity::class.java).use{s->
-   s.onActivity{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Ndërto"}.performClick()}
+   s.onActivity{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Ndërto"}.performClick();quest(a).onStageChanged={observed.add(it)}}
    waitFor(s,FountainQuest.Stage.TEST_WATER);shot("premium-01-meli-tests-water");action(s)
    waitFor(s,FountainQuest.Stage.CALL_LAZI);action(s);waitFor(s,FountainQuest.Stage.INSPECT);action(s)
    assertEquals(FountainQuest.Stage.CALL_REXHA,save.fountainQuestStage);action(s)
-   waitFor(s,FountainQuest.Stage.REXHA_ARRIVAL);shot("premium-02-rexha-arrival")
+   waitFor(s,FountainQuest.Stage.REXHA_ARRIVAL);shot("premium-02-rexha-arrived")
    waitFor(s,FountainQuest.Stage.REXHA_INSPECT);action(s);waitFor(s,FountainQuest.Stage.COLLECT)
    assertFalse(save.restorationMaterialsReady());val oldCoins=save.coins;action(s);assertEquals(FountainQuest.Stage.COLLECT,save.fountainQuestStage);assertEquals(oldCoins,save.coins)
    // Earn through the actual Match-3 win transaction; no test stock injection.
