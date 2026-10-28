@@ -8,7 +8,7 @@ import android.view.View
 import kotlin.math.*
 
 /** Premium illustrated board: animated pieces, water shimmer, combo particles and staged power effects. */
-class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->Unit,private val done:(Boolean)->Unit):View(c){
+class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->Unit,private val done:(Boolean)->Unit):View(c),SceneLifecycle{
  init{contentDescription=GameText.get(GardenSave(c).language,"match_board")}
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val d=resources.displayMetrics.density
@@ -30,12 +30,16 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
  private var animator:ValueAnimator?=null;private var ambient:ValueAnimator?=null;private var boostEffect:Match3Engine.Booster?=null;private var feedback=when(engine.spec.terrainKind){1->t("hint_crates");2,3->t("hint_stone");4->t("hint_soil");5->t("hint_water");else->t("hint_match")}
  var targetBooster:Match3Engine.Booster?=null;var onBoosterTarget:((Match3Engine.Booster,Int)->List<Match3Engine.Wave>)?=null;val isBusy get()=busy
  private var boostOrigin=-1
- private var advance=Runnable{}
- override fun onAttachedToWindow(){super.onAttachedToWindow();ambient=ValueAnimator.ofFloat(0f,1f).apply{duration=2600;repeatCount=ValueAnimator.INFINITE;addUpdateListener{life=it.animatedValue as Float;invalidate()};start()}}
+ private var scenePaused=false
+ internal val animationFraction get()=effect
+ override fun pauseScene(){scenePaused=true;pauseMotion()}
+ override fun resumeScene(){scenePaused=false;if(windowVisibility==VISIBLE){ambient?.resume();animator?.resume()}}
+ private fun pauseMotion(){ambient?.pause();animator?.pause();sfx.pause()}
+ override fun onAttachedToWindow(){super.onAttachedToWindow();ambient=ValueAnimator.ofFloat(0f,1f).apply{duration=2600;repeatCount=ValueAnimator.INFINITE;addUpdateListener{life=it.animatedValue as Float;invalidate()};start();if(scenePaused||windowVisibility!=VISIBLE)pause()}}
  override fun onWindowVisibilityChanged(visibility:Int){super.onWindowVisibilityChanged(visibility)
-  if(visibility==VISIBLE){ambient?.resume();animator?.resume()}else{ambient?.pause();animator?.pause()}
+  if(visibility==VISIBLE&&!scenePaused){ambient?.resume();animator?.resume()}else pauseMotion()
  }
- override fun onDetachedFromWindow(){animator?.removeAllListeners();animator?.cancel();ambient?.removeAllUpdateListeners();ambient?.cancel();ambient=null;removeCallbacks(advance);sfx.release();super.onDetachedFromWindow()}
+ override fun onDetachedFromWindow(){animator?.removeAllListeners();animator?.cancel();ambient?.removeAllUpdateListeners();ambient?.cancel();ambient=null;sfx.release();super.onDetachedFromWindow()}
  private fun text(c:Canvas,s:String,x:Float,y:Float,size:Float,color:Int=0xff593817.toInt()){p.shader=null;p.colorFilter=null;p.alpha=255;p.color=color;p.textSize=size;p.typeface=Typeface.create("sans-serif-condensed",Typeface.BOLD);p.textAlign=Paint.Align.CENTER;p.setShadowLayer(d,0f,d,0x44552d11);c.drawText(s,x,y,p);p.clearShadowLayer()}
  private fun image(c:Canvas,b:Bitmap,r:RectF,alpha:Int=255){p.shader=null;p.colorFilter=null;p.alpha=alpha;c.drawBitmap(b,null,r,p);p.alpha=255}
  override fun onDraw(c:Canvas){super.onDraw(c);val w=width.toFloat();val h=height.toFloat();val scale=max(w/background.width,h/background.height);val bw=background.width*scale;val bh=background.height*scale
@@ -83,7 +87,39 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
  private fun intensityAlpha(t:Float)=((1-t)*200).toInt().coerceIn(0,255)
  internal fun cellCenter(index:Int)=PointF(left+(index%8+.5f)*cell,top+(index/8+.5f)*cell)
  private fun index(x:Float,y:Float):Int{if(x<left||x>=left+8*cell||y<top||y>=top+8*cell)return -1;return ((y-top)/cell).toInt()*8+((x-left)/cell).toInt()}
- override fun onTouchEvent(e:MotionEvent):Boolean{if(busy)return true;if(e.actionMasked==MotionEvent.ACTION_DOWN){down=index(e.x,e.y);downX=e.x;downY=e.y;return true};if(e.actionMasked==MotionEvent.ACTION_UP){performClick();var end=index(e.x,e.y);if(end<0&&down<0)return true;if(down>=0&&hypot(e.x-downX,e.y-downY)>cell*.25f){val dx=e.x-downX;val dy=e.y-downY;end=if(abs(dx)>abs(dy))down+if(dx>0)1 else -1 else down+if(dy>0)8 else -8;if(end !in 0..63||abs(down/8-end/8)+abs(down%8-end%8)!=1){selected=-1;invalidate();return true}};if(end<0)return true;targetBooster?.let{kind->val waves=onBoosterTarget?.invoke(kind,end).orEmpty();targetBooster=null;selected=-1;if(waves.isNotEmpty()){boostOrigin=end;boostEffect=kind;busy=true;changed();animate(waves,0)}else invalidate();return true};val start=if(down>=0&&down!=end)down else selected;if(start>=0&&abs(start/8-end/8)+abs(start%8-end%8)==1){val legal=engine.legal(start,end);busy=true;selected=-1;swapA=start;swapB=end;feedback="";val a=ValueAnimator.ofFloat(0f,1f).apply{duration=if(legal)150 else 130;repeatCount=if(legal)0 else 1;repeatMode=ValueAnimator.REVERSE;addUpdateListener{swapProgress=it.animatedValue as Float;invalidate()}};animator=a;a.addListener(object:android.animation.AnimatorListenerAdapter(){override fun onAnimationEnd(animation:android.animation.Animator){if(!isAttachedToWindow)return;swapA=-1;swapB=-1;if(legal){val waves=engine.swap(start,end);changed();animate(waves,0)}else{busy=false;feedback=t("invalid_swap");invalidate()}}});a.start()}else{selected=end;feedback="";invalidate()};return true};return true}
- override fun performClick():Boolean{super.performClick();return true};fun runBooster(kind:Match3Engine.Booster){if(!busy){targetBooster=if(targetBooster==kind)null else kind;invalidate()}}
- private fun animate(waves:List<Match3Engine.Wave>,i:Int){if(i>=waves.size){visual=Array(8){engine.board[it].clone()};displayedIce=Array(8){engine.ice[it].clone()};displayedScore=engine.score.toFloat();wave=null;boostEffect=null;busy=false;invalidate();if(engine.won||engine.failed){if(save.sfxEnabled)sfx.play(if(engine.won)"win" else "fail");done(engine.won)};return};val startScore=displayedScore;val endScore=waves[i].scoreAfter.toFloat();wave=waves[i];if(save.sfxEnabled)sfx.play(when(boostEffect){Match3Engine.Booster.HAMMER->"hammer";Match3Engine.Booster.BOMB->"bomb";Match3Engine.Booster.ROW->"row";Match3Engine.Booster.COLUMN->"column";Match3Engine.Booster.CROSS->"rocket";null->if(waves[i].combo>1)"star" else "coin";else->"booster"});visual=waves[i].before;displayedIce=waves[i].iceBefore;effect=0f;animator=ValueAnimator.ofFloat(0f,1f).apply{duration=620;addUpdateListener{effect=it.animatedValue as Float;translationX=if(boostEffect!=null&&effect<.3f)sin(effect*75)*d*2*(1-effect/.3f) else 0f;if(effect>=(if(waves[i].shuffled).5f else .35f)){visual=waves[i].after;displayedIce=waves[i].iceAfter};displayedScore=startScore+(endScore-startScore)*effect;invalidate()};start()};advance=Runnable{if(isAttachedToWindow)animate(waves,i+1)};postDelayed(advance,635)}
+ override fun onTouchEvent(e:MotionEvent):Boolean{if(busy||scenePaused)return true;if(e.actionMasked==MotionEvent.ACTION_DOWN){down=index(e.x,e.y);downX=e.x;downY=e.y;return true};if(e.actionMasked==MotionEvent.ACTION_UP){performClick();var end=index(e.x,e.y);if(end<0&&down<0)return true;if(down>=0&&hypot(e.x-downX,e.y-downY)>cell*.25f){val dx=e.x-downX;val dy=e.y-downY;end=if(abs(dx)>abs(dy))down+if(dx>0)1 else -1 else down+if(dy>0)8 else -8;if(end !in 0..63||abs(down/8-end/8)+abs(down%8-end%8)!=1){selected=-1;invalidate();return true}};if(end<0)return true;targetBooster?.let{kind->val waves=onBoosterTarget?.invoke(kind,end).orEmpty();targetBooster=null;selected=-1;if(waves.isNotEmpty()){boostOrigin=end;boostEffect=kind;busy=true;changed();animate(waves,0)}else invalidate();return true};val start=if(down>=0&&down!=end)down else selected;if(start>=0&&abs(start/8-end/8)+abs(start%8-end%8)==1){val legal=engine.legal(start,end);busy=true;selected=-1;swapA=start;swapB=end;feedback="";val a=ValueAnimator.ofFloat(0f,1f).apply{duration=if(legal)150 else 130;repeatCount=if(legal)0 else 1;repeatMode=ValueAnimator.REVERSE;addUpdateListener{swapProgress=it.animatedValue as Float;invalidate()}};animator=a;a.addListener(object:android.animation.AnimatorListenerAdapter(){override fun onAnimationEnd(animation:android.animation.Animator){if(!isAttachedToWindow)return;swapA=-1;swapB=-1;if(legal){val waves=engine.swap(start,end);changed();animate(waves,0)}else{busy=false;feedback=t("invalid_swap");invalidate()}}});a.start()}else{selected=end;feedback="";invalidate()};return true};return true}
+ override fun performClick():Boolean{super.performClick();return true};fun runBooster(kind:Match3Engine.Booster){if(!busy&&!scenePaused){targetBooster=if(targetBooster==kind)null else kind;invalidate()}}
+ private fun animate(waves:List<Match3Engine.Wave>,i:Int){
+  if(i>=waves.size){
+   visual=Array(8){engine.board[it].clone()};displayedIce=Array(8){engine.ice[it].clone()};displayedScore=engine.score.toFloat()
+   wave=null;boostEffect=null;busy=false;invalidate()
+   if(engine.won||engine.failed){if(save.sfxEnabled)sfx.play(if(engine.won)"win" else "fail");done(engine.won)}
+   return
+  }
+  val startScore=displayedScore;val endScore=waves[i].scoreAfter.toFloat();wave=waves[i]
+  if(save.sfxEnabled)sfx.play(when(boostEffect){
+   Match3Engine.Booster.HAMMER->"hammer";Match3Engine.Booster.BOMB->"bomb"
+   Match3Engine.Booster.ROW->"row";Match3Engine.Booster.COLUMN->"column";Match3Engine.Booster.CROSS->"rocket"
+   null->if(waves[i].combo>1)"star" else "coin";else->"booster"
+  })
+  visual=waves[i].before;displayedIce=waves[i].iceBefore;effect=0f
+  animator=ValueAnimator.ofFloat(0f,1f).apply{
+   duration=620
+   addUpdateListener{
+    effect=it.animatedValue as Float
+    translationX=if(boostEffect!=null&&effect<.3f)sin(effect*75)*d*2*(1-effect/.3f) else 0f
+    if(effect>=(if(waves[i].shuffled).5f else .35f)){visual=waves[i].after;displayedIce=waves[i].iceAfter}
+    displayedScore=startScore+(endScore-startScore)*effect;invalidate()
+   }
+   addListener(object:android.animation.AnimatorListenerAdapter(){
+    private var cancelled=false
+    override fun onAnimationCancel(animation:android.animation.Animator){cancelled=true}
+    override fun onAnimationEnd(animation:android.animation.Animator){
+     if(!cancelled&&isAttachedToWindow)animate(waves,i+1)
+    }
+   })
+   start()
+   if(scenePaused||windowVisibility!=VISIBLE)pause()
+  }
+ }
 }
