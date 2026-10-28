@@ -118,7 +118,7 @@ class FountainQuestFlowTest {
    action(s);assertEquals(1,save.tasks);assertFalse(save.constructing)
    assertEquals(beforeCoins+75,save.coins);assertEquals(beforeStars+1,save.stars);assertEquals(beforeXp+50,save.xp)
    assertFalse(save.actFountain(FountainQuest.Action.CLAIM));assertFalse(save.hasPendingStory);assertEquals(3,save.storyPosition);shot("premium-06-rewards-in-flight")
-   recreateNative();assertEquals(1,save.tasks);assertEquals(beforeCoins+75,save.coins);assertEquals(beforeStars+1,save.stars);assertEquals(beforeXp+50,save.xp);onUi{a->assertTrue(views(a.window.decorView).any{it.contentDescription=="Logo LazyGarden"})}
+   recreateNative();assertEquals(1,save.tasks);assertEquals(beforeCoins+75,save.coins);assertEquals(beforeStars+1,save.stars);assertEquals(beforeXp+50,save.xp);onUi{a->assertTrue(views(a.window.decorView).any{it.contentDescription=="Logo LazyGarden"});assertEquals(CharacterSprites.identities.toSet(),views(a.window.decorView).filterIsInstance<GardenWorldView>().single().residentCast.toSet())};shot("premium-10-family-estate-after-restore")
   }
  }
  @Test fun actualResultScreenDeliversEarnedMaterialIntoItsCounter(){
@@ -174,6 +174,27 @@ class FountainQuestFlowTest {
    assertEquals(2,restored.materialCount(Material.PIPE));assertEquals(150,restored.coins)
    assertTrue(restored.startFountainQuest());assertEquals(name,restored.fountainQuestStage.name)
   }
+ }
+
+ @Test fun sharedCastSamplerKeepsFiveDistinctIdentitiesAcrossAllEightStates(){
+  val ids=CharacterSprites.identities
+  assertEquals(setOf("lazi","meli","cufi","rona","rexha"),ids.toSet())
+  assertEquals(5,ids.map{CharacterSprites.definition(it)!!.let{d->d.resource to d.row}}.toSet().size)
+  val image=Bitmap.createBitmap(960,800,Bitmap.Config.ARGB_8888)
+  val canvas=android.graphics.Canvas(image);val paint=android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+  for((row,id)in ids.withIndex())for((column,state)in CharacterAnimation.State.entries.withIndex()){
+   val aspect=CharacterSprites.aspect(context,id);val x=column*120f+60;val y=row*160f+150
+   val bounds=android.graphics.RectF(x-40,y-80*aspect,x+40,y)
+   val frame=CharacterAnimation.frame(state,0,CharacterSprites.definition(id)!!.arrivalAtlas)
+   assertTrue(CharacterSprites.draw(context,canvas,paint,id,frame,bounds,true))
+   var visible=0
+   for(py in row*160 until (row+1)*160 step 4)for(px in column*120 until (column+1)*120 step 4)if(android.graphics.Color.alpha(image.getPixel(px,py))>20)visible++
+   assertTrue("$id/$state must sample a visible full-body pose",visible>20)
+  }
+  val file=File(context.getExternalFilesDir(null),"premium-09-shared-cast-frames.png")
+  file.outputStream().use{image.compress(Bitmap.CompressFormat.PNG,100,it)};image.recycle()
+  val ui=InstrumentationRegistry.getInstrumentation().uiAutomation
+  for(cmd in listOf("mkdir -p /data/local/tmp/lazygarden-screenshots","cp ${file.absolutePath} /data/local/tmp/lazygarden-screenshots/${file.name}"))ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand(cmd)).use{it.readBytes()}
  }
 
 }

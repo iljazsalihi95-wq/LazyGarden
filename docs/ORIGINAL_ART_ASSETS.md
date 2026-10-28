@@ -75,3 +75,10 @@ work with wrench / children gathering leaves; carrying toolbox / flower
 basket; happy raised arms. Warm hand-painted dimensional HD 2D game art,
 three-quarter right view, genuine alpha, no text, grid, scenery, proprietary
 characters or baked shadow puddles.
+
+
+The playable fountain and the persistent estate now share `CharacterSprites`
+for Lazi, Meli, Cufi, Rona and Rexha. That registry owns the resource/row mapping
+and nonuniform row cuts. `CharacterAnimation.Player` owns each actor's state
+clock and route facing; neither renderer substitutes another resident's row.
+The remaining cast still requires its own original production artwork.

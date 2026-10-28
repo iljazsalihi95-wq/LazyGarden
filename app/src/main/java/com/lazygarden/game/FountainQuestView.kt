@@ -13,8 +13,6 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val before=GardenBackdrop(context,0);private val restored=GardenBackdrop(context,1)
  private val background=GameSkin.bitmap(context,R.drawable.garden_before)
- private val family=GameSkin.bitmap(context,R.drawable.resident_atlas)
- private val arrivals=GameSkin.bitmap(context,R.drawable.fountain_family_atlas)
  private val hardware=GameSkin.bitmap(context,R.drawable.fountain_worksite)
  private val leaf=GameSkin.bitmap(context,R.drawable.tile_leaf)
  private val materialArt=MaterialArt(context)
@@ -165,14 +163,14 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   val nearCufi=CharacterAnimation.move(cp.position,CharacterAnimation.Position(fx+w*.06f,fy+w*.22f),toWater)
   val nearRona=CharacterAnimation.move(rp.position,CharacterAnimation.Position(fx+w*.34f,fy+w*.28f),toWater)
   val plumber=route(-w*.2f,h*.91f,fx+w*.20f,fy+w*.25f,rexha)
-  data class Actor(val id:String,val row:Int,val new:Boolean,val x:Float,val y:Float,val moving:Boolean,val child:Boolean=false,val routeRight:Boolean=true)
+  data class Actor(val id:String,val x:Float,val y:Float,val moving:Boolean,val child:Boolean=false,val routeRight:Boolean=true)
   val people=mutableListOf(
-   Actor("meli",2,false,mp.position.x,mp.position.y,mp.moving,routeRight=mp.facingRight),
-   Actor("lazi",0,false,lp.position.x,lp.position.y,lp.moving,routeRight=lp.facingRight),
-   Actor("cufi",1,true,nearCufi.x,nearCufi.y,children<1||toWater in .001f.. .999f,true,false),
-   Actor("rona",2,true,nearRona.x,nearRona.y,children<1||toWater in .001f.. .999f,true,toWater>0)
+   Actor("meli",mp.position.x,mp.position.y,mp.moving,routeRight=mp.facingRight),
+   Actor("lazi",lp.position.x,lp.position.y,lp.moving,routeRight=lp.facingRight),
+   Actor("cufi",nearCufi.x,nearCufi.y,children<1||toWater in .001f.. .999f,true,false),
+   Actor("rona",nearRona.x,nearRona.y,children<1||toWater in .001f.. .999f,true,toWater>0)
   )
-  if(index>=FountainQuest.Stage.REXHA_ARRIVAL.ordinal)people.add(Actor("rexha",0,true,plumber.position.x,plumber.position.y,plumber.moving,routeRight=plumber.facingRight))
+  if(index>=FountainQuest.Stage.REXHA_ARRIVAL.ordinal)people.add(Actor("rexha",plumber.position.x,plumber.position.y,plumber.moving,routeRight=plumber.facingRight))
   actorRects.clear();actorFacing.clear()
   for(base in people.sortedBy{it.y}){
    if(base.id=="lazi"&&index<FountainQuest.Stage.LAZI_APPROACH.ordinal)continue
@@ -198,18 +196,16 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
     else->CharacterAnimation.State.IDLE
    }
    val player=players.getOrPut(a.id){CharacterAnimation.Player()};player.update(state,life)
-   val frame=player.frame(life,a.new)
+   val frame=player.frame(life,CharacterSprites.definition(a.id)!!.arrivalAtlas)
    val speaking=FountainText.cue(stage)?.character
    val lookAt=if(a.moving){if(a.routeRight)w*2 else -w}else if(speaking!=null&&speaking!=a.id)people.firstOrNull{it.id==speaking}?.x?:fx else fx
    val facesRight=CharacterAnimation.facesRight(a.x,lookAt);actorFacing[a.id]=facesRight
-   val size=w*(if(a.child).15f else .23f);val sheet=if(a.new)arrivals else family
-   val rows=if(a.new)floatArrayOf(0f,280/768f,536/768f,1f) else floatArrayOf(0f,.25f,.5f,.75f,1f)
-   val sw=sheet.width/8;val sh=(rows[a.row+1]-rows[a.row])*sheet.height
-   val ah=size*sh/sw;val poseTime=player.elapsed(life);val phase=(a.id.hashCode()%7).toFloat();val bob=if(happy)-abs(sin(poseTime/140f+phase))*8*d else if(a.moving)-abs(sin(poseTime/100f))*2*d else sin(poseTime/700f+phase)*d
+   val size=w*(if(a.child).15f else .23f);val ah=size*CharacterSprites.aspect(context,a.id)
+   val poseTime=player.elapsed(life);val phase=(a.id.hashCode()%7).toFloat()
+   val bob=if(happy)-abs(sin(poseTime/140f+phase))*8*d else if(a.moving)-abs(sin(poseTime/100f))*2*d else sin(poseTime/700f+phase)*d
    val y=a.y+bob;val rect=RectF(a.x-size/2,y-ah,a.x+size/2,y);actorRects[a.id]=rect
    p.color=0x44302010;c.drawOval(RectF(a.x-size*.3f,y-size*.07f,a.x+size*.3f,y+size*.04f),p)
-   p.alpha=255;val layer=c.save();c.scale(if(facesRight)1f else -1f,1f,a.x,y)
-   c.drawBitmap(sheet,Rect(frame*sw,(rows[a.row]*sheet.height).toInt(),(frame+1)*sw,(rows[a.row+1]*sheet.height).toInt()),rect,p);c.restoreToCount(layer)
+   CharacterSprites.draw(context,c,p,a.id,frame,rect,facesRight)
    onActorRendered?.invoke(a.id,state,frame,facesRight)
    if(carrying&&a.moving){val hx=a.x+if(facesRight)size*.18f else -size*.18f;val hy=y-ah*.36f;c.drawBitmap(leaf,null,RectF(hx-9*d,hy-9*d,hx+9*d,hy+9*d),p)}
    if(a.id=="rexha"&&stage==FountainQuest.Stage.REPAIR){val x=a.x-12*d;val yy=y-ah*.28f;val tool=c.save();c.rotate(sin(life/120f)*18,x,yy);c.drawBitmap(GameSkin.bitmap(context,R.drawable.boost_hammer),null,RectF(x-18*d,yy-30*d,x+18*d,yy+6*d),p);c.restoreToCount(tool)}

@@ -24,6 +24,9 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
  private var lastSoundStage:FountainSequence.Stage?=null
  private val names=listOf("Meti","Bejdi","Meli","Lina")
  private var progress=0f; private var life=0f
+ private var ambientMs=0L
+ private val familyPlayers=mutableMapOf<String,CharacterAnimation.Player>()
+ internal val residentCast get()=if(!constructing&&(settings.fountainQuestActive||settings.fountainQuestCompleted))CharacterSprites.identities.filter{it!="rexha"||tasks>0||settings.fountainQuestStage.ordinal>=FountainQuest.Stage.REXHA_ARRIVAL.ordinal}else names
  private var sceneMs=initialElapsed; private var completed=false
  internal val sceneElapsedMillis get()=sceneMs
  private val sprites by lazy { BitmapFactory.decodeResource(resources,R.drawable.resident_atlas) }
@@ -38,7 +41,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   var previous=android.os.SystemClock.uptimeMillis()
   lifeAnimator=ValueAnimator.ofFloat(0f,1f).apply{duration=12000;repeatCount=ValueAnimator.INFINITE;interpolator=LinearInterpolator();addUpdateListener{
    val now=android.os.SystemClock.uptimeMillis();val dt=(now-previous).coerceIn(0L,1000L);previous=now
-   life=(life+dt/12000f)%1f
+   life=(life+dt/12000f)%1f;ambientMs+=dt
    if(constructing && !completed){sceneMs+=dt;progress=(sceneMs/FountainSequence.DURATION.toFloat()).coerceIn(0f,1f)
     if(sceneMs>=FountainSequence.DURATION){completed=true;post{if(isAttachedToWindow)onRestorationComplete()}}
    }
@@ -78,6 +81,8 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   val fx=dst.left+dw*.55f;val fy=dst.top+dh*.515f
   val amount=if(tasks>0)1f else if(constructing)FountainSequence.water(sceneMs) else 0f
   if(amount>0f){val layer=c.saveLayer(null,Paint().apply{alpha=(255*amount).toInt()});WorldRestorationArt.water(c,p,dst,life*12000f);c.restoreToCount(layer)}
+  if(!constructing&&(settings.fountainQuestActive||settings.fountainQuestCompleted)){drawPersistentFamily(c,fx);return}
+
   if(tasks==0 && amount<1f){
    // Debris marks the blocked intake; it clears progressively during the repair.
    val debris=if(constructing)((19400-sceneMs)/2000f).coerceIn(0f,1f) else 1f
@@ -137,6 +142,26 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
    val fill=RectF(bar.left,bar.top,bar.left+bar.width()*FountainSequence.repair(sceneMs),bar.bottom);c.drawRoundRect(fill,dh*.006f,dh*.006f,p);p.shader=null
    p.style=Paint.Style.STROKE;p.strokeWidth=dp(1).toFloat();p.color=0xffffdb8c.toInt();c.drawRoundRect(bar,dh*.006f,dh*.006f,p);p.style=Paint.Style.FILL
    for(i in 0..5){val t=(life*8+i*.17f)%1f;p.color=0xffffd87a.toInt();p.alpha=((1-t)*230).toInt();c.drawCircle(fx+dw*.12f+sin(i*3f)*dw*.04f*t,by-dh*.05f-t*dh*.035f,dw*.003f,p)};p.alpha=255
+  }
+ }
+ private fun drawPersistentFamily(c:Canvas,fountainX:Float){
+  data class Resident(val id:String,val x:Float,val y:Float,val child:Boolean=false)
+  val cast=listOf(Resident("meli",.32f,.65f),Resident("lazi",.50f,.67f),Resident("rexha",.70f,.64f),Resident("cufi",.42f,.74f,true),Resident("rona",.59f,.74f,true)).filter{it.id in residentCast}
+  for(actor in cast.sortedBy{it.y}){
+   val start=CharacterAnimation.Position(width*actor.x,height*actor.y)
+   val visit=if(actor.child)ResidentAnimation.flowerVisit(life) else 0f
+   val destination=CharacterAnimation.Position(width*(if(actor.id=="cufi").34f else .69f),height*.73f)
+   val returning=life>=.75f
+   val route=if(returning)CharacterAnimation.sampleRoute(destination,start,1-visit,fountainX)else CharacterAnimation.sampleRoute(start,destination,visit,fountainX)
+   val position=if(actor.child)route.position else start
+   val walking=actor.child&&visit>.001f&&visit<.999f
+   val state=if(walking)CharacterAnimation.State.WALK else if(actor.child&&visit==1f)CharacterAnimation.State.THINK else CharacterAnimation.State.IDLE
+   val player=familyPlayers.getOrPut(actor.id){CharacterAnimation.Player()};player.update(state,ambientMs)
+   val frame=player.frame(ambientMs,CharacterSprites.definition(actor.id)!!.arrivalAtlas)
+   val w=width*(if(actor.child).105f else .15f);val h=w*CharacterSprites.aspect(context,actor.id)
+   val y=position.y+kotlin.math.sin(player.elapsed(ambientMs)/700f+actor.id.hashCode()%7)*resources.displayMetrics.density
+   p.shader=null;p.color=0x44302010;c.drawOval(RectF(position.x-w*.3f,y-w*.06f,position.x+w*.3f,y+w*.025f),p)
+   CharacterSprites.draw(context,c,p,actor.id,frame,RectF(position.x-w/2,y-h,position.x+w/2,y),if(walking)route.facingRight else CharacterAnimation.facesRight(position.x,fountainX))
   }
  }
  private fun prop(c:Canvas,index:Int,dst:RectF,alpha:Int=255){
