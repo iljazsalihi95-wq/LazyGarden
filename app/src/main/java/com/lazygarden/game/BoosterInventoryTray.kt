@@ -1,7 +1,6 @@
 package com.lazygarden.game
 
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
@@ -9,20 +8,13 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
-/**
- * Premium Match-3 booster inventory surface.
- *
- * The tray never mutates the board or economy itself: it renders the persistent
- * GardenSave stock and delegates use/purchase intents to the screen controller.
- * This keeps a single source of truth for the 3 -> 2 -> 1 -> 0 inventory flow.
- */
+/** Premium Match-3 booster inventory backed only by persistent GardenSave stock. */
 class BoosterInventoryTray(
     context: Context,
     private val save: GardenSave,
     private val onUse: (Match3Engine.Booster) -> Unit,
     private val onBuy: (Match3Engine.Booster) -> Unit
 ) : LinearLayout(context) {
-
     private val badges = linkedMapOf<Match3Engine.Booster, TextView>()
     private val tiles = linkedMapOf<Match3Engine.Booster, View>()
     private val icons = intArrayOf(
@@ -30,6 +22,7 @@ class BoosterInventoryTray(
         R.drawable.boost_cross, R.drawable.boost_bomb, R.drawable.boost_color,
         R.drawable.boost_shuffle
     )
+    private fun t(key:String)=GameText.get(save.language,key)
 
     init {
         orientation = HORIZONTAL
@@ -62,6 +55,9 @@ class BoosterInventoryTray(
         }
         tile.addView(badge, LayoutParams(-1, dp(25)))
         tile.setOnClickListener {
+            it.animate().scaleX(.90f).scaleY(.90f).setDuration(70).withEndAction {
+                it.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+            }.start()
             if (save.boosterCount(kind) > 0) onUse(kind) else onBuy(kind)
         }
         tile.setOnLongClickListener { onBuy(kind); true }
@@ -70,7 +66,7 @@ class BoosterInventoryTray(
         return tile
     }
 
-    /** Refresh after every successful use or purchase so stock is never stale. */
+    /** Refresh immediately after use/purchase: x3 -> x2 -> x1 -> buy state. */
     fun refresh() {
         Match3Engine.Booster.entries.forEach { kind ->
             val count = save.boosterCount(kind)
@@ -79,10 +75,11 @@ class BoosterInventoryTray(
                 setTextColor(if (count > 0) 0xff3f6d36.toInt() else 0xff8b4a2b.toInt())
             }
             tiles[kind]?.apply {
-                alpha = if (count > 0) 1f else .78f
+                alpha = if (count > 0) 1f else .72f
+                isActivated = count > 0
                 contentDescription = if (count > 0)
-                    "${kind.label}, $count në inventar"
-                else "${kind.label}, pa stok, bli për ${kind.cost} Game Coins"
+                    "${kind.label}, $count ${t("stock")}"
+                else "${kind.label}, ${t("no_stock")}, ${t("buy")} ${kind.cost} ${t("coins")}"
             }
         }
     }
