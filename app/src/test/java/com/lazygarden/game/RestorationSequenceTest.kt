@@ -19,9 +19,9 @@ class RestorationSequenceTest {
   assertEquals(FlowerSequence.Stage.CHOOSE,FlowerSequence.stage(14500))
   assertEquals(FlowerSequence.Stage.GEZIMI_ARRIVAL,FlowerSequence.stage(11500))
   assertEquals(1f,FlowerSequence.bloom(FlowerSequence.DURATION),0f)
-  assertEquals(CharacterAnimation.State.WALK,FlowerSequence.actorState("gezimi",11500))
-  assertEquals(CharacterAnimation.State.WORK,FlowerSequence.actorState("gezimi",20500))
-  assertEquals(CharacterAnimation.State.HAPPY,FlowerSequence.actorState("rona",FlowerSequence.DURATION))
+  assertEquals(CharacterAnimation.State.WALK,FlowerSequence.actorState(11500,"gezimi"))
+  assertEquals(CharacterAnimation.State.WORK,FlowerSequence.actorState(20500,"gezimi"))
+  assertEquals(CharacterAnimation.State.HAPPY,FlowerSequence.actorState(FlowerSequence.DURATION,"rona"))
   assertEquals(RestorationSequence.plan(2).duration,PathSequence.DURATION)
  }
 }
