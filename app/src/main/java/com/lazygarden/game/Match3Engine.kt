@@ -33,7 +33,11 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
         val positions = (0..63).shuffled(random)
         positions.take(spec.ice).forEach { ice[it / 8][it % 8] = 1 }
         positions.reversed().take(spec.terrainCount).forEach{terrain[it/8][it%8]=spec.terrainKind}
-        for(i in 0 until spec.rescue)cargo[0][1+i*3]=if(level>=126)2 else 1
+        for(i in 0 until spec.rescue){
+            val column=1+i*3
+            cargo[0][column]=if(level>=126)2 else 1
+            terrain[0][column]=1
+        }
     }
     private fun color(v: Int) = v % 6
     private fun matches(): Set<Int> {
@@ -196,7 +200,7 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
                 val spawned=write+1
                 while(write>=0){board[write][c]=random.nextInt(6);origins[write][c]=write-spawned;write--}
             }
-            for(c in 0..7){val next=IntArray(8);for(r in 7 downTo 0){val item=cargoBefore[r][c];if(item>0){var to=(r+hits.count{it%8==c&&it/8>r}).coerceAtMost(7);while(to>r&&next[to]>0)to--;if(to==7)rescued++ else next[to]=item}};for(r in 0..7)cargo[r][c]=next[r]}
+            for(c in 0..7){val next=IntArray(8);for(r in 7 downTo 0){val item=cargoBefore[r][c];if(item>0){var to=if(terrain[r][c]>0)r else (r+hits.count{it%8==c&&it/8>r}).coerceAtMost(7);while(to>r&&next[to]>0)to--;if(to==7)rescued++ else next[to]=item}};for(r in 0..7)cargo[r][c]=next[r]}
             waves.add(Wave(hits.toList(),before,Array(8){board[it].clone()},combo,origins,iceBefore,Array(8){ice[it].clone()},score,terrainBefore=terrainBefore,terrainAfter=Array(8){terrain[it].clone()},cargoBefore=cargoBefore,cargoAfter=Array(8){cargo[it].clone()}))
             hits=matches().toMutableSet()
         }
@@ -238,6 +242,6 @@ object Campaign {
             if(chapter==0 && stage<3)0 else 8+chapter*3+pattern*3,
             when {number<8->0;number<26->1;number<51->3;number<76->4;else->5},
             if(number<8)0 else (3+chapter+pattern).coerceAtMost(14),
-            if(number>=101)if(number>=176)2 else 1 else 0)
+            if(number>=176)2 else 1)
     }
 }

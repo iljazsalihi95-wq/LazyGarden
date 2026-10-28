@@ -5,7 +5,7 @@ object CharacterAnimation {
  enum class State { IDLE,WALK,TALK,THINK,WORK,COLLECT,CARRY,HAPPY }
  data class Position(val x:Float,val y:Float)
  fun ease(progress:Float):Float {val t=progress.coerceIn(0f,1f);return t*t*(3-2*t)}
- fun move(from:Position,to:Position,progress:Float):Position {val t=ease(progress);return Position(from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t)}
+ fun move(from:Position,to:Position,progress:Float):Position {val u=progress.coerceIn(0f,1f);val edge=.12f;val t=when {u<edge->u*u/(2*edge*(1-edge));u>1-edge->1-(1-u)*(1-u)/(2*edge*(1-edge));else->(u-edge/2)/(1-edge)};return Position(from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t)}
  fun facesRight(x:Float,targetX:Float)=x<=targetX
  fun routeFacing(from:Position,to:Position,progress:Float,targetX:Float):Boolean =
   if(progress>=0f&&progress<1f&&kotlin.math.abs(to.x-from.x)>.001f)to.x>from.x
@@ -25,7 +25,7 @@ object CharacterAnimation {
   fun frame(now:Long,arrivalAtlas:Boolean)=CharacterAnimation.frame(state,elapsed(now),arrivalAtlas)
  }
  fun frame(state:State,elapsed:Long,arrivalAtlas:Boolean):Int {
-  val tick=(elapsed.coerceAtLeast(0)/180).toInt()
+  val tick=(elapsed.coerceAtLeast(0)/(if(state==State.WALK)140 else 210)).toInt()
   val poses=if(arrivalAtlas)when(state){
    State.IDLE->intArrayOf(0);State.WALK->intArrayOf(1,0,2,0);State.TALK->intArrayOf(3,0)
    State.THINK->intArrayOf(4);State.WORK,State.COLLECT->intArrayOf(5)

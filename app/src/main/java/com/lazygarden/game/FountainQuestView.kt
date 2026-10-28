@@ -167,7 +167,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   val people=mutableListOf(
    Actor("meli",mp.position.x,mp.position.y,mp.moving,routeRight=mp.facingRight),
    Actor("lazi",lp.position.x,lp.position.y,lp.moving,routeRight=lp.facingRight),
-   Actor("cufi",nearCufi.x,nearCufi.y,children<1||toWater in .001f.. .999f,true,false),
+   Actor("cufi",nearCufi.x,nearCufi.y,children in .001f.. .999f||toWater in .001f.. .999f,true,false),
    Actor("rona",nearRona.x,nearRona.y,children<1||toWater in .001f.. .999f,true,toWater>0)
   )
   if(index>=FountainQuest.Stage.REXHA_ARRIVAL.ordinal)people.add(Actor("rexha",plumber.position.x,plumber.position.y,plumber.moving,routeRight=plumber.facingRight))
@@ -202,9 +202,9 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
    val facesRight=CharacterAnimation.facesRight(a.x,lookAt);actorFacing[a.id]=facesRight
    val size=w*(if(a.child).15f else .23f);val ah=size*CharacterSprites.aspect(context,a.id)
    val poseTime=player.elapsed(life);val phase=(a.id.hashCode()%7).toFloat()
-   val bob=if(happy)-abs(sin(poseTime/140f+phase))*8*d else if(a.moving)-abs(sin(poseTime/100f))*2*d else sin(poseTime/700f+phase)*d
+   val bob=if(happy)-abs(sin(poseTime/140f+phase))*8*d else if(a.moving)-abs(sin(poseTime*PI.toFloat()/280f))*.7f*d else 0f
    val y=a.y+bob;val rect=RectF(a.x-size/2,y-ah,a.x+size/2,y);actorRects[a.id]=rect
-   p.color=0x44302010;c.drawOval(RectF(a.x-size*.3f,y-size*.07f,a.x+size*.3f,y+size*.04f),p)
+   p.color=0x44302010;c.drawOval(RectF(a.x-size*.3f,a.y-size*.035f,a.x+size*.3f,a.y+size*.025f),p)
    CharacterSprites.draw(context,c,p,a.id,frame,rect,facesRight)
    onActorRendered?.invoke(a.id,state,frame,facesRight)
    if(carrying&&a.moving){val hx=a.x+if(facesRight)size*.18f else -size*.18f;val hy=y-ah*.36f;c.drawBitmap(leaf,null,RectF(hx-9*d,hy-9*d,hx+9*d,hy+9*d),p)}

@@ -65,8 +65,10 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   val locale=Locale.forLanguageTag(when(line.language){"de"->"de-DE";"it"->"it-IT";"mk"->"mk-MK";"tr"->"tr-TR";else->"sq-AL"})
   if(tts.isLanguageAvailable(locale)<TextToSpeech.LANG_AVAILABLE)return false
   tts.language=locale
-  val pitch=when(line.characterId){"meli"->1.06f;"rona","medina","hafsa"->1.28f;"bejdi","meti","cufi","rejani","unejsi"->1.20f;else->.88f}
-  tts.setPitch(pitch);tts.setSpeechRate(if(pitch<1f).92f else 1.02f)
+  tts.voices?.filter{it.locale.language==locale.language&&!it.isNetworkConnectionRequired}
+   ?.maxByOrNull{it.quality*10-it.latency}?.let{tts.voice=it}
+  val pitch=when(line.characterId){"meli"->1.02f;"rona","medina","hafsa"->1.10f;"bejdi","meti","cufi","rejani","unejsi"->1.06f;else->.97f}
+  tts.setPitch(pitch);tts.setSpeechRate(.94f)
   currentLine=line;lastId="${line.sceneId}/${line.lineId}/${++generation}"
   return tts.speak(line.subtitle,TextToSpeech.QUEUE_FLUSH,null,lastId)==TextToSpeech.SUCCESS
  }

@@ -12,7 +12,13 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
  init{contentDescription=GameText.get(GardenSave(c).language,"match_board")}
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val d=resources.displayMetrics.density
- private val tiles=intArrayOf(R.drawable.tile_apple,R.drawable.tile_flower,R.drawable.tile_leaf,R.drawable.tile_water,R.drawable.tile_berry,R.drawable.tile_orange).map{GameSkin.bitmap(c,it)}
+ private val materialArt=MaterialArt(c)
+ private val pieces=arrayOf(Material.TOOL,Material.PIPE,Material.VALVE,Material.PUMP_PART,Material.BOARD,Material.SCREW)
+ private fun piece(c:Canvas,index:Int,r:RectF){
+  p.shader=LinearGradient(r.left,r.top,r.right,r.bottom,intArrayOf(0xfff5dfad.toInt(),0xffba8644.toInt()),null,Shader.TileMode.CLAMP)
+  c.drawRoundRect(r,r.width()*.18f,r.height()*.18f,p);p.shader=null
+  val inset=r.width()*.09f;val inner=RectF(r);inner.inset(inset,inset);materialArt.draw(c,p,pieces[index.coerceIn(0,5)],inner)
+ }
  private val background=GameSkin.bitmap(c,R.drawable.garden_estate)
  private val socket=GameSkin.bitmap(c,R.drawable.hd_socket);private val frame=GameSkin.bitmap(c,R.drawable.hd_board_frame);private val hud=GameSkin.bitmap(c,R.drawable.hd_hud)
  private val iceArt=GameSkin.bitmap(c,R.drawable.hd_ice);private val star=GameSkin.bitmap(c,R.drawable.reward_star)
@@ -48,7 +54,7 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
   image(c,background,RectF((w-bw)/2,(h-bh)/2,(w+bw)/2,(h+bh)/2));c.drawColor(0x8a102a25.toInt());val header=152*d;cell=min((w-30*d)/8,(h-header-28*d)/8).coerceAtLeast(1f);left=(w-cell*8)/2;top=header+max(0f,(h-header-28*d-cell*8)*.35f)
   GameSkin.nine(c,hud,RectF(7*d,2*d,w-7*d,143*d),20*d,p,.20f);text(c,"${t("level")} ${engine.level}",w*.5f,24*d,21*d);text(c,t("moves"),w*.83f,48*d,12*d);text(c,"${engine.moves}",w*.83f,82*d,35*d);text(c,"${displayedScore.toInt()} / ${engine.spec.target}",w*.33f,50*d,18*d)
   val fraction=(displayedScore/engine.spec.target).coerceIn(0f,1f);val bar=RectF(w*.09f,57*d,w*.61f,65*d);p.color=0xff80633a.toInt();c.drawRoundRect(bar,4*d,4*d,p);if(fraction>0){p.shader=LinearGradient(bar.left,bar.top,bar.left,bar.bottom,intArrayOf(0xffffed7a.toInt(),0xffd18a1c.toInt()),null,Shader.TileMode.CLAMP);c.drawRoundRect(RectF(bar.left,bar.top,bar.left+bar.width()*fraction,bar.bottom),4*d,4*d,p);p.shader=null};for(i in 0..2){val x=bar.left+bar.width()*(i+1)/3;image(c,star,RectF(x-7*d,52*d,x+7*d,68*d),if(fraction>=(i+1)/3f)255 else 105)}
-  if(engine.spec.collectCount>0){image(c,tiles[engine.spec.collectColor],RectF(w*.13f,73*d,w*.13f+28*d,101*d));text(c,"${engine.collected[engine.spec.collectColor]}/${engine.spec.collectCount}",w*.31f,94*d,17*d)};if(engine.spec.ice>0){image(c,iceArt,RectF(w*.41f,75*d,w*.41f+24*d,99*d));text(c,"${engine.clearedIce}/${engine.spec.ice}",w*.56f,94*d,17*d)}
+  if(engine.spec.collectCount>0){piece(c,engine.spec.collectColor,RectF(w*.13f,73*d,w*.13f+28*d,101*d));text(c,"${engine.collected[engine.spec.collectColor]}/${engine.spec.collectCount}",w*.31f,94*d,17*d)};if(engine.spec.ice>0){image(c,iceArt,RectF(w*.41f,75*d,w*.41f+24*d,99*d));text(c,"${engine.clearedIce}/${engine.spec.ice}",w*.56f,94*d,17*d)}
   if(engine.spec.terrainCount>0||engine.rescueTarget>0){
    val idx=when(engine.spec.terrainKind){1->0;2,3->1;4->2;else->3}
    SpriteArt.draw(c,p,obstacleArt,3,2,idx,RectF(w*.13f,112*d,w*.13f+24*d,136*d));text(c,"${engine.terrainRemaining}",w*.31f,130*d,16*d)
@@ -57,14 +63,24 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
   val bounds=RectF(left-12*d,top-12*d,left+8*cell+12*d,top+8*cell+12*d);p.color=0xff082d39.toInt();c.drawRoundRect(bounds,18*d,18*d,p)
   for(r in 0..7)for(col in 0..7){val x=left+col*cell;val y=top+r*cell;p.colorFilter=if((r+col)%2==0)null else darkSocket;c.drawBitmap(socket,null,RectF(x-.6f*d,y-.6f*d,x+cell+.6f*d,y+cell+.6f*d),p);p.colorFilter=null;if(selected==r*8+col){p.shader=RadialGradient(x+cell/2,y+cell/2,cell*.72f,intArrayOf(0xccfff09a.toInt(),0x00fff09a),null,Shader.TileMode.CLAMP);c.drawCircle(x+cell/2,y+cell/2,cell*.72f,p);p.shader=null}}
   val clip=c.save();c.clipRect(left,top,left+8*cell,top+8*cell);val active=wave;val falling=active!=null&&!active.shuffled&&effect>=.35f
-  for(r in 0..7)for(col in 0..7){val index=r*8+col;val x=left+col*cell;var y=top+r*cell;var dx=0f;var dy=0f;if(index==swapA||index==swapB){val to=if(index==swapA)swapB else swapA;dx=(to%8-col)*cell*swapProgress;dy=(to/8-r)*cell*swapProgress};val hit=active?.cells?.contains(index)==true;val size=if(active?.shuffled==true)abs(1f-effect*2).coerceAtLeast(.01f) else if(hit&&!falling)(1f-effect/.35f).coerceIn(0f,1f) else 1f;if(falling){val t=((effect-.35f)/.65f).coerceIn(0f,1f);val ease=1-(1-t).pow(3);val source=active!!.origins[r][col];y=top+(source+(r-source)*ease)*cell}
+  for(r in 0..7)for(col in 0..7){val index=r*8+col;val x=left+col*cell;var y=top+r*cell;var dx=0f;var dy=0f;if(index==swapA||index==swapB){val to=if(index==swapA)swapB else swapA;dx=(to%8-col)*cell*swapProgress;dy=(to/8-r)*cell*swapProgress};val hit=active?.cells?.contains(index)==true;val size=if(active?.shuffled==true)abs(1f-effect*2).coerceAtLeast(.01f) else if(hit&&!falling)(1f-effect/.35f).coerceIn(0f,1f) else 1f;if(falling){val t=((effect-.35f)/.65f).coerceIn(0f,1f);val ease=t*t*(3-2*t);val source=active!!.origins[r][col];y=top+(source+(r-source)*ease)*cell}
    val value=visual[r][col];val base=value%6;val bob=if(!busy)sin(life*PI.toFloat()*2+index*.71f)*cell*.018f else 0f;val pulse=1f+if(!busy)sin(life*PI.toFloat()*2+index)*.018f else 0f;val rect=RectF(x+cell*.055f+dx,y+cell*.055f+dy+bob,x+cell*.945f+dx,y+cell*.945f+dy+bob)
-   if(size>0){val saved=c.save();val squash=if(falling){val t=((effect-.35f)/.65f).coerceIn(0f,1f);sin(t*PI.toFloat())*.12f}else if(hit)sin((effect/.35f).coerceIn(0f,1f)*PI.toFloat())*.14f else 0f;c.scale(size*pulse*(1+squash),size*pulse*(1-squash),x+cell/2+dx,y+cell/2+dy);if(value<6)image(c,tiles[value],rect) else{val glow=cell*(.51f+.04f*sin(life*PI.toFloat()*4+index));p.shader=RadialGradient(x+cell/2,y+cell/2,glow,intArrayOf(0x99fff49a.toInt(),0x00fff49a),null,Shader.TileMode.CLAMP);c.drawCircle(x+cell/2,y+cell/2,glow,p);p.shader=null;image(c,powerArt[(value/6-1).coerceIn(0,3)],rect);image(c,tiles[base],RectF(rect.right-cell*.29f,rect.bottom-cell*.29f,rect.right,rect.bottom))};if(base==3){p.color=0x99d9fbff.toInt();p.style=Paint.Style.STROKE;p.strokeWidth=cell*.025f;c.drawOval(RectF(rect.left+cell*.18f,rect.top+cell*(.18f+.05f*sin(life*PI.toFloat()*2+index)),rect.right-cell*.18f,rect.bottom-cell*.2f),p);p.style=Paint.Style.FILL};c.restoreToCount(saved)}
+   if(size>0){val saved=c.save();val squash=if(falling){val t=((effect-.35f)/.65f).coerceIn(0f,1f);sin(t*PI.toFloat())*.12f}else if(hit)sin((effect/.35f).coerceIn(0f,1f)*PI.toFloat())*.14f else 0f;c.scale(size*pulse*(1+squash),size*pulse*(1-squash),x+cell/2+dx,y+cell/2+dy);if(value<6)piece(c,value,rect) else{val glow=cell*(.51f+.04f*sin(life*PI.toFloat()*4+index));p.shader=RadialGradient(x+cell/2,y+cell/2,glow,intArrayOf(0x99fff49a.toInt(),0x00fff49a),null,Shader.TileMode.CLAMP);c.drawCircle(x+cell/2,y+cell/2,glow,p);p.shader=null;image(c,powerArt[(value/6-1).coerceIn(0,3)],rect);piece(c,base,RectF(rect.right-cell*.29f,rect.bottom-cell*.29f,rect.right,rect.bottom))};if(false){p.color=0x99d9fbff.toInt();p.style=Paint.Style.STROKE;p.strokeWidth=cell*.025f;c.drawOval(RectF(rect.left+cell*.18f,rect.top+cell*(.18f+.05f*sin(life*PI.toFloat()*2+index)),rect.right-cell*.18f,rect.bottom-cell*.2f),p);p.style=Paint.Style.FILL};c.restoreToCount(saved)}
   };c.restoreToCount(clip)
   for(r in 0..7)for(col in 0..7)if(displayedIce[r][col]>0){val x=left+col*cell;val y=top+r*cell;image(c,iceArt,RectF(x,y,x+cell,y+cell));p.color=0x66ffffff;p.strokeWidth=1.5f*d;c.drawLine(x+cell*.2f,y+cell*.25f,x+cell*.72f,y+cell*.68f,p)};GameSkin.nine(c,frame,bounds,24*d,p,.18f,false)
   for(r in 0..7)for(col in 0..7){val terrain=(if(active!=null)if(effect<.35f)active.terrainBefore else active.terrainAfter else engine.terrain)[r][col];val cargo=(if(active!=null)if(effect<.35f)active.cargoBefore else active.cargoAfter else engine.cargo)[r][col];val x=left+col*cell;val y=top+r*cell
    if(terrain>0)SpriteArt.draw(c,p,obstacleArt,3,2,when(terrain){1->0;2,3->1;4->2;else->3},RectF(x+cell*.03f,y+cell*.03f,x+cell*.97f,y+cell*.97f),if(terrain==4)170 else 235)
-   if(cargo>0)SpriteArt.draw(c,p,obstacleArt,3,2,if(cargo==2)5 else 4,RectF(x,y,x+cell,y+cell))
+   if(cargo>0){
+    val material=RestorationInventory.rewardForLevel(engine.level,save.tasks)?.first?:Material.TOOL
+    var cy=y
+    if(active!=null&&effect>=.35f){
+     val u=((effect-.35f)/.65f).coerceIn(0f,1f)
+     val source=(0..r).lastOrNull{active.cargoBefore[it][col]>0}?:r
+     cy=top+(source+(r-source)*u*u)*cell
+    }
+    materialArt.draw(c,p,material,RectF(x+cell*.12f,cy+cell*.12f,x+cell*.88f,cy+cell*.88f))
+    if(terrain>0)SpriteArt.draw(c,p,obstacleArt,3,2,0,RectF(x,y,x+cell,y+cell),210)
+   }
   }
   if(active!=null && boostOrigin>=0 && boostEffect!=null && effect<.48f){
    val t=(effect/.48f).coerceIn(0f,1f);val x=left+(boostOrigin%8+.5f)*cell;val y=top+(boostOrigin/8+.5f)*cell
