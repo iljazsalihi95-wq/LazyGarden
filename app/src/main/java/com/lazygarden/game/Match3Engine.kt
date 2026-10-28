@@ -78,7 +78,24 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
         exchange(a,b); moves--; revision++; combo=0
         val initial = matches().toMutableSet()
         for (i in listOf(a,b)) if (board[i/8][i%8]>=6) initial.add(i)
-        return resolve(initial, b)
+        val first=board[a/8][a%8];val second=board[b/8][b%8]
+        val firstKind=first/6;val secondKind=second/6
+        val rainbowColor=when {firstKind==4->color(second);secondKind==4->color(first);else->null}
+        if(firstKind>0&&secondKind>0){
+            when {
+                firstKind==4&&secondKind==4 -> initial.addAll(0..63)
+                firstKind==4||secondKind==4 -> {
+                    val other=if(firstKind==4)second else first
+                    for(i in 0..63)if(color(board[i/8][i%8])==color(other)){
+                        board[i/8][i%8]=color(other)+(other/6)*6;initial.add(i)
+                    }
+                }
+                firstKind==3&&secondKind==3 -> initial.addAll((0..63).filter{kotlin.math.abs(it/8-b/8)<=2&&kotlin.math.abs(it%8-b%8)<=2})
+                firstKind==3||secondKind==3 -> initial.addAll((0..63).filter{kotlin.math.abs(it/8-b/8)<=1||kotlin.math.abs(it%8-b%8)<=1})
+                else -> initial.addAll((0..63).filter{it/8==b/8||it%8==b%8})
+            }
+        }
+        return resolve(initial, b,rainbowColor=rainbowColor)
     }
     enum class Booster(val cost: Int, val label: String) {
         HAMMER(40,"Çekiçi"), ROW(55,"Rreshti"), COLUMN(55,"Kolona"),
@@ -104,7 +121,7 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
         }
         return resolve(hits, at,true)
     }
-    private fun resolve(initial:Set<Int>, b:Int,boosted:Boolean=false):List<Wave> {
+    private fun resolve(initial:Set<Int>, b:Int,boosted:Boolean=false,rainbowColor:Int?=null):List<Wave> {
         val waves = mutableListOf<Wave>()
         var hits = initial.toMutableSet()
         while (hits.isNotEmpty()) {
@@ -112,20 +129,39 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
             val before=Array(8){board[it].clone()}
             val iceBefore=Array(8){ice[it].clone()}
             val terrainBefore=Array(8){terrain[it].clone()};val cargoBefore=Array(8){cargo[it].clone()}
-            // Four creates a line rocket; five or intersecting runs create a blast.
+            // Keep old 18..23 bomb saves; rainbow pieces occupy the new 24..29 range.
             val specials=mutableMapOf<Int,Int>()
-            for (axis in 0..1) for (line in 0..7) {
-                var s=0
-                while(s<8) {
-                    var e=s+1
-                    fun index(i:Int)=if(axis==0)line*8+i else i*8+line
-                    while(e<8 && color(board[index(e)/8][index(e)%8])==color(board[index(s)/8][index(s)%8])) e++
-                    if(e-s>=4) {
-                        val run=(s until e).map{index(it)}
-                        val at=run.firstOrNull{it==b}?:run[run.size/2]
-                        specials[at]=color(board[at/8][at%8])+if(e-s>=5)18 else if(axis==0)6 else 12
+            if(!boosted||combo>1){
+                val horizontal=mutableListOf<List<Int>>()
+                val vertical=mutableListOf<List<Int>>()
+                for(axis in 0..1)for(line in 0..7){
+                    var start=0
+                    while(start<8){
+                        fun index(i:Int)=if(axis==0)line*8+i else i*8+line
+                        var end=start+1
+                        while(end<8&&color(board[index(end)/8][index(end)%8])==color(board[index(start)/8][index(start)%8]))end++
+                        if(end-start>=3){
+                            val run=(start until end).map{index(it)}
+                            if(run.all{it in hits})(if(axis==0)horizontal else vertical).add(run)
+                        }
+                        start=end
                     }
-                    s=e
+                }
+                val runs=horizontal+vertical
+                for(run in runs.filter{it.size==4}){
+                    val at=run.firstOrNull{it==b}?:run[run.size/2]
+                    specials[at]=color(board[at/8][at%8])+if(run in horizontal)6 else 12
+                }
+                for(h in horizontal)for(v in vertical){
+                    val at=h.firstOrNull{it in v}?:continue
+                    // Intersections produce one bomb instead of two independent rockets.
+                    h.forEach{specials.remove(it)};v.forEach{specials.remove(it)}
+                    specials[at]=color(board[at/8][at%8])+18
+                }
+                for(run in runs.filter{it.size>=5}){
+                    run.forEach{specials.remove(it)}
+                    val at=run.firstOrNull{it==b}?:run[run.size/2]
+                    specials[at]=color(board[at/8][at%8])+24
                 }
             }
             val activated=mutableSetOf<Int>()
@@ -136,7 +172,8 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
                     val kind=board[i/8][i%8]/6
                     if(kind==1) for(c in 0..7) hits.add(i/8*8+c)
                     if(kind==2) for(r in 0..7) hits.add(r*8+i%8)
-                    if(kind>=3) for(r in (i/8-1).coerceAtLeast(0)..(i/8+1).coerceAtMost(7)) for(c in (i%8-1).coerceAtLeast(0)..(i%8+1).coerceAtMost(7)) hits.add(r*8+c)
+                    if(kind==4){val target=if(combo==1)rainbowColor?:color(board[i/8][i%8]) else color(board[i/8][i%8]);hits.addAll((0..63).filter{color(board[it/8][it%8])==target})}
+                    if(kind==3) for(r in (i/8-1).coerceAtLeast(0)..(i/8+1).coerceAtMost(7)) for(c in (i%8-1).coerceAtLeast(0)..(i%8+1).coerceAtMost(7)) hits.add(r*8+c)
                 }
             } while(pending.isNotEmpty())
             // Crates break next to matches; stone takes two impacts, soil one, flowers need water or a power-up.
@@ -174,7 +211,7 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
     fun encode(): String = (listOf(level,moves,score,clearedIce) + collected.toList() + board.flatMap{it.toList()} + ice.flatMap{it.toList()} + listOf(rescued,if(modernGoals)1 else 0) + terrain.flatMap{it.toList()} + cargo.flatMap{it.toList()}).joinToString(",")
     fun restore(raw:String):Boolean {
         val v=raw.split(',').map{it.toIntOrNull() ?: return false}
-        if(v.size !in listOf(138,268) || v[0]!=level || v[1] !in 0..(spec.moves+15) || v[2]<0 || v[3] !in 0..spec.ice || v.slice(4..9).any{it<0} || v.slice(10..73).any{it !in 0..23} || v.slice(74..137).any{it !in 0..1}) return false
+        if(v.size !in listOf(138,268) || v[0]!=level || v[1] !in 0..(spec.moves+15) || v[2]<0 || v[3] !in 0..spec.ice || v.slice(4..9).any{it<0} || v.slice(10..73).any{it !in 0..29} || v.slice(74..137).any{it !in 0..1}) return false
         if(v.size==268&&(v[138] !in 0..spec.rescue || v[139] !in 0..1 || v.slice(140..203).any{it !in 0..5} || v.slice(204..267).any{it !in 0..2}))return false
         modernGoals=v.size==268&&v[139]==1;rescued=if(v.size==268)v[138] else 0
         for(i in 0..63){terrain[i/8][i%8]=if(modernGoals)v[140+i] else 0;cargo[i/8][i%8]=if(modernGoals)v[204+i] else 0}

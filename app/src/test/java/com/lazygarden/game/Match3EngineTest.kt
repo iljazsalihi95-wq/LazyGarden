@@ -10,7 +10,7 @@ class Match3EngineTest {
  @Test fun movesAndCascadesRemainConsistentAcrossCampaign(){
   for(level in listOf(1,25,75,150,250)){
    val e=Match3Engine(level,Random(level))
-   repeat(e.spec.moves){if(!e.won && !e.failed){val pair=(0..63).flatMap{a->listOf(a to a+1,a to a+8)}.first{e.legal(it.first,it.second)};val old=e.moves;assertTrue(e.swap(pair.first,pair.second).isNotEmpty());assertEquals(old-1,e.moves);assertTrue(e.board.all{row->row.all{it in 0..23}})}}
+   repeat(e.spec.moves){if(!e.won && !e.failed){val pair=(0..63).flatMap{a->listOf(a to a+1,a to a+8)}.first{e.legal(it.first,it.second)};val old=e.moves;assertTrue(e.swap(pair.first,pair.second).isNotEmpty());assertEquals(old-1,e.moves);assertTrue(e.board.all{row->row.all{it in 0..29}})}}
    assertTrue(e.won || e.failed)
   }
  }
@@ -20,7 +20,7 @@ class Match3EngineTest {
    val e=Match3Engine(30,Random(401));val before=e.encode();val moves=e.moves
    val waves=e.boost(kind,27)
    assertTrue("$kind must resolve",waves.isNotEmpty());assertEquals(moves,e.moves)
-   assertNotEquals(before,e.encode());assertTrue(e.board.all{row->row.all{it in 0..23}})
+   assertNotEquals(before,e.encode());assertTrue(e.board.all{row->row.all{it in 0..29}})
    if(kind!=Match3Engine.Booster.SHUFFLE)assertTrue(e.score>0)
    val copy=Match3Engine(30);assertTrue(copy.restore(e.encode()));assertEquals(e.encode(),copy.encode())
   }
