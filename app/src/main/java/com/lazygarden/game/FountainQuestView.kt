@@ -190,7 +190,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   when(stage){
    FountainQuest.Stage.COLLECT->{
     val needs=save.restorationNeeds(0);val row=RectF(14*d,h-240*d,w-14*d,h-110*d);panel(c,row)
-    for((i,need)in needs.withIndex()){val x=row.left+row.width()*(i+.5f)/needs.size;materialArt.draw(c,p,need.material,RectF(x-26*d,row.top+9*d,x+26*d,row.top+62*d));text(c,"${save.materialCount(need.material)}/${need.count}",x,row.top+83*d,15f,if(save.materialCount(need.material)>=need.count)0xff267539.toInt() else 0xff985029.toInt())}
+    for((i,need)in needs.withIndex()){val x=row.left+row.width()*(i+.5f)/needs.size;materialArt.draw(c,p,need.material,RectF(x-26*d,row.top+9*d,x+26*d,row.top+62*d));text(c,FountainText.get(save.language,need.material.name),x,row.top+77*d,9.5f);text(c,"${save.materialCount(need.material)}/${need.count}",x,row.top+98*d,15f,if(save.materialCount(need.material)>=need.count)0xff267539.toInt() else 0xff985029.toInt())}
     text(c,if(save.restorationMaterialsReady())FountainText.get(save.language,"ready") else GameText.get(save.language,"materials"),row.centerX(),row.bottom-15*d,13f)
     playRect.set(18*d,h-99*d,w*.48f,h-40*d);actionRect.set(w*.51f,h-99*d,w-18*d,h-40*d)
     button(c,playRect,GameText.get(save.language,"play")+" Match-3")
