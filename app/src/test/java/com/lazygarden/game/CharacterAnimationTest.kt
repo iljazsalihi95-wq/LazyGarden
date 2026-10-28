@@ -15,7 +15,15 @@ class CharacterAnimationTest {
   val a=CharacterAnimation.Position(0f,0f);val b=CharacterAnimation.Position(10f,0f)
   assertEquals(a,CharacterAnimation.gait(a,b,0f).position);assertEquals(b,CharacterAnimation.gait(a,b,1f).position)
   assertEquals(0f,CharacterAnimation.gait(a,b,0f).bob,0f);assertEquals(0f,CharacterAnimation.gait(a,b,1f).bob,0f)
-  for(i in 1..9){val g=CharacterAnimation.gait(a,b,i/10f);assertTrue(g.bob<=0f);assertTrue(kotlin.math.abs(g.bob)<=.0081f);assertTrue(kotlin.math.abs(g.lean)<=.0181f)}
+  for(i in 1..9){val g=CharacterAnimation.gait(a,b,i/10f);assertTrue(g.bob<=0f);assertTrue(kotlin.math.abs(g.bob)<=.0046f);assertTrue(kotlin.math.abs(g.lean)<=.0141f)}
+ }
+ @Test fun groundedStrideDoesNotFloatOrOvershootOnShortAndLongRoutes(){
+  for(distance in listOf(.15f,.5f,1f,3f,10f)){
+   val a=CharacterAnimation.Position(0f,.72f);val b=CharacterAnimation.Position(distance,.72f)
+   var last=-1f
+   for(i in 0..100){val g=CharacterAnimation.gait(a,b,i/100f);assertTrue(g.position.x>=last);last=g.position.x;assertTrue(g.position.y==.72f);assertTrue(g.bob in -.0046f..0f)}
+   assertEquals(b,CharacterAnimation.gait(a,b,1f).position)
+  }
  }
  @Test fun stateChangesRestartOnlyThatActorsPoseClock(){
   val actor=CharacterAnimation.Player();actor.update(CharacterAnimation.State.WALK,1000)
