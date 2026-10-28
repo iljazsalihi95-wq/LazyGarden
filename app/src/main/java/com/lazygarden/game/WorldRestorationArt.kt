@@ -21,9 +21,33 @@ object WorldRestorationArt {
   if(tasks>=6)RestorationObjectArt.draw(c,p,art,8,objectRect(d,5))
  }
  fun objectRect(d:RectF,task:Int)=when(task){3->rect(d,.21f,.64f,.28f,.17f);4->rect(d,.19f,.75f,.27f,.16f);5->rect(d,.50f,.82f,.60f,.30f);6->rect(d,.69f,.29f,.58f,.31f);else->rect(d,.50f,.86f,.40f,.20f)}
- fun water(c:Canvas,p:Paint,d:RectF,ms:Float){val x=d.left+d.width()*.55f;val y=d.top+d.height()*.515f;val w=d.width();p.style=Paint.Style.STROKE;p.strokeWidth=w*.0025f;p.strokeCap=Paint.Cap.ROUND
-  for(i in -2..2){val spread=w*i*.021f;val h=w*(.07f+.004f*kotlin.math.sin(ms/220+i));val path=Path().apply{moveTo(x,y-w*.055f);quadTo(x+spread*.4f,y-h,x+spread,y+w*.035f)};p.color=0xbbbcf5ff.toInt();c.drawPath(path,p);val t=(ms/1100+i*.17f+10)%1f;val xx=x+spread*t;val yy=(1-t)*(1-t)*(y-w*.055f)+2*(1-t)*t*(y-h)+t*t*(y+w*.035f);p.style=Paint.Style.FILL;c.drawCircle(xx,yy,w*.002f,p);p.style=Paint.Style.STROKE};p.style=Paint.Style.FILL;p.strokeCap=Paint.Cap.BUTT
+ fun water(c:Canvas,p:Paint,d:RectF,ms:Float){
+  // Anchors follow the actual illustrated nozzle, bowls and basin in garden_estate.
+  val w=d.width();val h=d.height();val x=d.left+w*.562f
+  val nozzle=d.top+h*.423f;val upper=d.top+h*.443f
+  val middle=d.top+h*.468f;val basin=d.top+h*.513f
+  p.shader=null;p.colorFilter=null;p.alpha=255;p.style=Paint.Style.STROKE;p.strokeCap=Paint.Cap.ROUND
+  val clip=c.save();c.clipRect(d.left+w*.39f,d.top+h*.409f,d.left+w*.74f,d.top+h*.523f)
+  for(i in -2..2){val spread=i*w*.004f
+   val path=Path().apply{moveTo(x,nozzle);quadTo(x+spread*.4f,nozzle-h*.014f,x+spread,upper)}
+   p.color=0x9974dce8.toInt();p.strokeWidth=w*.0025f;c.drawPath(path,p)
+   p.color=0xaaddffff.toInt();p.strokeWidth=w*.001f;c.drawPath(path,p)
+  }
+  for(side in listOf(-1,1))for(i in 0..3){
+   val sx=x+side*w*(.052f+i*.006f);val ex=sx+side*w*.006f
+   val path=Path().apply{moveTo(sx,middle);quadTo(ex,middle+h*.02f,ex,basin)}
+   p.color=0x6686dfec;p.strokeWidth=w*.0024f;c.drawPath(path,p)
+   val t=(ms/650f+i*.23f)%1f
+   p.style=Paint.Style.FILL;p.color=0xbbe9ffff.toInt();c.drawCircle(sx+(ex-sx)*t,middle+(basin-middle)*t,w*.0018f,p);p.style=Paint.Style.STROKE
+   val splash=(ms/500f+i*.19f)%1f;p.color=0x88dbfaff.toInt();p.alpha=((1-splash)*140).toInt()
+   c.drawCircle(ex+side*w*.009f*splash,basin-h*.008f*kotlin.math.sin(splash*Math.PI).toFloat(),w*.0015f,p)
+  }
+  for(i in 0..3){val t=(ms/1700f+i*.25f)%1f;val rx=w*(.025f+.10f*t);val ry=h*(.002f+.005f*t)
+   p.color=0xffc9f8ff.toInt();p.alpha=((1-t)*105).toInt();p.strokeWidth=w*.001f;c.drawOval(RectF(x-rx,basin-ry,x+rx,basin+ry),p)
+  }
+  c.restoreToCount(clip);p.alpha=255;p.style=Paint.Style.FILL;p.strokeCap=Paint.Cap.BUTT
  }
+
  fun rect(d:RectF,x:Float,y:Float,w:Float,h:Float)=RectF(d.left+(x-w/2)*d.width(),d.top+(y-h)*d.height(),d.left+(x+w/2)*d.width(),d.top+y*d.height())
  fun path(ctx:Context,c:Canvas,p:Paint,d:RectF,removed:Float,laid:Float){
   val b=GameSkin.bitmap(ctx,R.drawable.garden_work_props);val after=GameSkin.bitmap(ctx,R.drawable.garden_estate)

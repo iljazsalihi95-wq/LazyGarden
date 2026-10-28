@@ -77,7 +77,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   val fountain=tasks==0 && constructing
   val fx=dst.left+dw*.55f;val fy=dst.top+dh*.515f
   val amount=if(tasks>0)1f else if(constructing)FountainSequence.water(sceneMs) else 0f
-  if(amount>0f)drawWater(c,fx,fy,dw,amount)
+  if(amount>0f){val layer=c.saveLayer(null,Paint().apply{alpha=(255*amount).toInt()});WorldRestorationArt.water(c,p,dst,life*12000f);c.restoreToCount(layer)}
   if(tasks==0 && amount<1f){
    // Debris marks the blocked intake; it clears progressively during the repair.
    val debris=if(constructing)((19400-sceneMs)/2000f).coerceIn(0f,1f) else 1f
@@ -144,27 +144,6 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   if(alpha<=0)return
   p.shader=null;p.alpha=alpha.coerceIn(0,255);p.style=Paint.Style.FILL
   c.drawBitmap(b,Rect(index%2*cw,index/2*ch,(index%2+1)*cw,(index/2+1)*ch),dst,p);p.alpha=255
- }
- private fun drawWater(c:Canvas,x:Float,y:Float,w:Float,amount:Float){
-  val saved=c.save();p.shader=null;p.style=Paint.Style.STROKE;p.strokeCap=Paint.Cap.ROUND
-  // Continuous parabolic jets with flowing highlights and basin ripples.
-  for(i in -3..3){val spread=i*w*.018f;val height=w*(.065f+.006f*sin(life*45+i))*amount
-   val jet=Path().apply{moveTo(x,y-w*.055f);quadTo(x+spread*.4f,y-height-w*.055f,x+spread,y+w*.035f)}
-   p.color=0xaa53cde9.toInt();p.strokeWidth=w*.005f*amount;c.drawPath(jet,p)
-   p.color=0xdde6ffff.toInt();p.strokeWidth=w*.0018f*amount;c.drawPath(jet,p)
-   val t=(life*10+i*.13f+1)%1f;val dx=x+spread*t;val dy=(1-t)*(1-t)*(y-w*.055f)+2*(1-t)*t*(y-height-w*.055f)+t*t*(y+w*.035f)
-   p.style=Paint.Style.FILL;c.drawCircle(dx,dy,w*.0025f*amount,p);p.style=Paint.Style.STROKE
-  }
-  // Falling water follows the bowl contour as well as the upward jets.
-  for(side in listOf(-1,1))for(k in 0..3){
-   val sx=x+side*w*(.025f+k*.007f);val sy=y-w*.035f;val ex=sx+side*w*(.022f+.003f*sin(life*35+k));val ey=y+w*.045f
-   val path=Path().apply{moveTo(sx,sy);quadTo(ex,y,ex,ey)}
-   p.shader=LinearGradient(sx,sy,ex,ey,intArrayOf(0x44c5ffff,0xccb5f2ff.toInt(),0x7779cfe3),null,Shader.TileMode.CLAMP)
-   p.strokeWidth=w*.005f*amount;p.alpha=(255*amount).toInt();c.drawPath(path,p);p.shader=null
-   val t=(life*12+k*.23f)%1f;p.style=Paint.Style.FILL;p.color=0xffefffff.toInt();c.drawCircle(sx+(ex-sx)*t,sy+(ey-sy)*t,w*.0018f*amount,p);p.style=Paint.Style.STROKE
-  };p.alpha=255
-  for(i in 0..4){val t=(life*4+i*.2f)%1f;p.color=0xffb5f7ff.toInt();p.alpha=((1-t)*170*amount).toInt();p.strokeWidth=w*.0018f;c.drawOval(RectF(x-w*(.025f+.095f*t),y+w*.025f-w*.018f*t,x+w*(.025f+.095f*t),y+w*.042f+w*.018f*t),p)}
-  p.alpha=255;p.style=Paint.Style.FILL;p.strokeCap=Paint.Cap.BUTT;c.restoreToCount(saved)
  }
 
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()

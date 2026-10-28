@@ -227,7 +227,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
    else->return true
   }
   rewardCoins=save.coins;rewardStars=save.stars;rewardXp=save.xp
-  if(save.actFountain(action)){if(action==FountainQuest.Action.CLAIM){rewardElapsed=0;sound("reward")}else sound(if(action==FountainQuest.Action.START_WATER)"water" else "coin");refreshStage()}
+  if(save.actFountain(action)){if(action==FountainQuest.Action.CLAIM){rewardElapsed=0;sound("reward")}else sound(when(action){FountainQuest.Action.START_WATER->"water";FountainQuest.Action.CALL_REXHA->"phone";else->"coin"});refreshStage()}
   else if(action==FountainQuest.Action.RESTORE)android.widget.Toast.makeText(context,FountainText.get(save.language,"collect"),android.widget.Toast.LENGTH_SHORT).show()
   return true
  }
