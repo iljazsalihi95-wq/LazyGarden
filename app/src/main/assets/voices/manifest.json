@@ -225,11 +225,11 @@
       "line": "test_water",
       "character": "meli",
       "subtitles": {
-        "sq": "Nuk del ujë. Lazi, na ndihmon?",
-        "de": "Es kommt kein Wasser. Lazi, hilfst du uns?",
-        "it": "Non esce acqua. Lazi, ci aiuti?",
-        "mk": "Нема вода. Лази, ќе ни помогнеш?",
-        "tr": "Su gelmiyor. Lazi, yardım eder misin?"
+        "sq": "Ta provojmë ujin.",
+        "de": "Probieren wir das Wasser.",
+        "it": "Proviamo l’acqua.",
+        "mk": "Да ја провериме водата.",
+        "tr": "Suyu deneyelim."
       },
       "durationMillis": 0,
       "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
@@ -253,11 +253,11 @@
       "line": "inspect",
       "character": "lazi",
       "subtitles": {
-        "sq": "Pompa është bllokuar. Po telefonoj Rexhën.",
-        "de": "Die Pumpe ist verstopft. Ich rufe Rexha an.",
-        "it": "La pompa è bloccata. Chiamo Rexha.",
-        "mk": "Пумпата е затната. Ќе му се јавам на Реџа.",
-        "tr": "Pompa tıkanmış. Rexha’yı arıyorum."
+        "sq": "Ta kontrolloj pompën.",
+        "de": "Ich schaue mir die Pumpe an.",
+        "it": "Controllo la pompa.",
+        "mk": "Ќе ја проверам пумпата.",
+        "tr": "Pompayı kontrol edeyim."
       },
       "durationMillis": 0,
       "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
@@ -267,11 +267,11 @@
       "line": "call_rexha",
       "character": "lazi",
       "subtitles": {
-        "sq": "Pompa është bllokuar. Po telefonoj Rexhën.",
-        "de": "Die Pumpe ist verstopft. Ich rufe Rexha an.",
-        "it": "La pompa è bloccata. Chiamo Rexha.",
-        "mk": "Пумпата е затната. Ќе му се јавам на Реџа.",
-        "tr": "Pompa tıkanmış. Rexha’yı arıyorum."
+        "sq": "Duhet ta thërras Rexhën.",
+        "de": "Ich muss Rexha anrufen.",
+        "it": "Devo chiamare Rexha.",
+        "mk": "Треба да му се јавам на Реџа.",
+        "tr": "Rexha’yı aramalıyım."
       },
       "durationMillis": 0,
       "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
@@ -281,13 +281,27 @@
       "line": "phone_call",
       "character": "lazi",
       "subtitles": {
-        "sq": "Pompa është bllokuar. Po telefonoj Rexhën.",
-        "de": "Die Pumpe ist verstopft. Ich rufe Rexha an.",
-        "it": "La pompa è bloccata. Chiamo Rexha.",
-        "mk": "Пумпата е затната. Ќе му се јавам на Реџа.",
-        "tr": "Pompa tıkanmış. Rexha’yı arıyorum."
+        "sq": "Rexha, na ndihmon me pompën?",
+        "de": "Rexha, hilfst du uns mit der Pumpe?",
+        "it": "Rexha, ci aiuti con la pompa?",
+        "mk": "Реџа, ќе ни помогнеш со пумпата?",
+        "tr": "Rexha, pompaya yardım eder misin?"
       },
-      "durationMillis": 0,
+      "durationMillis": 3000,
+      "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain_quest",
+      "line": "phone_reply",
+      "character": "rexha",
+      "subtitles": {
+        "sq": "Po vij me veglat.",
+        "de": "Ich komme mit dem Werkzeug.",
+        "it": "Arrivo con gli attrezzi.",
+        "mk": "Доаѓам со алатот.",
+        "tr": "Aletlerle geliyorum."
+      },
+      "durationMillis": 2200,
       "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
     },
     {
@@ -295,11 +309,11 @@
       "line": "rexha_inspect",
       "character": "rexha",
       "subtitles": {
-        "sq": "Më duhen veglat dhe pjesët. Fitojini në Match-3!",
-        "de": "Ich brauche Werkzeug und Teile. Verdient sie in Match-3!",
-        "it": "Mi servono attrezzi e ricambi. Guadagnateli nel Match-3!",
-        "mk": "Ми требаат алат и делови. Освојте ги во Match-3!",
-        "tr": "Alet ve parçalar gerekiyor. Match-3 oynayarak kazanın!"
+        "sq": "Ta mas presionin e pompës.",
+        "de": "Ich messe den Pumpendruck.",
+        "it": "Misuro la pressione della pompa.",
+        "mk": "Ќе го измерам притисокот на пумпата.",
+        "tr": "Pompanın basıncını ölçeyim."
       },
       "durationMillis": 0,
       "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
@@ -320,14 +334,14 @@
     },
     {
       "scene": "fountain_quest",
-      "line": "celebrate",
-      "character": "rona",
+      "line": "clean",
+      "character": "meli",
       "subtitles": {
-        "sq": "Ura! Shatërvani po punon!",
-        "de": "Hurra! Der Brunnen läuft!",
-        "it": "Evviva! La fontana funziona!",
-        "mk": "Ура! Фонтаната работи!",
-        "tr": "Yaşasın! Çeşme çalışıyor!"
+        "sq": "Fëmijë, më ndihmoni me gjethet!",
+        "de": "Kinder, helft mir mit dem Laub!",
+        "it": "Bambini, aiutatemi con le foglie!",
+        "mk": "Деца, помогнете ми со лисјата!",
+        "tr": "Çocuklar, yapraklara yardım edin!"
       },
       "durationMillis": 0,
       "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
@@ -344,6 +358,20 @@
         "tr": "Yaşasın! Çeşme çalışıyor!"
       },
       "durationMillis": 0,
+      "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
+    },
+    {
+      "scene": "fountain_quest",
+      "line": "celebrate",
+      "character": "rona",
+      "subtitles": {
+        "sq": "Ura! Shatërvani po punon!",
+        "de": "Hurra! Der Brunnen läuft!",
+        "it": "Evviva! La fontana funziona!",
+        "mk": "Ура! Фонтаната работи!",
+        "tr": "Yaşasın! Çeşme çalışıyor!"
+      },
+      "durationMillis": 3000,
       "status": "TTS_FALLBACK_UNTIL_LICENSED_RECORDING"
     }
   ],

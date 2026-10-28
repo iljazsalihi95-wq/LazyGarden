@@ -66,7 +66,7 @@ class FountainQuestFlowTest {
    s.onActivity{a->currentActivity=a;views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Ndërto"}.performClick();quest(a).onStageChanged={observed.add(it)}}
    waitFor(s,FountainQuest.Stage.TEST_WATER);shot("premium-01-meli-tests-water");action(s)
    waitFor(s,FountainQuest.Stage.CALL_LAZI);action(s);waitFor(s,FountainQuest.Stage.INSPECT);action(s)
-   assertEquals(FountainQuest.Stage.CALL_REXHA,save.fountainQuestStage);action(s)
+   waitFor(s,FountainQuest.Stage.CALL_REXHA);action(s)
    waitFor(s,FountainQuest.Stage.REXHA_ARRIVAL);shot("premium-02-rexha-arrived")
    waitFor(s,FountainQuest.Stage.REXHA_INSPECT);action(s);waitFor(s,FountainQuest.Stage.COLLECT)
    assertFalse(save.restorationMaterialsReady());val oldCoins=save.coins;action(s);assertEquals(FountainQuest.Stage.COLLECT,save.fountainQuestStage);assertEquals(oldCoins,save.coins)

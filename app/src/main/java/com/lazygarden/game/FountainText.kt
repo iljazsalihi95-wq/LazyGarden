@@ -3,6 +3,20 @@ package com.lazygarden.game
 object FountainText {
  private val languages=listOf("sq","de","it","mk","tr")
  private val rows=mapOf(
+  "testing" to listOf("Meli po provon valvulën…","Meli prüft das Ventil…","Meli prova la valvola…","Мели го проверува вентилот…","Meli vanayı deniyor…"),
+  "checking" to listOf("Lazi kontrollon shatërvanin…","Lazi untersucht den Brunnen…","Lazi controlla la fontana…","Лази ја проверува фонтаната…","Lazi çeşmeyi inceliyor…"),
+  "diagnosing" to listOf("Rexha kontrollon presionin dhe pompën…","Rexha prüft Druck und Pumpe…","Rexha controlla pressione e pompa…","Реџа ги проверува притисокот и пумпата…","Rexha basıncı ve pompayı kontrol ediyor…"),
+  "children_water" to listOf("Fëmijët afrohen te uji","Die Kinder kommen zum Wasser","I bambini si avvicinano all’acqua","Децата се приближуваат до водата","Çocuklar suya yaklaşıyor"),
+  "test_line" to listOf("Ta provojmë ujin.","Probieren wir das Wasser.","Proviamo l’acqua.","Да ја провериме водата.","Suyu deneyelim."),
+  "dry_line" to listOf("Nuk del ujë.","Es kommt kein Wasser.","Non esce acqua.","Нема вода.","Su gelmiyor."),
+  "inspect_line" to listOf("Ta kontrolloj pompën.","Ich schaue mir die Pumpe an.","Controllo la pompa.","Ќе ја проверам пумпата.","Pompayı kontrol edeyim."),
+  "inspect_work_line" to listOf("Këtu është problemi.","Hier liegt das Problem.","Ecco il problema.","Тука е проблемот.","Sorun burada."),
+  "call_line" to listOf("Duhet ta thërras Rexhën.","Ich muss Rexha anrufen.","Devo chiamare Rexha.","Треба да му се јавам на Реџа.","Rexha’yı aramalıyım."),
+  "phone_line" to listOf("Rexha, na ndihmon me pompën?","Rexha, hilfst du uns mit der Pumpe?","Rexha, ci aiuti con la pompa?","Реџа, ќе ни помогнеш со пумпата?","Rexha, pompaya yardım eder misin?"),
+  "reply_line" to listOf("Po vij me veglat.","Ich komme mit dem Werkzeug.","Arrivo con gli attrezzi.","Доаѓам со алатот.","Aletlerle geliyorum."),
+  "pump_line" to listOf("Ta mas presionin e pompës.","Ich messe den Pumpendruck.","Misuro la pressione della pompa.","Ќе го измерам притисокот на пумпата.","Pompanın basıncını ölçeyim."),
+  "pump_work_line" to listOf("Kontrolloj tubin dhe valvulën.","Ich prüfe Rohr und Ventil.","Controllo tubo e valvola.","Ги проверувам цевката и вентилот.","Boruyu ve vanayı kontrol ediyorum."),
+  "cleanup_line" to listOf("Fëmijë, më ndihmoni me gjethet!","Kinder, helft mir mit dem Laub!","Bambini, aiutatemi con le foglie!","Деца, помогнете ми со лисјата!","Çocuklar, yapraklara yardım edin!"),
   "FLOWER" to listOf("Lule","Blumen","Fiori","Цвеќиња","Çiçekler"),
   "SOIL" to listOf("Dhe","Erde","Terra","Земја","Toprak"),
   "STONE" to listOf("Gurë","Steine","Pietre","Камења","Taşlar"),
@@ -46,6 +60,7 @@ object FountainText {
  )
  fun get(language:String,key:String)=rows[key]?.get(languages.indexOf(language).coerceAtLeast(0))?:GameText.get(language,key)
  fun objective(language:String,stage:FountainQuest.Stage):String=get(language,when(stage){
+  FountainQuest.Stage.TRY_WATER->"testing";FountainQuest.Stage.LAZI_INSPECT->"checking";FountainQuest.Stage.PUMP_DIAGNOSIS->"diagnosing";FountainQuest.Stage.CHILDREN_WATER_APPROACH->"children_water";FountainQuest.Stage.PHONE_REPLY->"phone_call";
   FountainQuest.Stage.TEST_WATER->"test_water";FountainQuest.Stage.CALL_LAZI->"call_lazi"
   FountainQuest.Stage.CALL_REXHA->"call_rexha";FountainQuest.Stage.PHONE_CALL->"phone_call"
   FountainQuest.Stage.REXHA_ARRIVAL->"arriving";FountainQuest.Stage.REXHA_INSPECT->"rexha_inspect"
@@ -53,4 +68,19 @@ object FountainText {
   FountainQuest.Stage.CLEAN->"clean";FountainQuest.Stage.START_WATER->"start_water"
   FountainQuest.Stage.CLAIM->"claim";else->"inspect"
  })
+ data class Cue(val character:String,val textKey:String)
+ fun cue(stage:FountainQuest.Stage):Cue?=when(stage){
+  FountainQuest.Stage.TEST_WATER->Cue("meli","test_line")
+  FountainQuest.Stage.CALL_LAZI->Cue("meli","meli_line")
+  FountainQuest.Stage.INSPECT->Cue("lazi","inspect_line")
+  FountainQuest.Stage.CALL_REXHA->Cue("lazi","call_line")
+  FountainQuest.Stage.PHONE_CALL->Cue("lazi","phone_line")
+  FountainQuest.Stage.PHONE_REPLY->Cue("rexha","reply_line")
+  FountainQuest.Stage.REXHA_INSPECT->Cue("rexha","pump_line")
+  FountainQuest.Stage.COLLECT->Cue("rexha","rexha_line")
+  FountainQuest.Stage.CLEAN->Cue("meli","cleanup_line")
+  FountainQuest.Stage.CELEBRATE,FountainQuest.Stage.CLAIM->Cue("rona","happy_line")
+  else->null
+ }
+
 }
