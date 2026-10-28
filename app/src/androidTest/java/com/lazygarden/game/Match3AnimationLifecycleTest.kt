@@ -39,6 +39,24 @@ class Match3AnimationLifecycleTest {
    settled();assertEquals(2,save.boosterCount(Match3Engine.Booster.HAMMER));assertEquals(200,save.coins);onUi{assertEquals(moves,board.engine.moves);assertEquals(board.engine.encode(),save.activeBoard);board.pauseScene()}
   }
  }
+ @Test fun matchedSpecialPiecesSelectTheirOwnCuesWithoutSpendingBoosterStock(){
+  val save=GardenSave(context)
+  for((pieces,expected)in listOf((6 to 12) to "rocket",(18 to 1) to "bomb")){
+   val fixture=Match3Engine(250,kotlin.random.Random(301))
+   for(r in 0..7)for(c in 0..7)fixture.board[r][c]=(r*2+c)%6
+   fixture.board[0][0]=pieces.first;fixture.board[0][1]=pieces.second
+   save.saveBoard(fixture)
+   val cues=java.util.concurrent.CopyOnWriteArrayList<String>()
+   ActivityScenario.launch(MainActivity::class.java).use{s->open(s)
+    val moves=board.engine.moves
+    onUi{board.onEffectCue={cues.add(it)};gesture(0,1)}
+    settled()
+    assertEquals("The first rendered effect uses the matched power cue",expected,cues.first())
+    assertEquals(3,save.boosterCount(Match3Engine.Booster.BOMB));assertEquals(3,save.boosterCount(Match3Engine.Booster.CROSS))
+    onUi{assertEquals(moves-1,board.engine.moves);board.pauseScene()}
+   }
+  }
+ }
  @Test fun legalSwapWaitsForResumeBeforeSpendingItsMove(){
   ActivityScenario.launch(MainActivity::class.java).use{s->open(s)
    var before="";var moves=0

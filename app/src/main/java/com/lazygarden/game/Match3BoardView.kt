@@ -32,6 +32,7 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
  private var boostOrigin=-1
  private var scenePaused=false
  internal val animationFraction get()=effect
+ internal var onEffectCue:((String)->Unit)?=null
  override fun pauseScene(){scenePaused=true;pauseMotion()}
  override fun resumeScene(){scenePaused=false;if(windowVisibility==VISIBLE)resumeMotion()}
  private fun resumeMotion(){sfx.resume();ambient?.resume();animator?.resume()}
@@ -98,11 +99,19 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
    return
   }
   val startScore=displayedScore;val endScore=waves[i].scoreAfter.toFloat();wave=waves[i]
-  if(save.sfxEnabled)sfx.play(when(boostEffect){
+  val powers=waves[i].cells.map{waves[i].before[it/8][it%8]/6}.toSet()
+  val cue=when(boostEffect){
    Match3Engine.Booster.HAMMER->"hammer";Match3Engine.Booster.BOMB->"bomb"
    Match3Engine.Booster.ROW->"row";Match3Engine.Booster.COLUMN->"column";Match3Engine.Booster.CROSS->"rocket"
-   null->if(waves[i].combo>1)"star" else "coin";else->"booster"
-  })
+   null->when {
+    4 in powers->"booster";3 in powers->"bomb"
+    1 in powers&&2 in powers->"rocket";1 in powers->"row";2 in powers->"column"
+    waves[i].combo>1->"star";else->"coin"
+   }
+   else->"booster"
+  }
+  onEffectCue?.invoke(cue)
+  if(save.sfxEnabled)sfx.play(cue)
   visual=waves[i].before;displayedIce=waves[i].iceBefore;effect=0f
   animator=ValueAnimator.ofFloat(0f,1f).apply{
    duration=620
