@@ -59,6 +59,7 @@ class FountainQuestFlowTest {
   while(SystemClock.uptimeMillis()<end){var laidOut=false;onUi{a->val v=quest(a);laidOut=v.isLaidOut&&v.width>0&&v.height>0};if(laidOut)return;SystemClock.sleep(30)}
   fail("Fountain scene must lay out before world coordinates are tapped")
  }
+ private fun pauseForTeardown(){onUi{a->views(a.window.decorView).filterIsInstance<SceneLifecycle>().forEach{it.pauseScene()}}}
  private fun action(s:ActivityScenario<MainActivity>){onUi{val v=quest(it);val point=v.actionCenter();tap(v,point.x,point.y)}}
  private fun waitFor(s:ActivityScenario<MainActivity>,stage:FountainQuest.Stage,timeout:Long=15000){
   val end=SystemClock.uptimeMillis()+timeout
@@ -118,17 +119,17 @@ class FountainQuestFlowTest {
    action(s);assertEquals(1,save.tasks);assertFalse(save.constructing)
    assertEquals(beforeCoins+75,save.coins);assertEquals(beforeStars+1,save.stars);assertEquals(beforeXp+50,save.xp)
    assertFalse(save.actFountain(FountainQuest.Action.CLAIM));assertFalse(save.hasPendingStory);assertEquals(3,save.storyPosition);shot("premium-06-rewards-in-flight")
-   recreateNative();assertEquals(1,save.tasks);assertEquals(beforeCoins+75,save.coins);assertEquals(beforeStars+1,save.stars);assertEquals(beforeXp+50,save.xp);onUi{a->assertTrue(views(a.window.decorView).any{it.contentDescription=="Logo LazyGarden"});assertEquals(CharacterSprites.identities.toSet(),views(a.window.decorView).filterIsInstance<GardenWorldView>().single().residentCast.toSet())};shot("premium-10-family-estate-after-restore")
+   recreateNative();assertEquals(1,save.tasks);assertEquals(beforeCoins+75,save.coins);assertEquals(beforeStars+1,save.stars);assertEquals(beforeXp+50,save.xp);onUi{a->assertTrue(views(a.window.decorView).any{it.contentDescription=="Logo LazyGarden"});assertEquals(CharacterSprites.identities.toSet(),views(a.window.decorView).filterIsInstance<GardenWorldView>().single().residentCast.toSet())};shot("premium-10-family-estate-after-restore");pauseForTeardown()
   }
  }
  @Test fun actualResultScreenDeliversEarnedMaterialIntoItsCounter(){
   save.saveBoard(solve(1))
   ActivityScenario.launch(MainActivity::class.java).use{s->
-   s.onActivity{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="▶ Vazhdo · 1"}.performClick()}
+   s.onActivity{a->currentActivity=a;views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="▶ Vazhdo · 1"}.performClick()}
    assertEquals(2,save.materialCount(Material.PIPE));assertEquals(2,save.level)
    shot("premium-07-match-material-reward");SystemClock.sleep(2000)
-   s.onActivity{a->assertTrue(views(a.window.decorView).filterIsInstance<TextView>().any{it.text.toString()=="Tuba  2/4"})}
-   assertFalse(save.win(solve(1)));assertEquals(2,save.materialCount(Material.PIPE))
+   onUi{a->assertTrue(views(a.window.decorView).filterIsInstance<TextView>().any{it.text.toString()=="Tuba  2/4"})}
+   assertFalse(save.win(solve(1)));assertEquals(2,save.materialCount(Material.PIPE));pauseForTeardown()
   }
  }
  @Test fun incompleteMaterialsAndInvalidActionsNeverConsumeInventory(){
@@ -139,10 +140,10 @@ class FountainQuestFlowTest {
  @Test fun repairCanPauseAtHomeWithoutStartingTheLegacyAutomaticScene(){
   context.getSharedPreferences("garden_progress",0).edit().putBoolean("fountain_quest_active",true).putBoolean("constructing",true).putString("fountain_quest_stage","REPAIR").putLong("fountain_quest_elapsed",1000).commit()
   ActivityScenario.launch(MainActivity::class.java).use{s->
-   s.onActivity{a->val v=quest(a);val d=a.resources.displayMetrics.density;tap(v,30*d,30*d);assertTrue(views(a.window.decorView).any{it.contentDescription=="Logo LazyGarden"});assertTrue(views(a.window.decorView).none{it is FountainQuestView})}
+   s.onActivity{a->currentActivity=a;val v=quest(a);val d=a.resources.displayMetrics.density;tap(v,30*d,30*d);assertTrue(views(a.window.decorView).any{it.contentDescription=="Logo LazyGarden"});assertTrue(views(a.window.decorView).none{it is FountainQuestView})}
    val checkpoint=save.fountainQuestElapsed;SystemClock.sleep(700);assertEquals(checkpoint,save.fountainQuestElapsed);assertEquals(0,save.tasks);assertTrue(save.constructing)
-   s.onActivity{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Ndërto"}.performClick();assertTrue(quest(a).currentStage in listOf(FountainQuest.Stage.REPAIR,FountainQuest.Stage.CLEAN))}
-   assertEquals(0,save.tasks);assertEquals(0,save.coins)
+   onUi{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Ndërto"}.performClick();assertTrue(quest(a).currentStage in listOf(FountainQuest.Stage.REPAIR,FountainQuest.Stage.CLEAN))}
+   assertEquals(0,save.tasks);assertEquals(0,save.coins);pauseForTeardown()
   }
  }
 
@@ -160,7 +161,7 @@ class FountainQuestFlowTest {
    shot("premium-08-earned-material-inventory")
    onUi{a->views(a.window.decorView).first{it.contentDescription=="inventory_boosters"}.performClick();assertEquals(7,views(a.window.decorView).filterIsInstance<TextView>().count{it.text.toString()=="×3"})}
    onUi{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="‹"}.performClick();assertEquals(FountainQuest.Stage.COLLECT,quest(a).currentStage)}
-   assertEquals(0,save.tasks);assertEquals(2,save.materialCount(Material.PIPE));assertEquals(150,save.coins)
+   assertEquals(0,save.tasks);assertEquals(2,save.materialCount(Material.PIPE));assertEquals(150,save.coins);pauseForTeardown()
   }
  }
 

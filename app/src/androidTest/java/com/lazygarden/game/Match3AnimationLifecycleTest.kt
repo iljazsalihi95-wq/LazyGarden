@@ -36,7 +36,7 @@ class Match3AnimationLifecycleTest {
    onUi{moves=board.engine.moves;board.runBooster(Match3Engine.Booster.HAMMER);gesture(0,0);assertTrue(board.isBusy);board.pauseScene();effect=board.animationFraction;model=board.engine.encode()}
    assertEquals(2,save.boosterCount(Match3Engine.Booster.HAMMER));SystemClock.sleep(1500)
    onUi{assertTrue(board.isBusy);assertEquals(effect,board.animationFraction,0f);assertEquals(model,board.engine.encode());board.resumeScene()}
-   settled();assertEquals(2,save.boosterCount(Match3Engine.Booster.HAMMER));assertEquals(200,save.coins);onUi{assertEquals(moves,board.engine.moves);assertEquals(board.engine.encode(),save.activeBoard)}
+   settled();assertEquals(2,save.boosterCount(Match3Engine.Booster.HAMMER));assertEquals(200,save.coins);onUi{assertEquals(moves,board.engine.moves);assertEquals(board.engine.encode(),save.activeBoard);board.pauseScene()}
   }
  }
  @Test fun legalSwapWaitsForResumeBeforeSpendingItsMove(){
@@ -45,7 +45,7 @@ class Match3AnimationLifecycleTest {
    onUi{val e=board.engine;val legal=(0..63).flatMap{a->listOf(a to a+1,a to a+8)}.first{e.legal(it.first,it.second)};before=e.encode();moves=e.moves;gesture(legal.first,legal.second);board.pauseScene()}
    SystemClock.sleep(500)
    onUi{assertEquals(before,board.engine.encode());assertTrue(board.isBusy);board.resumeScene()}
-   settled();onUi{assertEquals(moves-1,board.engine.moves);assertTrue(board.engine.score>0)}
+   settled();onUi{assertEquals(moves-1,board.engine.moves);assertTrue(board.engine.score>0);board.pauseScene()}
   }
  }
 }

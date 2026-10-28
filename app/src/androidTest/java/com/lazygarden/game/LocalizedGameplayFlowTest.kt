@@ -48,6 +48,7 @@ class LocalizedGameplayFlowTest {
     }
     assertEquals(2,save.level);assertEquals(150,save.coins);assertEquals(2,save.materialCount(Material.PIPE))
    }
+   onUi{views(activity.window.decorView).filterIsInstance<SceneLifecycle>().forEach{it.pauseScene()}}
   }
  }
 }
