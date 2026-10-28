@@ -45,7 +45,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
  private fun startClock(){if(paused||clock!=null||!isAttachedToWindow||windowVisibility!=VISIBLE)return
   var last=android.os.SystemClock.uptimeMillis()
   clock=ValueAnimator.ofFloat(0f,1f).apply{duration=12000;repeatCount=ValueAnimator.INFINITE;interpolator=LinearInterpolator();addUpdateListener{
-   val now=android.os.SystemClock.uptimeMillis();val dt=(now-last).coerceIn(0L,300L);last=now;life+=dt
+   val now=android.os.SystemClock.uptimeMillis();val dt=(now-last).coerceIn(0L,1000L);last=now;life+=dt
    if(rewardElapsed>=0){val beforeReward=rewardElapsed;rewardElapsed+=dt;if(beforeReward<1100&&rewardElapsed>=1100)sound("coin");if(beforeReward<1350&&rewardElapsed>=1350)sound("star");if(rewardElapsed>=1800){rewardElapsed=-1;complete();return@addUpdateListener}}
    else if(stage.duration>0){elapsed+=dt;if(save.advanceFountainTimed(stage,elapsed))refreshStage() else if(elapsed-checkpoint>=1000){save.checkpointFountain(stage,elapsed);checkpoint=elapsed}}
    if(stage!=lastSpoken){lastSpoken=stage;val pair=dialogue();if(pair!=null)voice.speakLine("fountain_quest",stage.name.lowercase(),pair.first,save.language,FountainText.get(save.language,pair.second),stage.duration)}
@@ -122,15 +122,21 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
  private fun drawActors(c:Canvas,w:Float,h:Float,fx:Float,fy:Float,f:Float){
   val index=stage.ordinal
   fun progress(at:FountainQuest.Stage)=when{index<at.ordinal->0f;index==at.ordinal->f;else->1f}
-  val m=CharacterAnimation.ease(progress(FountainQuest.Stage.MELI_APPROACH));val children=CharacterAnimation.ease(progress(FountainQuest.Stage.CHILDREN_APPROACH));val lazi=CharacterAnimation.ease(progress(FountainQuest.Stage.LAZI_APPROACH));val rexha=CharacterAnimation.ease(progress(FountainQuest.Stage.REXHA_ARRIVAL))
+  val m=progress(FountainQuest.Stage.MELI_APPROACH);val children=progress(FountainQuest.Stage.CHILDREN_APPROACH);val lazi=progress(FountainQuest.Stage.LAZI_APPROACH);val rexha=progress(FountainQuest.Stage.REXHA_ARRIVAL)
+  fun route(x:Float,y:Float,tx:Float,ty:Float,t:Float)=CharacterAnimation.move(CharacterAnimation.Position(x,y),CharacterAnimation.Position(tx,ty),t)
+  val mp=route(-w*.15f,h*.85f,fx-w*.32f,fy+w*.28f,m)
+  val lp=route(w*.88f,h*.37f,fx-w*.10f,fy+w*.30f,lazi)
+  val cp=route(w*1.15f,h*.88f,fx+w*.12f,fy+w*.49f,children)
+  val rp=route(w*1.3f,h*.95f,fx+w*.33f,fy+w*.52f,children)
+  val plumber=route(-w*.2f,h*.91f,fx+w*.20f,fy+w*.25f,rexha)
   data class Actor(val id:String,val row:Int,val new:Boolean,val x:Float,val y:Float,val moving:Boolean,val child:Boolean=false)
   val people=mutableListOf(
-   Actor("meli",2,false,-w*.15f+(w*.43f)*m,h*.85f+(fy+w*.24f-h*.85f)*m,m<1),
-   Actor("lazi",0,false,w*.88f+(fx-w*.14f-w*.88f)*lazi,h*.37f+(fy+w*.26f-h*.37f)*lazi,lazi in .001f.. .999f),
-   Actor("cufi",1,true,w*1.15f+(fx+w*.23f-w*1.15f)*children,h*.88f+(fy+w*.45f-h*.88f)*children,children<1,true),
-   Actor("rona",2,true,w*1.3f+(fx+w*.37f-w*1.3f)*children,h*.95f+(fy+w*.51f-h*.95f)*children,children<1,true)
+   Actor("meli",2,false,mp.x,mp.y,m<1),
+   Actor("lazi",0,false,lp.x,lp.y,lazi in .001f.. .999f),
+   Actor("cufi",1,true,cp.x,cp.y,children<1,true),
+   Actor("rona",2,true,rp.x,rp.y,children<1,true)
   )
-  if(index>=FountainQuest.Stage.REXHA_ARRIVAL.ordinal)people.add(Actor("rexha",0,true,-w*.2f+(fx+w*.17f+w*.2f)*rexha,h*.91f+(fy+w*.25f-h*.91f)*rexha,rexha<1))
+  if(index>=FountainQuest.Stage.REXHA_ARRIVAL.ordinal)people.add(Actor("rexha",0,true,plumber.x,plumber.y,rexha<1))
   actorRects.clear()
   for(base in people.sortedBy{it.y}){
    val age=life-collectStarted
