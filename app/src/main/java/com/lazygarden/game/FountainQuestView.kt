@@ -80,7 +80,9 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
  private fun panel(c:Canvas,r:RectF){GameSkin.nine(c,GameSkin.bitmap(context,R.drawable.hd_hud),r,18*d,p)}
  private fun button(c:Canvas,r:RectF,label:String,enabled:Boolean=true){
   p.alpha=if(enabled)255 else 140;GameSkin.nine(c,GameSkin.bitmap(context,if(enabled)R.drawable.hd_button_green else R.drawable.hd_button_blue),r,20*d,p,.35f);p.alpha=255
-  text(c,label,r.centerX(),r.centerY()+5*d,min(16f,r.width()/d/17),Color.WHITE)
+  p.typeface=Typeface.DEFAULT_BOLD;p.textSize=16*d
+  val fitted=(16f*(r.width()-20*d)/p.measureText(label).coerceAtLeast(1f)).coerceIn(10f,16f)
+  text(c,label,r.centerX(),r.centerY()+5*d,fitted,Color.WHITE)
  }
  override fun onDraw(c:Canvas){super.onDraw(c);val w=width.toFloat();val h=height.toFloat();if(w==0f||h==0f)return
   val scale=max(w/background.width,h/background.height)*1.15f
