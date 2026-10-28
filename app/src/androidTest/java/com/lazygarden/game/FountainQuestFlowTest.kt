@@ -67,7 +67,7 @@ class FountainQuestFlowTest {
    val beforeCoins=save.coins;val beforeStars=save.stars;val beforeXp=save.xp
    action(s);assertEquals(1,save.tasks);assertFalse(save.constructing)
    assertEquals(beforeCoins+75,save.coins);assertEquals(beforeStars+1,save.stars);assertEquals(beforeXp+50,save.xp)
-   assertFalse(save.actFountain(FountainQuest.Action.CLAIM));shot("premium-06-rewards-in-flight")
+   assertFalse(save.actFountain(FountainQuest.Action.CLAIM));assertFalse(save.hasPendingStory);assertEquals(3,save.storyPosition);shot("premium-06-rewards-in-flight")
    s.recreate();assertEquals(1,save.tasks);assertEquals(beforeCoins+75,save.coins);assertEquals(beforeStars+1,save.stars);assertEquals(beforeXp+50,save.xp)
   }
  }

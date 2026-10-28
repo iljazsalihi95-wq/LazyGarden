@@ -119,7 +119,7 @@ class GardenSave(ctx:Context) {
    if(!constructing||tasks!=0)return false
    return p.edit().putInt("tasks",1).putBoolean("constructing",false).putBoolean("fountain",true)
     .putString("fountain_quest_stage",FountainQuest.Stage.COMPLETE.name).putInt("coins",coins+75)
-    .putInt("stars",stars+1).putInt("xp",xp+50).remove("restoration_elapsed").putLong("fountain_quest_elapsed",0).commit()
+    .putInt("stars",stars+1).putInt("xp",xp+50).putInt("story_position",maxOf(storyPosition,GardenStory.LINES_PER_CHAPTER)).remove("restoration_elapsed").putLong("fountain_quest_elapsed",0).commit()
   }
   val next=FountainQuest.actionNext(stage,action)?:return false
   return p.edit().putString("fountain_quest_stage",next.name).putLong("fountain_quest_elapsed",0).commit()
