@@ -41,8 +41,8 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   if(id==lastId)return true
   val clip=manifest.find(scene,line,character,language)
   val cue=Line(scene,line,character,language,clip?.asset,subtitle,clip?.durationMillis?:durationMillis)
-  // Scene timers may advance before speech ends. Keep only the newest next line instead of chopping the current voice.
-  if(isTalking||player?.isPlaying==true){queued=cue;return true}
+  // Scene timers may advance before speech ends or while a recorded clip prepares.
+  if(isTalking||player!=null){queued=cue;return true}
   return play(cue)
  }
  private fun play(cue:Line):Boolean{
@@ -71,17 +71,12 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   if(tts.isLanguageAvailable(locale)<TextToSpeech.LANG_AVAILABLE)return false
   tts.language=locale
   val localVoices=tts.voices?.filter{it.locale.language==locale.language&&!it.isNetworkConnectionRequired}?.sortedWith(compareByDescending<android.speech.tts.Voice>{it.quality}.thenBy{it.latency}).orEmpty()
-  // Android does not expose a reliable gender field. Use stable separate local voices when the engine offers several,
-  // then shape pitch/rate per character. Recorded/AI clips can replace these entries without changing scene code.
+  // Android has no reliable gender metadata. Keep separate stable local voices when available; recorded/AI clips can replace them later.
   if(localVoices.isNotEmpty()){
    val index=if(line.characterId in femaleIds&&localVoices.size>1)1 else 0
    tts.voice=localVoices[index.coerceAtMost(localVoices.lastIndex)]
   }
-  val pitch=when{
-   line.characterId in femaleIds->1.08f
-   line.characterId in childIds->1.04f
-   else->.94f
-  }
+  val pitch=when{line.characterId in femaleIds->1.08f;line.characterId in childIds->1.04f;else->.94f}
   val rate=if(line.characterId in childIds).91f else .88f
   tts.setPitch(pitch);tts.setSpeechRate(rate)
   currentLine=line;lastId="${line.sceneId}/${line.lineId}/${++generation}"
@@ -106,7 +101,5 @@ class VoiceManifest(context:Context) {
    else Clip(item.getString("scene"),item.getString("line"),item.getString("character"),item.getString("language"),path,license,item.optLong("durationMillis",0))
   }
  }catch(_:Exception){emptyList()}
- fun find(scene:String,line:String,character:String,language:String):Clip? = clips.singleOrNull{
-  it.scene==scene&&it.line==line&&it.character==character&&it.language==language
- }
+ fun find(scene:String,line:String,character:String,language:String):Clip? = clips.singleOrNull{it.scene==scene&&it.line==line&&it.character==character&&it.language==language}
 }
