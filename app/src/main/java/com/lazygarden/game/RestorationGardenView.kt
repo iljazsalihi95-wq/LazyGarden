@@ -4,12 +4,31 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
 import android.view.View
+import android.view.MotionEvent
 import android.view.animation.LinearInterpolator
 import kotlin.math.*
 
 /** Shared rendering machinery; work plans, actors' routes and object transformations differ per scene. */
 open class RestorationGardenView(context:Context,private val task:Int,initialElapsed:Long=0,private val checkpoint:(Long)->Unit={},private val onComplete:()->Unit={}):View(context),SceneLifecycle {
  private val plan=RestorationSequence.plan(task)
+ private val workTarget=RectF()
+ private var contactX=0f;private var contactY=0f;private var contactAt=-2000L
+ init {isClickable=true;contentDescription=plan.title}
+ override fun performClick():Boolean {super.performClick();return true}
+ override fun onTouchEvent(event:MotionEvent):Boolean {
+  if(event.actionMasked==MotionEvent.ACTION_DOWN)return true
+  if(event.actionMasked!=MotionEvent.ACTION_UP)return true
+  performClick()
+  if(paused||completed||!workTarget.contains(event.x,event.y))return true
+  val step=plan.steps[plan.index(ms)]
+  if(step.key in listOf("ARRIVAL","INSPECT","TRY","REVEAL","CELEBRATE"))return true
+  contactX=event.x;contactY=event.y;contactAt=ms
+  if(save.sfxEnabled)sfx.play(step.sound)
+  // Contribute work without skipping the next action or its dialogue.
+  val end=plan.steps.take(plan.index(ms)+1).sumOf{it.duration}
+  ms=(ms+180).coerceAtMost(end-1)
+  checkpoint(ms);invalidate();return true
+ }
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val art=GameSkin.bitmap(context,R.drawable.restoration_objects)
  private val props=GameSkin.bitmap(context,R.drawable.garden_work_props)
@@ -61,10 +80,18 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
    if(task==6&&step.key !in listOf("ARRIVAL","INSPECT","CELEBRATE"))SpriteArt.draw(c,p,props,4,3,10,RectF(d.left+d.width()*.28f,d.top+d.height()*.14f,d.left+d.width()*.43f,d.top+d.height()*.60f),(255*(1-plan.progress(ms,"REVEAL"))).toInt())
    if(task==5&&step.key in listOf("LIGHT","REVEAL","CELEBRATE")){p.shader=RadialGradient(r.centerX(),r.top+r.height()*.25f,r.width()*.45f,intArrayOf(0x55ffe9a0,0x00ffe9a0),null,Shader.TileMode.CLAMP);c.drawOval(r,p);p.shader=null}
   }
+  workTarget.set(WorldRestorationArt.objectRect(d,task));workTarget.inset(-dp(24f),-dp(24f))
   val work=step.key !in listOf("ARRIVAL","INSPECT","TRY","REVEAL","CELEBRATE")
   if(work){tool(c,d,if(task==2)7 else 9,.27f,.80f,.19f);particles(c,d,step.sound,f)}
   if(step.key in listOf("WATER","GROW")){tool(c,d,6,.69f,.65f,.16f);for(i in 0..15){val t=((ms%1100)/1100f+i*.07f)%1f;p.color=0xbb9ce9ff.toInt();c.drawCircle(width*(.59f-t*.22f),height*(.53f+t*.19f),d.width()*.0025f,p)}}
   actors(c,d,WorldRestorationArt.objectRect(d,task),step,work)
+  val contact=(ms-contactAt)/650f
+  if(contact in 0f..1f){
+   p.style=Paint.Style.STROKE;p.strokeWidth=dp(2f);p.color=0xffffd47a.toInt();p.alpha=((1-contact)*230).toInt()
+   c.drawCircle(contactX,contactY,dp(8f)+contact*dp(32f),p);p.style=Paint.Style.FILL
+   for(i in 0..9){val angle=i*PI.toFloat()/5;val radius=contact*dp(42f);c.drawCircle(contactX+cos(angle)*radius,contactY+sin(angle)*radius-contact*dp(18f),dp(3f)*(1-contact),p)}
+   p.alpha=255
+  }
   if(step.key=="CELEBRATE"){for(i in 0..27){val t=((ms%2300)/2300f+i*.037f)%1f;p.color=if(i%2==0)0xffffd86b.toInt() else 0xffb1efc6.toInt();p.alpha=((1-t)*210).toInt();c.drawCircle(width*(i*0.173f%1),height*(.25f+t*.60f),dp(2f),p)};p.alpha=255}
   if(step.line.isNotBlank())SceneBubble.draw(c,p,width,height,SceneText.name(step.speaker),SceneText.line(step.line,save.language),dp(1f),width*(if(step.speaker%2==0).26f else .74f))
   val bar=RectF(width*.23f,height*.91f,width*.77f,height*.925f);p.color=0xcc184736.toInt();c.drawRoundRect(bar,dp(6f),dp(6f),p);p.color=0xffa8df61.toInt();c.drawRoundRect(RectF(bar.left,bar.top,bar.left+bar.width()*ms/plan.duration,bar.bottom),dp(6f),dp(6f),p)
@@ -72,12 +99,14 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
  private inline fun reveal(c:Canvas,r:RectF,f:Float,draw:()->Unit){if(f<=0)return;val s=c.save();c.clipRect(r.left,r.top,r.left+r.width()*f,r.bottom);draw();c.restoreToCount(s)}
  private fun tool(c:Canvas,d:RectF,i:Int,x:Float,y:Float,w:Float){val cx=width*x;val bottom=height*y;val ww=width*w;SpriteArt.draw(c,p,props,4,3,i,RectF(cx-ww/2,bottom-ww*.65f,cx+ww/2,bottom))}
  private fun particles(c:Canvas,d:RectF,sound:String,f:Float){for(i in 0..11){val t=((ms%1200)/1200f+i*.083f)%1f;p.color=if(sound=="water")0xff8cdeff.toInt() else 0xffd7bd87.toInt();p.alpha=((1-t)*150).toInt();c.drawCircle(width*.5f+sin(i*4f)*width*.22f*t,height*(.67f-t*.09f),d.width()*.004f*(1-t),p)};p.alpha=255}
- private fun actors(c:Canvas,d:RectF,target:RectF,step:RestorationSequence.Step,work:Boolean){for(id in 0..3){val arrive=plan.progress(ms,"ARRIVAL");val offsets=floatArrayOf(-.57f,.57f,-.84f,.84f);val tx=if(task==6)width*floatArrayOf(.16f,.40f,.60f,.84f)[id] else (target.centerX()+offsets[id]*target.width()).coerceIn(width*.13f,width*.87f);val move=if(work)sin(ms/2200f+id)*width*.025f else 0f
+ private fun actors(c:Canvas,d:RectF,target:RectF,step:RestorationSequence.Step,work:Boolean){for(id in 0..3){val arrive=CharacterAnimation.ease(plan.progress(ms,"ARRIVAL"));val offsets=floatArrayOf(-.57f,.57f,-.84f,.84f);val tx=if(task==6)width*floatArrayOf(.16f,.40f,.60f,.84f)[id] else (target.centerX()+offsets[id]*target.width()).coerceIn(width*.13f,width*.87f);val move=0f
    val ground=if(task==6)height*.88f else target.bottom+height*(if(id<2).10f else .19f)
    var x=(if(id%2==0)-width*.12f else width*1.12f)*(1-arrive)+(tx+move)*arrive;var y=height*.98f*(1-arrive)+ground.coerceAtMost(height*.88f)*arrive
    if(task==6&&id<2){val platform=plan.progress(ms,"SCAFFOLD")*(1-plan.progress(ms,"REVEAL"));val px=d.left+d.width()*(if(id==0).37f else .34f);val py=d.top+d.height()*(if(id==0).42f else .56f);x+=(px-x)*platform;y+=(py-y)*platform}
    if(step.key=="TRY"&&id==3){x=target.centerX()+target.width()*.12f;y=target.top+target.height()*.60f+width*.115f}
    val state=when{step.key=="ARRIVAL"->ResidentAnimation.State.WALK;step.key=="CELEBRATE"->ResidentAnimation.State.CELEBRATE;step.speaker==id->ResidentAnimation.State.TALK;work&&(id<2||task==4||task==6)->ResidentAnimation.State.WORK;step.key=="REVEAL"->ResidentAnimation.State.HAPPY;else->ResidentAnimation.State.LOOK}
+   p.shader=null;p.alpha=255;p.color=0x44302010
+   c.drawOval(RectF(x-width*.065f,y-width*.012f,x+width*.065f,y+width*.012f),p)
    val w=width*.23f;val frame=ResidentAnimation.frame(state,(ms/130).toInt()+id);val cw=residents.width/8;val ch=residents.height/4;val s=c.save();c.scale(if(x<target.centerX())1f else -1f,1f,x,y);if(state==ResidentAnimation.State.CELEBRATE)y-=abs(sin(ms/140f+id))*d.height()*.01f
    val workFrame=when{step.key=="TRY"&&id==3->7;state!=ResidentAnimation.State.WORK->-1;step.key=="PAINT"->4+((ms/320+id)%2).toInt();step.key=="WATER"->6;task==4&&step.key=="PLANT"->2+((ms/340+id)%2).toInt();step.key in listOf("WEED","SOIL","LEVEL","CLEAR","PLASTER")->((ms/300+id)%2).toInt();else->-1}
    if(workFrame>=0)WorkerArt.draw(c,p,workResidents,id,workFrame,RectF(x-w*.63f,y-w*1.26f,x+w*.63f,y)) else SpriteArt.draw(c,p,residents,8,4,id*8+frame,RectF(x-w/2,y-w*ch/cw,x+w/2,y));c.restoreToCount(s)
