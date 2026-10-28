@@ -96,8 +96,7 @@ class FountainQuestFlowTest {
    waitFor(s,FountainQuest.Stage.CLEAN)
    for(i in 0..2){
     val oldMask=save.fountainCleanedMask
-    onUi{a->val v=quest(a);val point=v.leafCenter(i);tap(v,point.x,point.y)}
-    assertEquals("A leaf is not granted before the child reaches it",oldMask,save.fountainCleanedMask)
+    onUi{a->val v=quest(a);val point=v.leafCenter(i);tap(v,point.x,point.y);assertEquals("A leaf is not granted before the child reaches it",oldMask,save.fountainCleanedMask)}
     val end=SystemClock.uptimeMillis()+10000;var busy=true
     while(busy&&SystemClock.uptimeMillis()<end){SystemClock.sleep(50);onUi{a->busy=quest(a).isCollecting}}
     assertFalse("Child collection animation must finish",busy)
