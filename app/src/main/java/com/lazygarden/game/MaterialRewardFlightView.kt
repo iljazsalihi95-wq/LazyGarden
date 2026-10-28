@@ -6,12 +6,17 @@ import android.view.View
 import kotlin.math.*
 
 /** Earned material grows out of the result, then flies into its inventory counter. */
-class MaterialRewardFlightView(context:Context,private val material:Material,private val amount:Int,private val arrived:()->Unit):View(context){
+class MaterialRewardFlightView(context:Context,private val material:Material,private val amount:Int,private val arrived:()->Unit):View(context),SceneLifecycle{
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val art=MaterialArt(context);private var t=0f;private var animator:ValueAnimator?=null
+ private var paused=false
+ internal val animationFraction get()=t
+ override fun pauseScene(){paused=true;animator?.pause()}
+ override fun resumeScene(){paused=false;if(windowVisibility==VISIBLE)animator?.resume()}
+ override fun onWindowVisibilityChanged(visibility:Int){super.onWindowVisibilityChanged(visibility);if(visibility==VISIBLE&&!paused)animator?.resume() else animator?.pause()}
  override fun onAttachedToWindow(){super.onAttachedToWindow();animator=ValueAnimator.ofFloat(0f,1f).apply{duration=1600;startDelay=150
   addUpdateListener{t=it.animatedValue as Float;invalidate()}
-  addListener(object:android.animation.AnimatorListenerAdapter(){override fun onAnimationEnd(a:android.animation.Animator){if(isAttachedToWindow){arrived();(parent as? android.view.ViewGroup)?.removeView(this@MaterialRewardFlightView)}}});start()}}
+  addListener(object:android.animation.AnimatorListenerAdapter(){override fun onAnimationEnd(a:android.animation.Animator){if(isAttachedToWindow){arrived();(parent as? android.view.ViewGroup)?.removeView(this@MaterialRewardFlightView)}}});start();if(paused||windowVisibility!=VISIBLE)pause()}}
  override fun onDetachedFromWindow(){animator?.removeAllListeners();animator?.removeAllUpdateListeners();animator?.cancel();super.onDetachedFromWindow()}
  override fun onDraw(c:Canvas){if(t<=0||t>=1)return;val d=resources.displayMetrics.density;val u=((t-.22f)/.78f).coerceIn(0f,1f);val x=width*.5f;val y=(1-u).pow(2)*height*.57f+2*(1-u)*u*height*.27f+u*u*85*d
   val size=(if(t<.22f)24+30*(t/.22f) else 54-35*u)*d

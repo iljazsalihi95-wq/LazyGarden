@@ -31,10 +31,18 @@ class MainActivity : AppCompatActivity() {
  private fun t(key:String)=GameText.get(save.language,key)
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
  override fun onCreate(state:Bundle?){super.onCreate(state);WindowCompat.setDecorFitsSystemWindows(window,false);save=GardenSave(this);ads=RewardedVideos(this,save);sfx=GardenSfx(this);showGarden();if(save.hasPendingStory&&!save.constructing)showStory();onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true){override fun handleOnBackPressed(){if(screen=="garden")finish() else {engine?.let{save.saveBoard(it)};showGarden(screen=="fountain_quest")}}})}
- override fun onResume(){super.onResume();world?.resumeScene()}
- override fun onPause(){world?.pauseScene();sfx.pause();engine?.let{save.saveBoard(it)};super.onPause()}
+ override fun onResume(){super.onResume();world?.resumeScene();rewardAnimator?.resume();sfx.resume()}
+ override fun onPause(){world?.pauseScene();rewardAnimator?.pause();sfx.pause();engine?.let{save.saveBoard(it)};super.onPause()}
  override fun onDestroy(){completionDialog?.dismiss();world?.pauseScene();rewardAnimator?.cancel();ads.release();sfx.release();super.onDestroy()}
- private fun findWorld(view:View):SceneLifecycle?{if(view is SceneLifecycle)return view;if(view is android.view.ViewGroup)for(i in 0 until view.childCount)findWorld(view.getChildAt(i))?.let{return it};return null}
+ private fun visitScenes(view:View,action:(SceneLifecycle)->Unit){
+  if(view is SceneLifecycle)action(view)
+  if(view is android.view.ViewGroup)for(i in 0 until view.childCount)visitScenes(view.getChildAt(i),action)
+ }
+ // Traverse at lifecycle time: result particles are added after the world is attached.
+ private fun findWorld(view:View)=object:SceneLifecycle {
+  override fun pauseScene(){visitScenes(view){it.pauseScene()}}
+  override fun resumeScene(){visitScenes(view){it.resumeScene()}}
+ }
  private fun attach(view:View){world?.pauseScene();rewardAnimator?.cancel();val host=FrameLayout(this).apply{setBackgroundColor(0xff142f28.toInt());addView(view,FrameLayout.LayoutParams(-1,-1))};ViewCompat.setOnApplyWindowInsetsListener(host){v,insets->val bars=insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout());v.setPadding(bars.left,bars.top,bars.right,bars.bottom);insets};setContentView(host);world=findWorld(view);ViewCompat.requestApplyInsets(host);WindowInsetsControllerCompat(window,host).apply{systemBarsBehavior=WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE;hide(WindowInsetsCompat.Type.systemBars())}}
  private fun label(value:String,size:Float=18f,color:Int=Color.WHITE)=TextView(this).apply{text=value;textSize=size;setTextColor(color);gravity=Gravity.CENTER;typeface=Typeface.DEFAULT_BOLD;setShadowLayer(2f,0f,1f,0x77253020)}
  private fun premiumButton(value:String,primary:Boolean=false,action:()->Unit)=GameButton(this,primary).apply{text=value;isAllCaps=false;textSize=if(primary)23f else 15f;setTextColor(Color.WHITE);typeface=Typeface.DEFAULT_BOLD;minHeight=dp(if(primary)66 else 48);setPadding(dp(10),dp(6),dp(10),dp(6));layoutParams=LinearLayout.LayoutParams(-1,-2).apply{setMargins(dp(4),dp(5),dp(4),dp(5))};setOnClickListener{performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);action()}}

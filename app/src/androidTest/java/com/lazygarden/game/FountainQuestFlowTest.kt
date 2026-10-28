@@ -127,6 +127,15 @@ class FountainQuestFlowTest {
   ActivityScenario.launch(MainActivity::class.java).use{s->
    s.onActivity{a->currentActivity=a;views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="▶ Vazhdo · 1"}.performClick()}
    assertEquals(2,save.materialCount(Material.PIPE));assertEquals(2,save.level)
+   var flight:MaterialRewardFlightView?=null
+   var coinsFlight:RewardFlightView?=null
+   onUi{a->flight=views(a.window.decorView).filterIsInstance<MaterialRewardFlightView>().single();coinsFlight=views(a.window.decorView).filterIsInstance<RewardFlightView>().single()}
+   s.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+   val pausedMaterial=flight!!.animationFraction;val pausedCoins=coinsFlight!!.animationFraction
+   assertTrue("Material flight is paused before arrival",pausedMaterial<1f);assertTrue("Coin flight is paused before arrival",pausedCoins<1f)
+   SystemClock.sleep(700)
+   assertEquals(pausedMaterial,flight!!.animationFraction,0f);assertEquals(pausedCoins,coinsFlight!!.animationFraction,0f)
+   s.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
    shot("premium-07-match-material-reward");SystemClock.sleep(2000)
    onUi{a->assertTrue(views(a.window.decorView).filterIsInstance<TextView>().any{it.text.toString()=="Tuba  2/4"})}
    assertFalse(save.win(solve(1)));assertEquals(2,save.materialCount(Material.PIPE));pauseForTeardown()
