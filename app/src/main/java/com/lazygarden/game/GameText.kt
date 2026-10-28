@@ -7,6 +7,7 @@ object GameText {
 
     private val text = mapOf(
         "sq" to mapOf(
+            "locked" to "Përforcuesit përdoren në nivelin aktual", "insufficient_coins" to "Nuk ke mjaft Coins", "invalid_target" to "Zgjidh një figurë të vlefshme", "booster_HAMMER" to "Çekiçi", "booster_ROW" to "Rreshti", "booster_COLUMN" to "Kolona", "booster_CROSS" to "Kryqi", "booster_BOMB" to "Bomba", "booster_COLOR" to "Ngjyra", "booster_SHUFFLE" to "Përzieje",
             "garden" to "Kopshti", "play" to "Luaj", "continue" to "Vazhdo", "levels" to "Nivelet",
             "story" to "Historia", "new" to "E re", "build" to "Ndërto", "decorate" to "Dekoro",
             "settings" to "Cilësimet", "close" to "Mbyll", "save" to "Ruaj", "profile" to "Profili",
@@ -16,6 +17,7 @@ object GameText {
             "level_complete" to "Niveli i përfunduar!", "try_again" to "Provo përsëri", "moves" to "Lëvizje"
         ),
         "de" to mapOf(
+            "locked" to "Booster sind nur im aktuellen Level verfügbar", "insufficient_coins" to "Nicht genügend Münzen", "invalid_target" to "Wähle ein gültiges Spielfeld", "booster_HAMMER" to "Hammer", "booster_ROW" to "Reihe", "booster_COLUMN" to "Spalte", "booster_CROSS" to "Kreuz", "booster_BOMB" to "Bombe", "booster_COLOR" to "Farbe", "booster_SHUFFLE" to "Mischen",
             "garden" to "Garten", "play" to "Spielen", "continue" to "Fortsetzen", "levels" to "Level",
             "story" to "Geschichte", "new" to "Neu", "build" to "Bauen", "decorate" to "Dekorieren",
             "settings" to "Einstellungen", "close" to "Schließen", "save" to "Speichern", "profile" to "Profil",
@@ -25,6 +27,7 @@ object GameText {
             "level_complete" to "Level geschafft!", "try_again" to "Nochmal versuchen", "moves" to "Züge"
         ),
         "it" to mapOf(
+            "locked" to "I potenziamenti sono disponibili nel livello attuale", "insufficient_coins" to "Monete insufficienti", "invalid_target" to "Scegli una casella valida", "booster_HAMMER" to "Martello", "booster_ROW" to "Riga", "booster_COLUMN" to "Colonna", "booster_CROSS" to "Croce", "booster_BOMB" to "Bomba", "booster_COLOR" to "Colore", "booster_SHUFFLE" to "Mescola",
             "garden" to "Giardino", "play" to "Gioca", "continue" to "Continua", "levels" to "Livelli",
             "story" to "Storia", "new" to "Nuovo", "build" to "Costruisci", "decorate" to "Decora",
             "settings" to "Impostazioni", "close" to "Chiudi", "save" to "Salva", "profile" to "Profilo",
@@ -34,6 +37,7 @@ object GameText {
             "level_complete" to "Livello completato!", "try_again" to "Riprova", "moves" to "Mosse"
         ),
         "mk" to mapOf(
+            "locked" to "Засилувачите се достапни во тековното ниво", "insufficient_coins" to "Нема доволно монети", "invalid_target" to "Избери важечко поле", "booster_HAMMER" to "Чекан", "booster_ROW" to "Ред", "booster_COLUMN" to "Колона", "booster_CROSS" to "Крст", "booster_BOMB" to "Бомба", "booster_COLOR" to "Боја", "booster_SHUFFLE" to "Измешај",
             "garden" to "Градина", "play" to "Играј", "continue" to "Продолжи", "levels" to "Нивоа",
             "story" to "Приказна", "new" to "Ново", "build" to "Изгради", "decorate" to "Украси",
             "settings" to "Поставки", "close" to "Затвори", "save" to "Зачувај", "profile" to "Профил",
@@ -43,6 +47,7 @@ object GameText {
             "level_complete" to "Нивото е завршено!", "try_again" to "Обиди се повторно", "moves" to "Потези"
         ),
         "tr" to mapOf(
+            "locked" to "Güçlendiriciler mevcut seviyede kullanılabilir", "insufficient_coins" to "Yeterli jeton yok", "invalid_target" to "Geçerli bir kare seç", "booster_HAMMER" to "Çekiç", "booster_ROW" to "Satır", "booster_COLUMN" to "Sütun", "booster_CROSS" to "Çapraz", "booster_BOMB" to "Bomba", "booster_COLOR" to "Renk", "booster_SHUFFLE" to "Karıştır",
             "garden" to "Bahçe", "play" to "Oyna", "continue" to "Devam et", "levels" to "Seviyeler",
             "story" to "Hikâye", "new" to "Yeni", "build" to "İnşa et", "decorate" to "Süsle",
             "settings" to "Ayarlar", "close" to "Kapat", "save" to "Kaydet", "profile" to "Profil",
@@ -52,6 +57,8 @@ object GameText {
             "level_complete" to "Seviye tamamlandı!", "try_again" to "Tekrar dene", "moves" to "Hamle"
         )
     )
+
+    fun booster(language:String?,kind:Match3Engine.Booster)=get(language,"booster_${kind.name}")
 
     fun get(language: String?, key: String): String {
         val lang = language(language)

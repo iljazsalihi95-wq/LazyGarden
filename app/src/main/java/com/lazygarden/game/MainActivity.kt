@@ -76,6 +76,57 @@ class MainActivity : AppCompatActivity() {
  private fun showFountainReplay(){screen="fountain_replay";engine=null;val root=FrameLayout(this);root.addView(GardenWorldView(this,0,true,onRestorationComplete={showGarden()}),FrameLayout.LayoutParams(-1,-1));val back=premiumButton("‹ Kopshti"){showGarden()};root.addView(back,FrameLayout.LayoutParams(dp(130),dp(48),Gravity.TOP or Gravity.START).apply{setMargins(dp(10),dp(8),0,0)});attach(root)}
  private fun showSceneReplay(task:Int){screen="scene_replay";engine=null;val root=FrameLayout(this);val v:View=if(task==1)FlowerGardenView(this,save.language,save.flowerChoice,onComplete={showGarden()}) else RestorationGardenView(this,task,onComplete={showGarden()});root.addView(v,FrameLayout.LayoutParams(-1,-1));root.addView(premiumButton("‹ Kopshti"){showGarden()},FrameLayout.LayoutParams(dp(130),dp(48),Gravity.TOP or Gravity.START).apply{setMargins(dp(10),dp(8),0,0)});attach(root)}
  private fun showStoryArchive(){screen="story_archive";engine=null;val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(8),dp(12),dp(10));setBackgroundColor(0xff204d40.toInt())};root.addView(premiumButton("‹ Kopshti"){showGarden()});root.addView(label("Historia e pronës",26f,0xffffdf83.toInt()));if(save.fountainRestored)root.addView(premiumButton("▶ Riluaj shatërvanin"){showFountainReplay()});val list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};GardenStory.chapters.forEachIndexed{i,chapter->val unlocked=i<save.tasks;if(unlocked&&i>0)list.addView(premiumButton("▶ Riluaj: ${names[i]}"){showSceneReplay(i)});val read=save.storyPosition>=(i+1)*3;list.addView(premiumButton("${i+1}. ${chapter.title}\n${if(!unlocked)"🔒 Përfundo restaurimin ${i+1}" else if(read)"Rilexo" else "Vazhdo tregimin"}"){if(unlocked){if(read)showStory(i,0) else showStory()}else Toast.makeText(this,"Ky kapitull hapet pas restaurimit",Toast.LENGTH_SHORT).show()}.apply{contentDescription="Kapitulli ${i+1}"})};root.addView(ScrollView(this).apply{addView(list)},LinearLayout.LayoutParams(-1,0,1f));attach(root)}
- private fun showMatch3(restart:Boolean=false,levelNumber:Int=save.level){screen="match";val board=Match3Engine(levelNumber);if(!restart&&levelNumber==save.level)save.activeBoard?.let{board.restore(it)};if(restart&&levelNumber==save.level)save.clearBoard();engine=board;val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(0xff153f42.toInt())};val bar=LinearLayout(this).apply{background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,15f)};bar.addView(premiumButton("‹"){save.saveBoard(board);showGarden()},LinearLayout.LayoutParams(dp(48),dp(36)));val coins=label("${save.coins} Game Coins",15f,0xff66411f.toInt());bar.addView(coins,LinearLayout.LayoutParams(0,dp(36),1f));root.addView(bar);val boardView=Match3BoardView(this,board,{save.saveBoard(board)},{won->val rewarded=if(won)save.win(board) else false;engine=null;showResult(board,rewarded)});boardView.onBoosterTarget={kind,at->if(board.level!=save.level){Toast.makeText(this,"Përforcuesit përdoren në nivelin aktual",Toast.LENGTH_SHORT).show();emptyList()}else{val waves=save.buyBooster(board,kind,at);coins.text="${save.coins} Game Coins";if(waves.isEmpty())Toast.makeText(this,"Duhen ${kind.cost} Game Coins",Toast.LENGTH_SHORT).show();waves}};root.addView(boardView,LinearLayout.LayoutParams(-1,0,1f));val tray=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;setPadding(dp(5),0,dp(5),dp(7))};val icons=intArrayOf(R.drawable.boost_hammer,R.drawable.boost_row,R.drawable.boost_column,R.drawable.boost_cross,R.drawable.boost_bomb,R.drawable.boost_color,R.drawable.boost_shuffle);Match3Engine.Booster.entries.forEachIndexed{i,kind->val tile=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,10f);contentDescription="${kind.label}, ${kind.cost} Game Coins"};tile.addView(ImageView(this).apply{setImageResource(icons[i]);scaleType=ImageView.ScaleType.FIT_CENTER},LinearLayout.LayoutParams(dp(40),dp(42)));tile.addView(label("${kind.cost}",11f,0xff50341b.toInt()));tile.setOnClickListener{boardView.runBooster(kind)};tray.addView(tile,LinearLayout.LayoutParams(0,dp(67),1f).apply{setMargins(dp(2),dp(3),dp(2),0)})};root.addView(label("Përforcues · Game Coins",11f));root.addView(tray);attach(root);if(board.won||board.failed){val rewarded=if(board.won)save.win(board) else false;engine=null;showResult(board,rewarded)}}
+ private fun showMatch3(restart:Boolean=false,levelNumber:Int=save.level){
+  screen="match"
+  val board=Match3Engine(levelNumber)
+  if(!restart&&levelNumber==save.level)save.activeBoard?.let{board.restore(it)}
+  if(restart&&levelNumber==save.level)save.clearBoard()
+  engine=board
+  fun t(key:String)=GameText.get(save.language,key)
+  val controller=Match3BoosterController(save,board,save.level)
+  val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(0xff153f42.toInt())}
+  val bar=LinearLayout(this).apply{background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,15f)}
+  bar.addView(premiumButton("‹"){save.saveBoard(board);showGarden()},LinearLayout.LayoutParams(dp(48),dp(36)))
+  val coins=label("${save.coins} ${t("coins")}",15f,0xff66411f.toInt())
+  bar.addView(coins,LinearLayout.LayoutParams(0,dp(36),1f));root.addView(bar)
+  val boardView=Match3BoardView(this,board,{save.saveBoard(board)},{won->
+   val rewarded=if(won)save.win(board) else false
+   engine=null;showResult(board,rewarded)
+  })
+  lateinit var tray:BoosterInventoryTray
+  fun refresh(){coins.text="${save.coins} ${t("coins")}";tray.refresh()}
+  tray=BoosterInventoryTray(this,save,onUse={kind->
+   if(!boardView.isBusy)boardView.runBooster(kind)
+  },onBuy={kind->
+   if(!boardView.isBusy&&controller.gameplayEnabled&&!board.won&&!board.failed){
+    boardView.targetBooster=null
+    boardView.invalidate()
+    AlertDialog.Builder(this)
+     .setTitle(GameText.booster(save.language,kind))
+     .setMessage("${t("buy")} ×1 · ${kind.cost} ${t("coins")}")
+     .setPositiveButton(t("buy")){_,_->
+      if(!controller.buy(kind))Toast.makeText(this,t("insufficient_coins"),Toast.LENGTH_SHORT).show()
+      refresh()
+     }.setNegativeButton(t("close"),null).show()
+   }
+  })
+  tray.setGameplayEnabled(controller.gameplayEnabled&&!board.won&&!board.failed)
+  boardView.onBoosterTarget={kind,at->
+   val result=controller.use(kind,at)
+   refresh()
+   when(result.status){
+    Match3BoosterController.Status.LOCKED_REPLAY->Toast.makeText(this,t("locked"),Toast.LENGTH_SHORT).show()
+    Match3BoosterController.Status.NEEDS_STOCK->Toast.makeText(this,t("no_stock"),Toast.LENGTH_SHORT).show()
+    Match3BoosterController.Status.INVALID_TARGET->Toast.makeText(this,t("invalid_target"),Toast.LENGTH_SHORT).show()
+    Match3BoosterController.Status.USED->Unit
+   }
+   result.waves
+  }
+  root.addView(boardView,LinearLayout.LayoutParams(-1,0,1f))
+  root.addView(label(t("boosters"),11f));root.addView(tray)
+  attach(root)
+  if(board.won||board.failed){val rewarded=if(board.won)save.win(board) else false;engine=null;showResult(board,rewarded)}
+ }
+
  private fun showResult(board:Match3Engine,rewarded:Boolean){screen="result";if(!board.won&&save.sfxEnabled)sfx.play("fail");if(!board.won&&board.level==save.level)save.saveBoard(board);val root=FrameLayout(this);root.addView(GardenWorldView(this,save.tasks,decorations=save.decorations),FrameLayout.LayoutParams(-1,-1));root.addView(View(this).apply{setBackgroundColor(0xb9101826.toInt())},FrameLayout.LayoutParams(-1,-1));val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(dp(22),dp(24),dp(22),dp(20));background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,28f)};val stars=LinearLayout(this).apply{gravity=Gravity.CENTER};for(i in 0..2){val star=ImageView(this).apply{setImageResource(R.drawable.reward_star);alpha=if(i<board.earnedStars)1f else .18f;scaleX=.1f;scaleY=.1f};stars.addView(star,LinearLayout.LayoutParams(dp(if(i==1)88 else 65),dp(94)));star.animate().scaleX(1f).scaleY(1f).setStartDelay(i*150L).setDuration(350).setInterpolator(android.view.animation.OvershootInterpolator()).start()};card.addView(stars);card.addView(label(if(board.won)"Niveli i përfunduar!" else "Provo përsëri",26f,0xff79381d.toInt()));card.addView(label("Niveli ${board.level}",16f,0xff765530.toInt()).apply{setPadding(0,dp(10),0,dp(14))});val reward=label(if(board.won)if(rewarded)"+0 Game Coins\n+1 yll për restaurim" else "${board.earnedStars} yje\nProgresi është ruajtur" else "Pikët: ${board.score}/${board.spec.target}\nAkulli: ${board.clearedIce}/${board.spec.ice}\n${arrayOf("Mollë","Lule","Gjethe","Ujë","Manaferra","Portokaj")[board.spec.collectColor]}: ${board.collected[board.spec.collectColor]}/${board.spec.collectCount}",20f,0xff704520.toInt());card.addView(reward);if(board.level==save.level&&!board.won)card.addView(premiumButton("▶ Video · +5 lëvizje"){watchReward("moves"){showMatch3()}});if(board.won)card.addView(premiumButton("▶ Bonus vullnetar · +100 Coins"){watchReward("coins"){showGarden()}});card.addView(premiumButton(if(board.won)"Vazhdo" else "Provo përsëri",true){if(board.won)showGarden() else showMatch3(true,board.level)});card.addView(premiumButton(if(board.won)"Harta e niveleve" else "Kopshti"){if(board.won)showMap() else showGarden()});root.addView(card,FrameLayout.LayoutParams(-1,-2,Gravity.CENTER).apply{setMargins(dp(24),dp(12),dp(24),dp(12))});attach(root);card.alpha=0f;card.translationY=dp(30).toFloat();card.animate().alpha(1f).translationY(0f).setDuration(300).start();if(rewarded){if(save.sfxEnabled)sfx.play("reward");val balance=label("${save.coins-150} Coins             ★ ${save.stars-1}",18f,0xff654123.toInt()).apply{background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,16f)};root.addView(balance,FrameLayout.LayoutParams(-1,dp(48),Gravity.TOP).apply{setMargins(dp(12),dp(8),dp(12),0)});root.addView(RewardFlightView(this),FrameLayout.LayoutParams(-1,-1));rewardAnimator=ValueAnimator.ofInt(0,150).apply{duration=800;addUpdateListener{reward.text="+${it.animatedValue} Game Coins\n+1 yll për restaurim";balance.text="${save.coins-150+(it.animatedValue as Int)} Coins             ★ ${save.stars}"};start()}}}
 }

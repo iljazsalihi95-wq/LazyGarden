@@ -30,7 +30,7 @@ class Match3BoosterController(
     }
 
     fun buy(kind: Match3Engine.Booster, count: Int = 1): Boolean =
-        gameplayEnabled && save.buyBoosterStock(kind, count)
+        gameplayEnabled && !board.won && !board.failed && save.buyBoosterStock(kind, count)
 
     private fun snapshot(status: Status, kind: Match3Engine.Booster) =
         Result(status, stock = save.boosterCount(kind), coins = save.coins)

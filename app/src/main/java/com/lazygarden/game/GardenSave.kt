@@ -53,7 +53,7 @@ class GardenSave(ctx:Context) {
  private fun boosterKey(kind:Match3Engine.Booster)="booster_${kind.name.lowercase()}"
  fun boosterCount(kind:Match3Engine.Booster)=p.getInt(boosterKey(kind),3).coerceAtLeast(0)
  fun grantBooster(kind:Match3Engine.Booster,count:Int=1):Boolean {if(count<=0)return false;return p.edit().putInt(boosterKey(kind),boosterCount(kind)+count).commit()}
- fun buyBoosterStock(kind:Match3Engine.Booster,count:Int=1):Boolean {if(count<=0)return false;val total=kind.cost*count;if(coins<total)return false;return p.edit().putInt("coins",coins-total).putInt(boosterKey(kind),boosterCount(kind)+count).commit()}
+ fun buyBoosterStock(kind:Match3Engine.Booster,count:Int=1):Boolean {if(count<=0)return false;val total=kind.cost.toLong()*count;val stock=boosterCount(kind).toLong()+count;if(total>coins||stock>Int.MAX_VALUE)return false;return p.edit().putInt("coins",coins-total.toInt()).putInt(boosterKey(kind),stock.toInt()).commit()}
  /** Uses owned stock first. One successful board effect consumes exactly one booster. */
  fun useBooster(board:Match3Engine,kind:Match3Engine.Booster,at:Int):List<Match3Engine.Wave>{
   if(board.won||board.failed||boosterCount(kind)<=0)return emptyList()

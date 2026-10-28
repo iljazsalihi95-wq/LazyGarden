@@ -48,7 +48,7 @@ class BoosterInventoryTray(
         tile.addView(ImageView(context).apply {
             setImageResource(icon)
             scaleType = ImageView.ScaleType.FIT_CENTER
-            contentDescription = kind.label
+            contentDescription = GameText.booster(save.language,kind)
         }, LayoutParams(dp(38), dp(38)))
         val badge = TextView(context).apply {
             textSize = 12f
@@ -103,9 +103,9 @@ class BoosterInventoryTray(
                 alpha = when { !gameplayEnabled -> .42f; count > 0 -> 1f; else -> .72f }
                 isActivated = gameplayEnabled && count > 0
                 contentDescription = when {
-                    !gameplayEnabled -> "${kind.label}, ${t("locked")}"
-                    count > 0 -> "${kind.label}, $count ${t("stock")}"
-                    else -> "${kind.label}, ${t("no_stock")}, ${t("buy")} ${kind.cost} ${t("coins")}"
+                    !gameplayEnabled -> "${GameText.booster(save.language,kind)}, ${t("locked")}"
+                    count > 0 -> "${GameText.booster(save.language,kind)}, $count ${t("stock")}"
+                    else -> "${GameText.booster(save.language,kind)}, ${t("no_stock")}, ${t("buy")} ${kind.cost} ${t("coins")}"
                 }
             }
         }
