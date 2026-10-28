@@ -12,6 +12,7 @@ class Match3SpecialsTest {
  private fun createRun(length:Int):Match3Engine.Wave {
   val e=board()
   for(c in 1..length)e.board[3][c]=0
+  e.board[3][0]=3;e.board[3][length+1]=2
   e.board[3][3]=1;e.board[2][3]=0
   return e.swap(19,27).first()
  }
