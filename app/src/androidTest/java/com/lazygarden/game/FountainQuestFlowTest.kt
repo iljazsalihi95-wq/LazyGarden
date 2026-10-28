@@ -96,4 +96,20 @@ class FountainQuestFlowTest {
   }
  }
 
+ @Test fun match3WinReturnsToTheSameFountainAndInventoryCounters(){
+  context.getSharedPreferences("garden_progress",0).edit().putBoolean("fountain_quest_active",true).putString("fountain_quest_stage","COLLECT").commit()
+  save.saveBoard(solve(1))
+  ActivityScenario.launch(MainActivity::class.java).use{s->
+   s.onActivity{a->currentActivity=a;views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Ndërto"}.performClick()}
+   onUi{a->val v=quest(a);val d=a.resources.displayMetrics.density;tap(v,v.width*.25f,v.height-70*d)}
+   assertEquals(2,save.level);assertEquals(2,save.materialCount(Material.PIPE));assertEquals(150,save.coins)
+   onUi{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Vazhdo"}.performClick();assertEquals(FountainQuest.Stage.COLLECT,quest(a).currentStage)}
+   onUi{a->val v=quest(a);val d=a.resources.displayMetrics.density;tap(v,v.width-36*d,30*d);assertTrue(views(a.window.decorView).any{it is InventoryScreen});assertTrue(views(a.window.decorView).filterIsInstance<TextView>().any{it.text.toString()=="2 / 4"})}
+   shot("premium-08-earned-material-inventory")
+   onUi{a->views(a.window.decorView).first{it.contentDescription=="inventory_boosters"}.performClick();assertEquals(7,views(a.window.decorView).filterIsInstance<TextView>().count{it.text.toString()=="×3"})}
+   onUi{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="‹"}.performClick();assertEquals(FountainQuest.Stage.COLLECT,quest(a).currentStage)}
+   assertEquals(0,save.tasks);assertEquals(2,save.materialCount(Material.PIPE));assertEquals(150,save.coins)
+  }
+ }
+
 }
