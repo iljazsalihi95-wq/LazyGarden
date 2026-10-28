@@ -43,7 +43,11 @@ class FountainQuestFlowTest {
   val monitor=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
   val callback=object:androidx.test.runner.lifecycle.ActivityLifecycleCallback{
    override fun onActivityLifecycleChanged(a:android.app.Activity,state:androidx.test.runner.lifecycle.Stage){
-    if(a is MainActivity&&a!==previous&&state==androidx.test.runner.lifecycle.Stage.RESUMED){currentActivity=a;resumed.countDown()}
+    if(a is MainActivity&&a!==previous&&state==androidx.test.runner.lifecycle.Stage.RESUMED){
+     currentActivity=a
+     views(a.window.decorView).filterIsInstance<FountainQuestView>().singleOrNull()?.let{v->v.onActorRendered={id,pose,frame,facing->drawn.add(DrawnPose(id,pose,frame,facing))};v.onStageChanged={observed.add(it)}}
+     resumed.countDown()
+    }
    }
   }
   onUi{monitor.addLifecycleCallback(callback);it.recreate()}
@@ -90,7 +94,17 @@ class FountainQuestFlowTest {
    assertFalse(save.actFountain(FountainQuest.Action.RESTORE));SystemClock.sleep(900);shot("premium-04-rexha-work")
    recreateNative();assertTrue(save.constructing);assertEquals(0,save.tasks)
    waitFor(s,FountainQuest.Stage.CLEAN)
-   for(i in 0..2){onUi{a->val v=quest(a);val point=v.leafCenter(i);tap(v,point.x,point.y)};assertTrue(save.fountainCleanedMask and (1 shl i)!=0)}
+   for(i in 0..2){
+    val oldMask=save.fountainCleanedMask
+    onUi{a->val v=quest(a);val point=v.leafCenter(i);tap(v,point.x,point.y)}
+    assertEquals("A leaf is not granted before the child reaches it",oldMask,save.fountainCleanedMask)
+    val end=SystemClock.uptimeMillis()+10000;var busy=true
+    while(busy&&SystemClock.uptimeMillis()<end){SystemClock.sleep(50);onUi{a->busy=quest(a).isCollecting}}
+    assertFalse("Child collection animation must finish",busy)
+    assertTrue(save.fountainCleanedMask and (1 shl i)!=0)
+   }
+   assertTrue(drawn.any{it.id=="cufi"&&it.state==CharacterAnimation.State.COLLECT})
+   assertTrue(drawn.any{it.id=="rona"&&it.state==CharacterAnimation.State.COLLECT})
    waitFor(s,FountainQuest.Stage.START_WATER)
    var cufiBefore=0f;var ronaBefore=0f
    onUi{a->cufiBefore=quest(a).actorGround("cufi")!!.y;ronaBefore=quest(a).actorGround("rona")!!.y}
