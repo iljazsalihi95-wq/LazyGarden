@@ -13,6 +13,17 @@ class MaterialArt(private val context:Context){
  }
  fun draw(c:Canvas,p:Paint,m:Material,r:RectF){
   when(m){
+   Material.SCREW->{
+    val layer=c.save();c.rotate(-32f,r.centerX(),r.centerY())
+    val shaft=RectF(r.centerX()-r.width()*.09f,r.top+r.height()*.23f,r.centerX()+r.width()*.09f,r.bottom-r.height()*.08f)
+    p.shader=LinearGradient(shaft.left,0f,shaft.right,0f,intArrayOf(0xff64717c.toInt(),0xffedf7ff.toInt(),0xff667580.toInt()),null,Shader.TileMode.CLAMP)
+    c.drawRoundRect(shaft,r.width()*.04f,r.width()*.04f,p);p.shader=null
+    p.color=0xff82939e.toInt();p.strokeWidth=r.width()*.035f
+    for(i in 0..5){val y=shaft.top+shaft.height()*(i+1)/7;c.drawLine(shaft.left,y+r.height()*.025f,shaft.right,y-r.height()*.025f,p)}
+    p.color=0xffd4e1e7.toInt();c.drawOval(RectF(r.centerX()-r.width()*.25f,r.top+r.height()*.08f,r.centerX()+r.width()*.25f,r.top+r.height()*.30f),p)
+    p.color=0xff55636c.toInt();c.drawLine(r.centerX()-r.width()*.15f,r.top+r.height()*.19f,r.centerX()+r.width()*.15f,r.top+r.height()*.19f,p)
+    c.restoreToCount(layer)
+   }
    Material.TOOL->SpriteArt.draw(c,p,GameSkin.bitmap(context,R.drawable.fountain_worksite),2,2,2,r)
    Material.PIPE->hardware(c,p,Rect(790,250,1055,497),r)
    Material.VALVE->hardware(c,p,Rect(1290,172,1439,246),r)
