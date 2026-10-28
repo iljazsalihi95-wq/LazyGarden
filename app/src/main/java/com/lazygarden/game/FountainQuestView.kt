@@ -205,7 +205,18 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
    val bob=if(happy)-abs(sin(poseTime/140f+phase))*8*d else if(a.moving)-abs(sin(poseTime*PI.toFloat()/280f))*.7f*d else 0f
    val y=a.y+bob;val rect=RectF(a.x-size/2,y-ah,a.x+size/2,y);actorRects[a.id]=rect
    p.color=0x44302010;c.drawOval(RectF(a.x-size*.3f,a.y-size*.035f,a.x+size*.3f,a.y+size*.025f),p)
-   CharacterSprites.draw(context,c,p,a.id,frame,rect,facesRight)
+   val mood=when{
+    stage==FountainQuest.Stage.TRY_WATER->ActorGesture.Mood.SAD
+    stage==FountainQuest.Stage.PUMP_DIAGNOSIS&&a.id=="rexha"->ActorGesture.Mood.ANALYSE
+    stage==FountainQuest.Stage.WATER_FLOW->ActorGesture.Mood.SURPRISE
+    happy->ActorGesture.Mood.JOY
+    work||collecting->ActorGesture.Mood.WORK
+    state==CharacterAnimation.State.THINK->ActorGesture.Mood.THINK
+    else->null
+   }
+   val gesture=c.save();if(mood!=null)c.rotate(ActorGesture.lean(mood,poseTime),a.x,y)
+   CharacterSprites.draw(context,c,p,a.id,frame,rect,facesRight);c.restoreToCount(gesture)
+   if(mood!=null)ActorGesture.draw(c,p,mood,a.x,rect.top-size*.12f,size,poseTime)
    onActorRendered?.invoke(a.id,state,frame,facesRight)
    if(carrying&&a.moving){val hx=a.x+if(facesRight)size*.18f else -size*.18f;val hy=y-ah*.36f;c.drawBitmap(leaf,null,RectF(hx-9*d,hy-9*d,hx+9*d,hy+9*d),p)}
    if(a.id=="rexha"&&stage==FountainQuest.Stage.REPAIR){val x=a.x-12*d;val yy=y-ah*.28f;val tool=c.save();c.rotate(sin(life/120f)*18,x,yy);c.drawBitmap(GameSkin.bitmap(context,R.drawable.boost_hammer),null,RectF(x-18*d,yy-30*d,x+18*d,yy+6*d),p);c.restoreToCount(tool)}

@@ -13,9 +13,9 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val d=resources.displayMetrics.density
  private val materialArt=MaterialArt(c)
- private val pieces=arrayOf(Material.TOOL,Material.PIPE,Material.VALVE,Material.PUMP_PART,Material.BOARD,Material.SCREW)
+ private val pieces=RestorationJobs.palette(GardenSave(c).tasks)
  private fun piece(c:Canvas,index:Int,r:RectF){
-  p.shader=LinearGradient(r.left,r.top,r.right,r.bottom,intArrayOf(0xfff5dfad.toInt(),0xffba8644.toInt()),null,Shader.TileMode.CLAMP)
+  p.shader=LinearGradient(r.left,r.top,r.right,r.bottom,intArrayOf(intArrayOf(0xffdff5ff.toInt(),0xffe3f8d1.toInt(),0xffffdfae.toInt(),0xffe5dcff.toInt(),0xffffd9e5.toInt(),0xffe4e9ec.toInt())[index.coerceIn(0,5)],0xff987449.toInt()),null,Shader.TileMode.CLAMP)
   c.drawRoundRect(r,r.width()*.18f,r.height()*.18f,p);p.shader=null
   val inset=r.width()*.09f;val inner=RectF(r);inner.inset(inset,inset);materialArt.draw(c,p,pieces[index.coerceIn(0,5)],inner)
  }
@@ -100,6 +100,7 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
     }
    }
   }
+  if(active!=null)drawBonusImpact(c,active)
   if(active!=null && boostOrigin>=0 && boostEffect!=null && effect<.48f){
    val t=(effect/.48f).coerceIn(0f,1f);val x=left+(boostOrigin%8+.5f)*cell;val y=top+(boostOrigin/8+.5f)*cell
    p.color=0xffffedac.toInt();p.alpha=((1-t)*220).toInt();p.strokeWidth=cell*.08f
@@ -119,6 +120,25 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
   if(active!=null&&effect<.48f){val intensity=(1-effect/.48f).coerceIn(0f,1f);for(index in active.cells){val x=left+(index%8+.5f)*cell;val y=top+(index/8+.5f)*cell;val kind=active.before[index/8][index%8]/6;if(kind>0||boostEffect!=null && index==boostOrigin){p.color=if(kind==3||boostEffect==Match3Engine.Booster.BOMB)0xffffb22e.toInt() else 0xffa6f1ff.toInt();p.alpha=(intensity*210).toInt();p.strokeWidth=cell*.12f*intensity;if(kind==1||boostEffect==Match3Engine.Booster.ROW||boostEffect==Match3Engine.Booster.CROSS)c.drawLine(left,y,left+8*cell,y,p);if(kind==2||boostEffect==Match3Engine.Booster.COLUMN||boostEffect==Match3Engine.Booster.CROSS)c.drawLine(x,top,x,top+8*cell,p);if(kind==4){for(target in active.cells){val tx=left+(target%8+.5f)*cell;val ty=top+(target/8+.5f)*cell;p.color=Color.HSVToColor((intensity*210).toInt(),floatArrayOf(target*47f%360,.65f,1f));c.drawLine(x,y,tx,ty,p)}};if(kind==3||boostEffect==Match3Engine.Booster.BOMB){p.style=Paint.Style.STROKE;for(q in 1..3)c.drawCircle(x,y,cell*(.25f+effect*q),p);p.style=Paint.Style.FILL}}
     for(k in 0..5){val a=k*PI/3+index*.37;val travel=cell*(.12f+effect*2.4f);val sx=x+(cos(a)*travel).toFloat();val sy=y+(sin(a)*travel).toFloat();val sz=cell*(.05f+.08f*intensity);p.color=listOf(0xffffd84e.toInt(),0xff8ee9ff.toInt(),0xffff8ec5.toInt())[k%3];p.alpha=(255*intensity).toInt();c.drawCircle(sx,sy,sz,p)}
    }};p.alpha=255;val caption=targetBooster?.let{"${GameText.booster(save.language,it)}: ${t("choose_piece")}"}?:if(busy&&(active?.combo?:0)>1)"${t("excellent")} ×${active?.combo}" else feedback;if(caption.isNotEmpty())text(c,caption,w/2,top+8*cell+24*d,min(16*d,w/24),0xffffefb5.toInt())
+ }
+ private fun drawBonusImpact(c:Canvas,active:Match3Engine.Wave){
+  if(effect>=.65f)return
+  val origins=active.cells.filter{active.before[it/8][it%8]>=6}.toMutableList()
+  if(boostOrigin>=0&&boostEffect!=null)origins.add(boostOrigin)
+  for(index in origins.distinct()){
+   val x=left+(index%8+.5f)*cell;val y=top+(index/8+.5f)*cell
+   val t=(effect/.65f).coerceIn(0f,1f);val energy=(1-t)
+   p.shader=RadialGradient(x,y,cell*(.8f+4*t),intArrayOf(0x88fff3b5.toInt(),0x00fff3b5),null,Shader.TileMode.CLAMP)
+   c.drawCircle(x,y,cell*(.8f+4*t),p);p.shader=null
+   p.style=Paint.Style.STROKE;p.strokeWidth=cell*.06f*energy;p.color=0xffffe8a2.toInt();p.alpha=(220*energy).toInt()
+   c.drawCircle(x,y,cell*(.2f+3*t),p);c.drawCircle(x,y,cell*(.1f+2*t),p);p.style=Paint.Style.FILL
+   for(k in 0..11){val a=k*PI.toFloat()/6+index*.3f;val reach=cell*(.4f+3*t);val sx=x+cos(a)*reach;val sy=y+sin(a)*reach+cell*t*t
+    p.color=if(k%2==0)0xffffd67a.toInt() else 0xffabf2ff.toInt();p.alpha=(energy*230).toInt();p.strokeWidth=cell*.025f
+    c.drawLine(x+cos(a)*reach*.65f,y+sin(a)*reach*.65f,sx,sy,p)
+    val starSize=cell*.10f*energy;image(c,star,RectF(sx-starSize,sy-starSize,sx+starSize,sy+starSize),(255*energy).toInt())
+   }
+  }
+  p.alpha=255;p.shader=null;p.style=Paint.Style.FILL
  }
  private fun intensityAlpha(t:Float)=((1-t)*200).toInt().coerceIn(0,255)
  internal fun cellCenter(index:Int)=PointF(left+(index%8+.5f)*cell,top+(index/8+.5f)*cell)
