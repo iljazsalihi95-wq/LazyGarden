@@ -9,7 +9,7 @@ class GardenSave(ctx:Context) {
  val xp get()=p.getInt("xp",0).coerceAtLeast(0)
  val stars get()=p.getInt("stars",0)
  val level get()=p.getInt("level",1).coerceIn(1,Campaign.COUNT)
- val tasks get()=p.getInt("tasks",if(p.getBoolean("fountain",false))1 else 0)
+ val tasks get()=p.getInt("tasks",if(p.getBoolean("fountain",false))1 else 0).coerceIn(0,RestorationInventory.TASK_COUNT)
  val fountainRestored get()=tasks>0
  val constructing get()=p.getBoolean("constructing",false)
  val restorationElapsed get()=p.getLong("restoration_elapsed",0L).coerceAtLeast(0L)
@@ -26,7 +26,7 @@ class GardenSave(ctx:Context) {
  fun materialCount(m:Material)=p.getInt("material_${m.name}",0).coerceAtLeast(0)
  fun restorationNeeds(task:Int=tasks)=RestorationInventory.forTask(task)
  fun missingRestorationMaterials(task:Int=tasks)=restorationNeeds(task).filter{materialCount(it.material)<it.count}
- fun restorationMaterialsReady(task:Int=tasks)=missingRestorationMaterials(task).isEmpty()
+ fun restorationMaterialsReady(task:Int=tasks)=restorationNeeds(task).isNotEmpty()&&missingRestorationMaterials(task).isEmpty()
  fun materialStatus(task:Int=tasks)=restorationNeeds(task).joinToString("\n"){"${it.material.label}: ${materialCount(it.material)}/${it.count}"}
  data class MaterialReward(val material:Material,val before:Int,val after:Int,val required:Int)
  val lastMaterialReward:MaterialReward? get(){
@@ -35,9 +35,7 @@ class GardenSave(ctx:Context) {
  }
  private fun grantMaterial(m:Material,count:Int,edit:android.content.SharedPreferences.Editor){if(count>0)edit.putInt("material_${m.name}",materialCount(m)+count)}
  private fun consumeRestorationMaterials(task:Int,edit:android.content.SharedPreferences.Editor){restorationNeeds(task).forEach{edit.putInt("material_${it.material.name}",(materialCount(it.material)-it.count).coerceAtLeast(0))}}
- /** Alternates the first rewarded provider so production testing collects real samples from both networks. */
  fun nextRewardedProvider():String {val current=p.getString("rewarded_provider_next","unity")?:"unity";p.edit().putString("rewarded_provider_next",if(current=="unity")"admob" else "unity").commit();return current}
- /** A pending receipt is minted before one SDK show. Only that completed impression can settle it. */
  fun beginAdReward(kind:String):String? {if(constructing||(kind=="life"&&lives>=maxLives)||kind !in setOf("coins","star","moves","life"))return null;val id=java.util.UUID.randomUUID().toString();return if(p.edit().putString("ad_pending",id).putString("ad_kind",kind).commit())id else null}
  fun settleAdReward(id:String):Boolean {if(p.getString("ad_pending",null)!=id)return false;val kind=p.getString("ad_kind","");val edit=p.edit().remove("ad_pending").remove("ad_kind");when(kind){"coins"->edit.putInt("coins",coins+100);"star"->edit.putInt("stars",stars+1);"life"->edit.putInt("lives",(lives+1).coerceAtMost(maxLives));"moves"->{val board=Match3Engine(level);if(activeBoard==null||!board.restore(activeBoard!!)||!board.addMoves(5))return false;edit.putString("active_board",board.encode())};else->return false};return edit.commit()}
  fun cancelAdReward(id:String){if(p.getString("ad_pending",null)==id)p.edit().remove("ad_pending").remove("ad_kind").commit()}
@@ -57,25 +55,14 @@ class GardenSave(ctx:Context) {
  fun grantRewardedCoins(amount:Int=100):Boolean {if(amount<=0)return false;return p.edit().putInt("coins",coins+amount).commit()}
  data class ChestReward(val coins:Int,val keys:Int)
  fun openRewardChest():ChestReward? {if(chestProgress<5)return null;val reward=ChestReward(300,1);p.edit().putInt("chest_progress",0).putInt("coins",coins+reward.coins).putInt("keys",keys+reward.keys).commit();return reward}
-
  private fun boosterKey(kind:Match3Engine.Booster)="booster_${kind.name.lowercase()}"
  fun boosterCount(kind:Match3Engine.Booster)=p.getInt(boosterKey(kind),3).coerceAtLeast(0)
  fun grantBooster(kind:Match3Engine.Booster,count:Int=1):Boolean {if(count<=0)return false;return p.edit().putInt(boosterKey(kind),boosterCount(kind)+count).commit()}
  fun buyBoosterStock(kind:Match3Engine.Booster,count:Int=1):Boolean {if(count<=0)return false;val total=kind.cost.toLong()*count;val stock=boosterCount(kind).toLong()+count;if(total>coins||stock>Int.MAX_VALUE)return false;return p.edit().putInt("coins",coins-total.toInt()).putInt(boosterKey(kind),stock.toInt()).commit()}
- /** Uses owned stock first. One successful board effect consumes exactly one booster. */
- fun useBooster(board:Match3Engine,kind:Match3Engine.Booster,at:Int):List<Match3Engine.Wave>{
-  if(board.won||board.failed||boosterCount(kind)<=0)return emptyList()
-  val waves=board.boost(kind,at)
-  if(waves.isNotEmpty())p.edit().putInt(boosterKey(kind),(boosterCount(kind)-1).coerceAtLeast(0)).putString("active_board",board.encode()).commit()
-  return waves
- }
- /** Kept for old callers: buying now adds stock, it no longer silently spends coins per tap. */
- fun buyBooster(board:Match3Engine,kind:Match3Engine.Booster,at:Int):List<Match3Engine.Wave>{
-  if(boosterCount(kind)<=0&&!buyBoosterStock(kind))return emptyList()
-  return useBooster(board,kind,at)
- }
- val storyPosition get()=p.getInt("story_position",0).coerceIn(0,21)
- val availableStoryLines get()=tasks.coerceIn(0,7)*GardenStory.LINES_PER_CHAPTER
+ fun useBooster(board:Match3Engine,kind:Match3Engine.Booster,at:Int):List<Match3Engine.Wave>{if(board.won||board.failed||boosterCount(kind)<=0)return emptyList();val waves=board.boost(kind,at);if(waves.isNotEmpty())p.edit().putInt(boosterKey(kind),(boosterCount(kind)-1).coerceAtLeast(0)).putString("active_board",board.encode()).commit();return waves}
+ fun buyBooster(board:Match3Engine,kind:Match3Engine.Booster,at:Int):List<Match3Engine.Wave>{if(boosterCount(kind)<=0&&!buyBoosterStock(kind))return emptyList();return useBooster(board,kind,at)}
+ val storyPosition get()=p.getInt("story_position",0).coerceIn(0,GardenStory.lines.size)
+ val availableStoryLines get()=(tasks*GardenStory.LINES_PER_CHAPTER).coerceAtMost(GardenStory.lines.size)
  val hasPendingStory get()=storyPosition<availableStoryLines
  fun advanceStory(expectedPosition:Int):Boolean {if(expectedPosition!=storyPosition||!hasPendingStory)return false;return p.edit().putInt("story_position",storyPosition+1).commit()}
  fun ownsDecoration(id:String)=GardenDecor.find(id)!=null&&p.getBoolean("decor_owned_$id",false)
@@ -88,44 +75,15 @@ class GardenSave(ctx:Context) {
  fun saveBoard(board:Match3Engine){if(board.level==level&&p.getInt("rewarded_level",0)<board.level)p.edit().putString("active_board",board.encode()).commit()}
  fun clearBoard(){p.edit().remove("active_board").commit()}
  fun win(board:Match3Engine):Boolean {if(!board.won)return false;if(board.level<level||p.getInt("rewarded_level",0)>=board.level){p.edit().putInt("rating_${board.level}",maxOf(rating(board.level),board.earnedStars)).commit();return false};if(board.level!=level)return false;val newChest=(chestProgress+1).coerceAtMost(5);val newKeys=keys+if(level%10==0)1 else 0;val newTickets=tickets+if(level%5==0)1 else 0;val edit=p.edit().putInt("coins",coins+150).putInt("stars",stars+1).putInt("rewarded_level",level).putInt("rating_$level",board.earnedStars).putInt("chest_progress",newChest).putInt("keys",newKeys).putInt("event_tickets",newTickets).putInt("level",(level+1).coerceAtMost(Campaign.COUNT)).remove("active_board").remove("reward_material");RestorationInventory.rewardForLevel(level,tasks)?.let{val before=materialCount(it.first);grantMaterial(it.first,it.second,edit);edit.putString("reward_material",it.first.name).putInt("reward_material_before",before).putInt("reward_material_after",before+it.second).putInt("reward_material_required",restorationNeeds().first{need->need.material==it.first}.count)};return edit.commit()}
- fun beginRestoration(fountainQuest:Boolean=false):Boolean {if(fountainQuest&&tasks!=0)return false;if(constructing||tasks>=7||coins<120||(tasks>0&&stars<1)||!restorationMaterialsReady())return false;val edit=p.edit().putInt("coins",coins-120).putInt("stars",(stars-if(tasks==0)0 else 1).coerceAtLeast(0)).putBoolean("constructing",true).putLong("restoration_elapsed",0L);consumeRestorationMaterials(tasks,edit);if(fountainQuest)edit.putString("fountain_quest_stage",FountainQuest.Stage.MATERIAL_DELIVERY.name).putLong("fountain_quest_elapsed",0);if(tasks==1)edit.remove("flower_choice");return edit.commit()}
- fun finishRestoration(){if(constructing)p.edit().putInt("tasks",tasks+1).putBoolean("constructing",false).putBoolean("fountain",true).remove("restoration_elapsed").commit()}
+ fun beginRestoration(fountainQuest:Boolean=false):Boolean {if(fountainQuest&&tasks!=0)return false;if(constructing||tasks>=RestorationInventory.TASK_COUNT||coins<120||(tasks>0&&stars<1)||!restorationMaterialsReady())return false;val edit=p.edit().putInt("coins",coins-120).putInt("stars",(stars-if(tasks==0)0 else 1).coerceAtLeast(0)).putBoolean("constructing",true).putLong("restoration_elapsed",0L);consumeRestorationMaterials(tasks,edit);if(fountainQuest)edit.putString("fountain_quest_stage",FountainQuest.Stage.MATERIAL_DELIVERY.name).putLong("fountain_quest_elapsed",0);if(tasks==1)edit.remove("flower_choice");return edit.commit()}
+ fun finishRestoration(){if(constructing&&tasks<RestorationInventory.TASK_COUNT)p.edit().putInt("tasks",tasks+1).putBoolean("constructing",false).putBoolean("fountain",true).remove("restoration_elapsed").commit()}
  val fountainQuestCompleted get()=tasks>0&&p.getBoolean("fountain_quest_active",false)
  val fountainQuestActive get()=tasks==0&&p.getBoolean("fountain_quest_active",false)
  val fountainQuestStage get()=if(tasks>0)FountainQuest.Stage.COMPLETE else runCatching{FountainQuest.Stage.valueOf(p.getString("fountain_quest_stage",null)?:"MELI_APPROACH")}.getOrDefault(FountainQuest.Stage.MELI_APPROACH)
  val fountainQuestElapsed get()=p.getLong("fountain_quest_elapsed",0).coerceAtLeast(0)
  val fountainCleanedMask get()=p.getInt("fountain_cleaned_mask",0) and 7
- fun startFountainQuest():Boolean {
-  if(tasks>0||constructing&&!fountainQuestActive)return false
-  return p.edit().putBoolean("fountain_quest_active",true).commit()
- }
- fun checkpointFountain(stage:FountainQuest.Stage,elapsed:Long){
-  if(fountainQuestActive&&fountainQuestStage==stage)p.edit().putLong("fountain_quest_elapsed",elapsed.coerceAtLeast(0)).commit()
- }
- fun advanceFountainTimed(stage:FountainQuest.Stage,elapsed:Long):Boolean {
-  if(!fountainQuestActive||fountainQuestStage!=stage||stage.duration<=0||elapsed<stage.duration)return false
-  val next=FountainQuest.timedNext(stage)?:return false
-  return p.edit().putString("fountain_quest_stage",next.name).putLong("fountain_quest_elapsed",0).commit()
- }
- fun actFountain(action:FountainQuest.Action,leaf:Int=-1):Boolean {
-  if(!fountainQuestActive)return false
-  val stage=fountainQuestStage
-  if(stage==FountainQuest.Stage.COLLECT&&action==FountainQuest.Action.RESTORE)return beginRestoration(true)
-  if(stage==FountainQuest.Stage.CLEAN&&action==FountainQuest.Action.CLEAN_LEAF){
-   if(leaf !in 0..2||fountainCleanedMask and (1 shl leaf)!=0)return false
-   val mask=fountainCleanedMask or (1 shl leaf)
-   val edit=p.edit().putInt("fountain_cleaned_mask",mask)
-   if(mask==7)edit.putString("fountain_quest_stage",FountainQuest.Stage.START_WATER.name).putLong("fountain_quest_elapsed",0)
-   return edit.commit()
-  }
-  if(stage==FountainQuest.Stage.CLAIM&&action==FountainQuest.Action.CLAIM){
-   if(!constructing||tasks!=0)return false
-   return p.edit().putInt("tasks",1).putBoolean("constructing",false).putBoolean("fountain",true)
-    .putString("fountain_quest_stage",FountainQuest.Stage.COMPLETE.name).putInt("coins",coins+75)
-    .putInt("stars",stars+1).putInt("xp",xp+50).putInt("story_position",maxOf(storyPosition,GardenStory.LINES_PER_CHAPTER)).remove("restoration_elapsed").putLong("fountain_quest_elapsed",0).commit()
-  }
-  val next=FountainQuest.actionNext(stage,action)?:return false
-  return p.edit().putString("fountain_quest_stage",next.name).putLong("fountain_quest_elapsed",0).commit()
- }
-
+ fun startFountainQuest():Boolean {if(tasks>0||constructing&&!fountainQuestActive)return false;return p.edit().putBoolean("fountain_quest_active",true).commit()}
+ fun checkpointFountain(stage:FountainQuest.Stage,elapsed:Long){if(fountainQuestActive&&fountainQuestStage==stage)p.edit().putLong("fountain_quest_elapsed",elapsed.coerceAtLeast(0)).commit()}
+ fun advanceFountainTimed(stage:FountainQuest.Stage,elapsed:Long):Boolean {if(!fountainQuestActive||fountainQuestStage!=stage||stage.duration<=0||elapsed<stage.duration)return false;val next=FountainQuest.timedNext(stage)?:return false;return p.edit().putString("fountain_quest_stage",next.name).putLong("fountain_quest_elapsed",0).commit()}
+ fun actFountain(action:FountainQuest.Action,leaf:Int=-1):Boolean {if(!fountainQuestActive)return false;val stage=fountainQuestStage;if(stage==FountainQuest.Stage.COLLECT&&action==FountainQuest.Action.RESTORE)return beginRestoration(true);if(stage==FountainQuest.Stage.CLEAN&&action==FountainQuest.Action.CLEAN_LEAF){if(leaf !in 0..2||fountainCleanedMask and (1 shl leaf)!=0)return false;val mask=fountainCleanedMask or (1 shl leaf);val edit=p.edit().putInt("fountain_cleaned_mask",mask);if(mask==7)edit.putString("fountain_quest_stage",FountainQuest.Stage.START_WATER.name).putLong("fountain_quest_elapsed",0);return edit.commit()};if(stage==FountainQuest.Stage.CLAIM&&action==FountainQuest.Action.CLAIM){if(!constructing||tasks!=0)return false;return p.edit().putInt("tasks",1).putBoolean("constructing",false).putBoolean("fountain",true).putString("fountain_quest_stage",FountainQuest.Stage.COMPLETE.name).putInt("coins",coins+75).putInt("stars",stars+1).putInt("xp",xp+50).putInt("story_position",maxOf(storyPosition,GardenStory.LINES_PER_CHAPTER)).remove("restoration_elapsed").putLong("fountain_quest_elapsed",0).commit()};val next=FountainQuest.actionNext(stage,action)?:return false;return p.edit().putString("fountain_quest_stage",next.name).putLong("fountain_quest_elapsed",0).commit()}
 }
