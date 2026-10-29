@@ -10,9 +10,12 @@ object RestorationJobs {
   Worker("beka","Beka","Fasader / moler","Maler / Verputzer","Imbianchino / intonacatore","Молер / фасадер","Boyacı / sıvacı"),
   Worker("gezimi","Gëzimi","Bahçexhi","Gärtner","Giardiniere","Градинар","Bahçıvan"),
   Worker("besi","Besi","Dritarendreqës","Fensterbauer","Serramentista","Мајстор за прозорци","Pencere ustası"),
-  Worker("mevludin","Mevludin","Elektricist","Elektriker","Elettricista","Електричар","Elektrikçi")
+  Worker("mevludin","Mevludin","Elektricist","Elektriker","Elettricista","Електричар","Elektrikçi"),
+  Worker("luli","Luli","Mjeshtër druri / mobilieri","Holz- / Möbelhandwerker","Falegname / mobiliere","Столар / мајстор за мебел","Marangoz / mobilya ustası")
  )
  fun worker(task:Int,step:String):Worker=crew.first{it.id==when {
+  // The bench is Luli's complete restoration job, including sanding, paint and assembly.
+  task==3->"luli"
   step=="LIGHT"->"mevludin"
   step=="WINDOWS"->"besi"
   step=="ROOF"->"nermir"
@@ -37,7 +40,7 @@ object RestorationJobs {
   0->listOf(Material.SCREW,Material.CABLE)
   1,4->listOf(Material.SEEDLING,Material.SOIL,Material.FERTILIZER,Material.FLOWER,Material.TOOL,Material.STONE)
   2->listOf(Material.STONE,Material.SAND,Material.TOOL,Material.BOARD,Material.SCREW,Material.SOIL)
-  3->listOf(Material.TOOL,Material.HINGE,Material.SAND)
+  3->listOf(Material.BOARD,Material.SCREW,Material.PAINT,Material.TOOL,Material.SAND,Material.HINGE)
   5->listOf(Material.TOOL,Material.SCREW)
   else->listOf(Material.CABLE,Material.TOOL)
  }).distinct().let{(it+Material.entries).distinct().take(6)}
