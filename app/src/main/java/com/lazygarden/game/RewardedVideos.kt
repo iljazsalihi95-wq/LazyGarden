@@ -18,13 +18,16 @@ class RewardedVideos(private val activity:Activity,private val save:GardenSave){
  private var receipt:String?=null;private var callback:((Boolean,String)->Unit)?=null
  private var earned=false
  private var unityGate=RewardCompletionGate(UNITY_REWARDED)
+ private val ledger=AdTestLedger(activity.applicationContext)
+ private var activeProvider=""
  private val timeout=Runnable{finish(false,"Videoja nuk u ngarkua. Provo përsëri më vonë.")}
  fun show(kind:String,done:(Boolean,String)->Unit){
   if(released||busy||activity.isFinishing||save.constructing){done(false,"Videoja nuk është gati.");return}
-  receipt=save.beginAdReward(kind);if(receipt==null){done(false,"Bonusi nuk mund të hapet tani.");return};busy=true;earned=false;unityGate=RewardCompletionGate(UNITY_REWARDED);callback=done;generation++;val request=generation;main.postDelayed(timeout,45000)
+  receipt=save.beginAdReward(kind);if(receipt==null){done(false,"Bonusi nuk mund të hapet tani.");return};busy=true;earned=false;activeProvider="";unityGate=RewardCompletionGate(UNITY_REWARDED);callback=done;generation++;val request=generation;main.postDelayed(timeout,45000)
   if(save.nextRewardedProvider()=="admob"&&BuildConfig.ADMOB_CONFIGURED)admob(request,true) else unity(request,true)
  }
  private fun unity(request:Int,allowFallback:Boolean){
+  activeProvider="unity";ledger.attempt(activeProvider)
   fun load(){if(valid(request))UnityAds.load(UNITY_REWARDED,object:IUnityAdsLoadListener{
    override fun onUnityAdsAdLoaded(id:String){main.post{if(valid(request)&&id==UNITY_REWARDED){main.removeCallbacks(timeout);UnityAds.show(activity,id,UnityAdsShowOptions(),object:IUnityAdsShowListener{
     override fun onUnityAdsShowStart(id:String){}
@@ -44,6 +47,7 @@ class RewardedVideos(private val activity:Activity,private val save:GardenSave){
   if(!BuildConfig.ADMOB_CONFIGURED){if(allowFallback)unity(request,false) else finish(false,"Nuk ka video të disponueshme tani. Nuk u dha bonus.");return}
   val unitId=if(BuildConfig.ADS_TEST_MODE)ADMOB_TEST_REWARDED else BuildConfig.ADMOB_REWARDED_ID
   if(unitId.isBlank()){if(allowFallback)unity(request,false) else finish(false,"AdMob Rewarded nuk është konfiguruar. Nuk u dha bonus.");return}
+  activeProvider="admob";ledger.attempt(activeProvider)
   MobileAds.initialize(activity){main.post{if(valid(request))RewardedAd.load(activity,unitId,AdRequest.Builder().build(),object:RewardedAdLoadCallback(){
    override fun onAdFailedToLoad(error:LoadAdError){if(valid(request))if(allowFallback)unity(request,false) else finish(false,"Videoja nuk është në dispozicion. Nuk u dha bonus.")}
    override fun onAdLoaded(ad:RewardedAd){if(!valid(request))return;main.removeCallbacks(timeout);ad.fullScreenContentCallback=object:FullScreenContentCallback(){
@@ -53,7 +57,7 @@ class RewardedVideos(private val activity:Activity,private val save:GardenSave){
    }
   })}}
  }
- private fun finish(completed:Boolean,failure:String){if(!busy)return;main.removeCallbacks(timeout);val id=receipt;val rewarded=if(earned)true else completed&&id!=null&&save.settleAdReward(id);if(!rewarded&&id!=null)save.cancelAdReward(id);val done=callback;callback=null;busy=false;receipt=null;done?.invoke(rewarded,if(rewarded)"Bonusi u ruajt!" else failure)}
+ private fun finish(completed:Boolean,failure:String){if(!busy)return;main.removeCallbacks(timeout);val id=receipt;val rewarded=if(earned)true else completed&&id!=null&&save.settleAdReward(id);if(rewarded&&activeProvider.isNotBlank())ledger.completed(activeProvider);if(!rewarded&&id!=null)save.cancelAdReward(id);val done=callback;callback=null;busy=false;receipt=null;activeProvider="";done?.invoke(rewarded,if(rewarded)"Bonusi u ruajt!" else failure)}
  fun cancel(){unityGate.cancel();generation++;finish(false,"Videoja u anulua. Nuk u dha bonus.")}
- fun release(){released=true;generation++;main.removeCallbacksAndMessages(null);receipt?.let{save.cancelAdReward(it)};callback=null;receipt=null;busy=false}
+ fun release(){released=true;generation++;main.removeCallbacksAndMessages(null);receipt?.let{save.cancelAdReward(it)};callback=null;receipt=null;activeProvider="";busy=false}
 }
