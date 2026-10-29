@@ -22,18 +22,22 @@ class RecordedVoiceTest {
    val voice=GardenVoice(context)
    var talkingEvents=0
    voice.onTalkingChanged={talkingEvents++}
-   // Missing packaged clips are accepted now because GardenVoice first requests the
-   // configured AI voice backend; a subtitle is required only if it later falls back to TTS.
+   // Missing packaged clips now start an asynchronous AI-backend lookup. The request is
+   // accepted immediately; stop() must still cancel/clear the playback lifecycle cleanly.
    for(language in listOf("sq","de","it","mk","tr")){
     assertTrue(voice.speakLine("fountain","talk","meli",language))
     assertEquals("meli",voice.currentLine?.characterId)
     voice.stop()
     assertFalse(voice.isTalking)
+    assertNull(voice.currentLine)
    }
+   // No player/TTS has started synchronously while the backend lookup is pending.
    assertEquals(0,talkingEvents)
    assertTrue(voice.speakLine("fountain","talk","meli","de","Warum funktioniert der Brunnen nicht?",3500))
    assertEquals("meli",voice.currentLine?.characterId)
    assertEquals(3500L,voice.currentLine?.durationMillis)
+   voice.stop()
+   assertNull(voice.currentLine)
    voice.release();assertFalse(voice.speakLine("fountain","talk","meli","sq"))
   }
  }
