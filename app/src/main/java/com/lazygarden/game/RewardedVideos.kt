@@ -22,13 +22,14 @@ class RewardedVideos(private val activity:Activity,private val save:GardenSave){
  private var activeProvider=""
  private var activeRewardKind=""
  private val timeout=Runnable{finish(false,"Videoja nuk u ngarkua. Provo përsëri më vonë.")}
+ private fun armTimeout(){main.removeCallbacks(timeout);main.postDelayed(timeout,45000)}
  fun show(kind:String,done:(Boolean,String)->Unit){
   if(released||busy||activity.isFinishing||save.constructing){done(false,"Videoja nuk është gati.");return}
-  receipt=save.beginAdReward(kind);if(receipt==null){done(false,"Bonusi nuk mund të hapet tani.");return};busy=true;earned=false;activeProvider="";activeRewardKind=kind;unityGate=RewardCompletionGate(UNITY_REWARDED);callback=done;generation++;val request=generation;main.postDelayed(timeout,45000)
+  receipt=save.beginAdReward(kind);if(receipt==null){done(false,"Bonusi nuk mund të hapet tani.");return};busy=true;earned=false;activeProvider="";activeRewardKind=kind;unityGate=RewardCompletionGate(UNITY_REWARDED);callback=done;generation++;val request=generation
   if(save.nextRewardedProvider()=="admob"&&BuildConfig.ADMOB_CONFIGURED)admob(request,true) else unity(request,true)
  }
  private fun unity(request:Int,allowFallback:Boolean){
-  activeProvider="unity";ledger.attempt(activeProvider)
+  activeProvider="unity";ledger.attempt(activeProvider);armTimeout()
   fun load(){if(valid(request))UnityAds.load(UNITY_REWARDED,object:IUnityAdsLoadListener{
    override fun onUnityAdsAdLoaded(id:String){main.post{if(valid(request)&&id==UNITY_REWARDED){main.removeCallbacks(timeout);UnityAds.show(activity,id,UnityAdsShowOptions(),object:IUnityAdsShowListener{
     override fun onUnityAdsShowStart(id:String){}
@@ -48,7 +49,7 @@ class RewardedVideos(private val activity:Activity,private val save:GardenSave){
   if(!BuildConfig.ADMOB_CONFIGURED){if(allowFallback)unity(request,false) else finish(false,"Nuk ka video të disponueshme tani. Nuk u dha bonus.");return}
   val unitId=if(BuildConfig.ADS_TEST_MODE)ADMOB_TEST_REWARDED else BuildConfig.ADMOB_REWARDED_ID
   if(unitId.isBlank()){if(allowFallback)unity(request,false) else finish(false,"AdMob Rewarded nuk është konfiguruar. Nuk u dha bonus.");return}
-  activeProvider="admob";ledger.attempt(activeProvider)
+  activeProvider="admob";ledger.attempt(activeProvider);armTimeout()
   MobileAds.initialize(activity){main.post{if(valid(request))RewardedAd.load(activity,unitId,AdRequest.Builder().build(),object:RewardedAdLoadCallback(){
    override fun onAdFailedToLoad(error:LoadAdError){if(valid(request))if(allowFallback)unity(request,false) else finish(false,"Videoja nuk është në dispozicion. Nuk u dha bonus.")}
    override fun onAdLoaded(ad:RewardedAd){if(!valid(request))return;main.removeCallbacks(timeout);ad.fullScreenContentCallback=object:FullScreenContentCallback(){
