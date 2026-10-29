@@ -35,6 +35,8 @@ class GardenSave(ctx:Context) {
  }
  private fun grantMaterial(m:Material,count:Int,edit:android.content.SharedPreferences.Editor){if(count>0)edit.putInt("material_${m.name}",materialCount(m)+count)}
  private fun consumeRestorationMaterials(task:Int,edit:android.content.SharedPreferences.Editor){restorationNeeds(task).forEach{edit.putInt("material_${it.material.name}",(materialCount(it.material)-it.count).coerceAtLeast(0))}}
+ /** Alternates the first rewarded provider so production testing collects real samples from both networks. */
+ fun nextRewardedProvider():String {val current=p.getString("rewarded_provider_next","unity")?:"unity";p.edit().putString("rewarded_provider_next",if(current=="unity")"admob" else "unity").commit();return current}
  /** A pending receipt is minted before one SDK show. Only that completed impression can settle it. */
  fun beginAdReward(kind:String):String? {if(constructing||(kind=="life"&&lives>=maxLives)||kind !in setOf("coins","star","moves","life"))return null;val id=java.util.UUID.randomUUID().toString();return if(p.edit().putString("ad_pending",id).putString("ad_kind",kind).commit())id else null}
  fun settleAdReward(id:String):Boolean {if(p.getString("ad_pending",null)!=id)return false;val kind=p.getString("ad_kind","");val edit=p.edit().remove("ad_pending").remove("ad_kind");when(kind){"coins"->edit.putInt("coins",coins+100);"star"->edit.putInt("stars",stars+1);"life"->edit.putInt("lives",(lives+1).coerceAtMost(maxLives));"moves"->{val board=Match3Engine(level);if(activeBoard==null||!board.restore(activeBoard!!)||!board.addMoves(5))return false;edit.putString("active_board",board.encode())};else->return false};return edit.commit()}
