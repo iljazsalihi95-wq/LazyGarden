@@ -64,7 +64,7 @@ class FlowerGardenView(
   FlowerSequence.Stage.GEZIMI_ARRIVAL->"arrival_01"
   FlowerSequence.Stage.PREPARE->"plan_01"
   FlowerSequence.Stage.PLANT->"plant_01"
-  FlowerSequence.Stage.WATER->"water_01"
+  FlowerSequence.Stage.WATER->if(elapsed<28750L)"water_01" else "water_02"
   FlowerSequence.Stage.CELEBRATE->"finish_01"
   else->stage.name.lowercase()
  }
