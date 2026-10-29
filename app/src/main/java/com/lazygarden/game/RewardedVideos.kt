@@ -22,30 +22,33 @@ class RewardedVideos(private val activity:Activity,private val save:GardenSave){
  fun show(kind:String,done:(Boolean,String)->Unit){
   if(released||busy||activity.isFinishing||save.constructing){done(false,"Videoja nuk është gati.");return}
   receipt=save.beginAdReward(kind);if(receipt==null){done(false,"Bonusi nuk mund të hapet tani.");return};busy=true;earned=false;unityGate=RewardCompletionGate(UNITY_REWARDED);callback=done;generation++;val request=generation;main.postDelayed(timeout,45000)
+  if(save.nextRewardedProvider()=="admob"&&BuildConfig.ADMOB_CONFIGURED)admob(request,true) else unity(request,true)
+ }
+ private fun unity(request:Int,allowFallback:Boolean){
   fun load(){if(valid(request))UnityAds.load(UNITY_REWARDED,object:IUnityAdsLoadListener{
    override fun onUnityAdsAdLoaded(id:String){main.post{if(valid(request)&&id==UNITY_REWARDED){main.removeCallbacks(timeout);UnityAds.show(activity,id,UnityAdsShowOptions(),object:IUnityAdsShowListener{
     override fun onUnityAdsShowStart(id:String){}
     override fun onUnityAdsShowClick(id:String){}
-    override fun onUnityAdsShowFailure(id:String,error:UnityAds.UnityAdsShowError,message:String){main.post{if(valid(request))finish(false,"Videoja dështoi. Nuk u dha bonus.")}}
+    override fun onUnityAdsShowFailure(id:String,error:UnityAds.UnityAdsShowError,message:String){main.post{if(valid(request))if(allowFallback)admob(request,false) else finish(false,"Videoja dështoi. Nuk u dha bonus.")}}
     override fun onUnityAdsShowComplete(id:String,state:UnityAds.UnityAdsShowCompletionState){main.post{if(valid(request))finish(unityGate.complete(id,state==UnityAds.UnityAdsShowCompletionState.COMPLETED),"Videoja u mbyll pa bonus.")}}
    })}}}
-   override fun onUnityAdsFailedToLoad(id:String,error:UnityAds.UnityAdsLoadError,message:String){main.post{if(valid(request))admob(request)}}
+   override fun onUnityAdsFailedToLoad(id:String,error:UnityAds.UnityAdsLoadError,message:String){main.post{if(valid(request))if(allowFallback)admob(request,false) else finish(false,"Videoja nuk është në dispozicion. Nuk u dha bonus.")}}
   })}
   if(UnityAds.isInitialized)load() else UnityAds.initialize(activity.applicationContext,UNITY_GAME,BuildConfig.ADS_TEST_MODE,object:IUnityAdsInitializationListener{
    override fun onInitializationComplete(){main.post{load()}}
-   override fun onInitializationFailed(error:UnityAds.UnityAdsInitializationError,message:String){main.post{if(valid(request))admob(request)}}
+   override fun onInitializationFailed(error:UnityAds.UnityAdsInitializationError,message:String){main.post{if(valid(request))if(allowFallback)admob(request,false) else finish(false,"Videoja nuk është në dispozicion. Nuk u dha bonus.")}}
   })
  }
  private fun valid(request:Int)=!released&&busy&&generation==request&&!activity.isFinishing&&!activity.isDestroyed
- private fun admob(request:Int){
-  if(!BuildConfig.ADMOB_CONFIGURED){finish(false,"Nuk ka video të disponueshme tani. Nuk u dha bonus.");return}
+ private fun admob(request:Int,allowFallback:Boolean){
+  if(!BuildConfig.ADMOB_CONFIGURED){if(allowFallback)unity(request,false) else finish(false,"Nuk ka video të disponueshme tani. Nuk u dha bonus.");return}
   val unitId=if(BuildConfig.ADS_TEST_MODE)ADMOB_TEST_REWARDED else BuildConfig.ADMOB_REWARDED_ID
-  if(unitId.isBlank()){finish(false,"AdMob Rewarded nuk është konfiguruar. Nuk u dha bonus.");return}
+  if(unitId.isBlank()){if(allowFallback)unity(request,false) else finish(false,"AdMob Rewarded nuk është konfiguruar. Nuk u dha bonus.");return}
   MobileAds.initialize(activity){main.post{if(valid(request))RewardedAd.load(activity,unitId,AdRequest.Builder().build(),object:RewardedAdLoadCallback(){
-   override fun onAdFailedToLoad(error:LoadAdError){if(valid(request))finish(false,"Videoja nuk është në dispozicion. Nuk u dha bonus.")}
+   override fun onAdFailedToLoad(error:LoadAdError){if(valid(request))if(allowFallback)unity(request,false) else finish(false,"Videoja nuk është në dispozicion. Nuk u dha bonus.")}
    override fun onAdLoaded(ad:RewardedAd){if(!valid(request))return;main.removeCallbacks(timeout);ad.fullScreenContentCallback=object:FullScreenContentCallback(){
     override fun onAdDismissedFullScreenContent(){if(valid(request))finish(earned,"Videoja u mbyll pa bonus.")}
-    override fun onAdFailedToShowFullScreenContent(error:AdError){if(valid(request))finish(false,"Videoja nuk u hap. Nuk u dha bonus.")}
+    override fun onAdFailedToShowFullScreenContent(error:AdError){if(valid(request))if(allowFallback)unity(request,false) else finish(false,"Videoja nuk u hap. Nuk u dha bonus.")}
    };ad.show(activity){if(valid(request)&&!earned){earned=receipt?.let{save.settleAdReward(it)}==true}}
    }
   })}}
