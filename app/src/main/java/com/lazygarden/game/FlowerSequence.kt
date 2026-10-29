@@ -31,7 +31,7 @@ object FlowerSequence {
   Stage.TALK->if(ms<5200)"rona" else "meli"
   Stage.CALL_GEZIMI->"lazi"
   Stage.GEZIMI_ARRIVAL,Stage.PREPARE,Stage.PLANT->"gezimi"
-  Stage.WATER->"rona"
+  Stage.WATER->if(ms<28750)"rona" else "meli"
   Stage.CELEBRATE->"meli"
   else->null
  }
@@ -52,7 +52,9 @@ object FlowerSequence {
   Stage.GEZIMI_ARRIVAL->tr(lang,"Erdha. Së pari kontrollojmë tokën, pastaj zgjedhim lulet.","Da bin ich. Zuerst prüfen wir den Boden, dann wählen wir die Blumen.","Eccomi. Prima controlliamo il terreno, poi scegliamo i fiori.","Еве ме. Прво ја проверуваме земјата, потоа ги избираме цвеќињата.","Geldim. Önce toprağı kontrol ederiz, sonra çiçekleri seçeriz.")
   Stage.PREPARE->tr(lang,"Toka duhet liruar dhe përgatitur para mbjelljes.","Der Boden muss vor dem Pflanzen gelockert und vorbereitet werden.","Il terreno va smosso e preparato prima di piantare.","Земјата мора да се разрохка и подготви пред садењето.","Dikimden önce toprak gevşetilip hazırlanmalı.")
   Stage.PLANT->tr(lang,"Shumë mirë. Unë i hap vendet, ndërsa ju sillni fidanët një nga një.","Sehr gut. Ich bereite die Plätze vor, und ihr bringt die Pflanzen einzeln her.","Molto bene. Io preparo i posti e voi portate le piantine una alla volta.","Одлично. Јас ги подготвувам местата, а вие носете ги садниците една по една.","Çok iyi. Ben yerleri hazırlıyorum, siz fideleri birer birer getirin.")
-  Stage.WATER->tr(lang,"Tani i ujisim ngadalë te rrënjët.","Jetzt gießen wir langsam direkt an den Wurzeln.","Ora annaffiamo lentamente vicino alle radici.","Сега полеваме полека кај корените.","Şimdi köklerinden yavaşça sulayalım.")
+  Stage.WATER->if(ms<28750) tr(lang,
+   "A mund t'i ujit unë tani?","Darf ich sie jetzt gießen?","Posso annaffiarli io adesso?","Може ли јас сега да ги полеам?","Şimdi onları ben sulayabilir miyim?") else tr(lang,
+   "Po, por ngadalë. Ujë te rrënjët, jo mbi të gjitha lulet.","Ja, aber langsam. Gieße an den Wurzeln, nicht über alle Blüten.","Sì, ma piano. Acqua alle radici, non sopra tutti i fiori.","Да, но полека. Вода кај корените, не врз сите цветови.","Evet, ama yavaşça. Suyu köklere ver, bütün çiçeklerin üstüne değil.")
   Stage.CELEBRATE->tr(lang,"Sa bukur! Kopshti po merr jetë.","Wie schön! Der Garten wird lebendig.","Che bello! Il giardino prende vita.","Колку убаво! Градината оживува.","Ne güzel! Bahçe canlanıyor.")
   else->""
  }
