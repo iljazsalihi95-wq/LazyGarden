@@ -36,6 +36,7 @@ class MaterialObjectiveHud:View{
   val text=label();contentDescription=text
   p.color=0xff446538.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textSize=11.5f*d;p.textAlign=Paint.Align.LEFT
   c.drawText(text,54*d,height*.5f+4*d,p)
-  if(liveBoard==null)postInvalidateOnAnimation()
+  // Keep objective progress visibly synchronized while cascades, cargo and booster waves mutate the live engine.
+  postInvalidateOnAnimation()
  }
 }
