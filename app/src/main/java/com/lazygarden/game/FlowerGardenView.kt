@@ -52,11 +52,19 @@ class FlowerGardenView(
     if(FlowerSequence.stage(ms)!=FlowerSequence.Stage.CHOOSE || chosen!=null)ms=(ms+dt).coerceAtMost(FlowerSequence.DURATION)
     if(ms>=FlowerSequence.DURATION && !completed){completed=true;checkpoint(ms);post{if(isAttachedToWindow)onComplete()}}
     val st=FlowerSequence.stage(ms);val line=FlowerSequence.dialogue(ms,language)
-    if(line!=lastLine){lastLine=line;if(line.isNotBlank()){val speaker=FlowerSequence.speaker(ms)?:"meli";voice.speakLine("flowers",st.name.lowercase(),speaker,language,line)}}
+    if(line!=lastLine){lastLine=line;if(line.isNotBlank()){val speaker=FlowerSequence.speaker(ms)?:"meli";voice.speakLine("flower_garden",voiceLineId(st,ms),speaker,language,line)}}
     if(st!=lastStage){lastStage=st;sfx.play(when(st){FlowerSequence.Stage.GEZIMI_ARRIVAL->"walk";FlowerSequence.Stage.PREPARE->"shovel";FlowerSequence.Stage.PLANT->"plant";FlowerSequence.Stage.WATER->"water";FlowerSequence.Stage.BLOOM->"bloom";FlowerSequence.Stage.CELEBRATE->"reward";else->""})}
     invalidate()
    };start()
   }
+ }
+ private fun voiceLineId(stage:FlowerSequence.Stage,elapsed:Long)=when(stage){
+  FlowerSequence.Stage.TALK->if(elapsed<5200L)"choice_01" else "call_01"
+  FlowerSequence.Stage.CALL_GEZIMI->"collect_01"
+  FlowerSequence.Stage.GEZIMI_ARRIVAL->"arrival_01"
+  FlowerSequence.Stage.PREPARE->"plan_01"
+  FlowerSequence.Stage.CELEBRATE->"finish_01"
+  else->stage.name.lowercase()
  }
  override fun onDraw(c:Canvas){
   super.onDraw(c);val s=maxOf(width.toFloat()/garden.width,height.toFloat()/garden.height);val dw=garden.width*s;val dh=garden.height*s
@@ -83,7 +91,7 @@ class FlowerGardenView(
   }
   val text=FlowerSequence.dialogue(ms,language);if(text.isNotBlank()){val who=FlowerSequence.speaker(ms)?:"meli";SceneBubble.draw(c,p,width,height,displayName(who),text,dp(1f))}
  }
- private fun displayName(id:String)=when(id){"lazi"->"Lazi";"meli"->"Meli";"rona"->"Rona";"gezimi"->"Gëzimi";else->id}
+ private fun displayName(id:String)=when(id){"lazi"->"Lazi";"meli"->"Meli";"rona"->"Rona";"gezimi"->when(language){"de"->"Gärtner Georg";"it"->"Giorgio";"mk"->"Ѓорѓи";"tr"->"Bahçıvan Cem";else->"Gëzimi"};else->id}
  private fun drawResident(c:Canvas,id:Int,x:Float,y:Float,w:Float,frame:Int,right:Boolean){val cw=residents.width/8;val ch=residents.height/4;val src=Rect(frame*cw,id*ch,(frame+1)*cw,(id+1)*ch);val h=w*ch/cw;val save=c.save();c.scale(if(right)1f else -1f,1f,x,y);c.drawBitmap(residents,src,RectF(x-w/2,y-h,x+w/2,y),p);c.restoreToCount(save)}
  private fun drawPicker(c:Canvas){val box=RectF(dp(18f),height*.24f,width-dp(18f),height*.58f);p.color=0xf5fff5dc.toInt();c.drawRoundRect(box,dp(20f),dp(20f),p);p.textAlign=Paint.Align.CENTER;p.typeface=Typeface.DEFAULT_BOLD;p.textSize=dp(18f);p.color=0xff5a3923.toInt();c.drawText(pickerTitle(),box.centerX(),box.top+dp(32f),p);FlowerSequence.choices.forEachIndexed{i,f->val w=box.width()/3;val cx=box.left+w*(i+.5f);plants.draw(c,p,f.id,cx,box.centerY()+dp(24f),dp(60f));p.color=0xff4b3422.toInt();p.textSize=dp(12f);c.drawText(localName(f),cx,box.bottom-dp(22f),p)}}
  override fun onTouchEvent(e:MotionEvent):Boolean{if(e.action==MotionEvent.ACTION_UP&&FlowerSequence.stage(ms)==FlowerSequence.Stage.CHOOSE&&chosen==null){val l=dp(18f);val r=width-dp(18f);if(e.x>=l&&e.x<=r&&e.y>=height*.24f&&e.y<=height*.58f){val i=(((e.x-l)/(r-l))*3).toInt().coerceIn(0,2);chosen=FlowerSequence.choices[i];onChoice(chosen!!);ms=17000L;checkpoint(ms);invalidate();performClick();return true}};return true}
