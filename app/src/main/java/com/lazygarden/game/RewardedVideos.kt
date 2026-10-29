@@ -20,10 +20,11 @@ class RewardedVideos(private val activity:Activity,private val save:GardenSave){
  private var unityGate=RewardCompletionGate(UNITY_REWARDED)
  private val ledger=AdTestLedger(activity.applicationContext)
  private var activeProvider=""
+ private var activeRewardKind=""
  private val timeout=Runnable{finish(false,"Videoja nuk u ngarkua. Provo përsëri më vonë.")}
  fun show(kind:String,done:(Boolean,String)->Unit){
   if(released||busy||activity.isFinishing||save.constructing){done(false,"Videoja nuk është gati.");return}
-  receipt=save.beginAdReward(kind);if(receipt==null){done(false,"Bonusi nuk mund të hapet tani.");return};busy=true;earned=false;activeProvider="";unityGate=RewardCompletionGate(UNITY_REWARDED);callback=done;generation++;val request=generation;main.postDelayed(timeout,45000)
+  receipt=save.beginAdReward(kind);if(receipt==null){done(false,"Bonusi nuk mund të hapet tani.");return};busy=true;earned=false;activeProvider="";activeRewardKind=kind;unityGate=RewardCompletionGate(UNITY_REWARDED);callback=done;generation++;val request=generation;main.postDelayed(timeout,45000)
   if(save.nextRewardedProvider()=="admob"&&BuildConfig.ADMOB_CONFIGURED)admob(request,true) else unity(request,true)
  }
  private fun unity(request:Int,allowFallback:Boolean){
@@ -57,7 +58,7 @@ class RewardedVideos(private val activity:Activity,private val save:GardenSave){
    }
   })}}
  }
- private fun finish(completed:Boolean,failure:String){if(!busy)return;main.removeCallbacks(timeout);val id=receipt;val rewarded=if(earned)true else completed&&id!=null&&save.settleAdReward(id);if(rewarded&&activeProvider.isNotBlank())ledger.completed(activeProvider);if(!rewarded&&id!=null)save.cancelAdReward(id);val done=callback;callback=null;busy=false;receipt=null;activeProvider="";done?.invoke(rewarded,if(rewarded)"Bonusi u ruajt!" else failure)}
+ private fun finish(completed:Boolean,failure:String){if(!busy)return;main.removeCallbacks(timeout);val id=receipt;val rewarded=if(earned)true else completed&&id!=null&&save.settleAdReward(id);if(rewarded&&activeProvider.isNotBlank())ledger.completed(activeProvider,activeRewardKind);if(!rewarded&&id!=null)save.cancelAdReward(id);val done=callback;callback=null;busy=false;receipt=null;activeProvider="";activeRewardKind="";done?.invoke(rewarded,if(rewarded)"Bonusi u ruajt!" else failure)}
  fun cancel(){unityGate.cancel();generation++;finish(false,"Videoja u anulua. Nuk u dha bonus.")}
- fun release(){released=true;generation++;main.removeCallbacksAndMessages(null);receipt?.let{save.cancelAdReward(it)};callback=null;receipt=null;activeProvider="";busy=false}
+ fun release(){released=true;generation++;main.removeCallbacksAndMessages(null);receipt?.let{save.cancelAdReward(it)};callback=null;receipt=null;activeProvider="";activeRewardKind="";busy=false}
 }
