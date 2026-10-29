@@ -3,42 +3,39 @@ package com.lazygarden.game
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
+import kotlin.math.sqrt
 
-/** Reusable pose controller shared by native scene actors; movement always stops at its destination. */
+/** Reusable pose controller shared by native scene actors; the actor root stays on the ground plane. */
 object CharacterAnimation {
  enum class State { IDLE,WALK,TALK,THINK,WORK,COLLECT,CARRY,HAPPY }
  data class Position(val x:Float,val y:Float)
  data class Gait(val position:Position,val bob:Float,val lean:Float,val step:Float)
  fun ease(progress:Float):Float {val t=progress.coerceIn(0f,1f);return t*t*(3-2*t)}
- /** Smooth acceleration/deceleration keeps feet visually grounded instead of sliding/flying. */
  fun move(from:Position,to:Position,progress:Float):Position {val t=ease(progress);return Position(from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t)}
  /**
-  * Grounded stride. The body rises only a few pixels in normalized scene space, while the
-  * horizontal lean fades in/out with velocity. A distance-aware step count prevents short
-  * routes from looking like rapid moon-walking and long routes from gliding.
+  * Foot-planted stride: world/root Y is never bounced. Step phase is distance-aware and is
+  * intended only for leg/pose animation. This prevents the whole character from appearing
+  * to hover above paths, furniture or the fountain while walking.
   */
  fun gait(from:Position,to:Position,progress:Float):Gait {
-  val u=progress.coerceIn(0f,1f);val dx=to.x-from.x;val dy=to.y-from.y;val distance=kotlin.math.sqrt(dx*dx+dy*dy)
+  val u=progress.coerceIn(0f,1f);val dx=to.x-from.x;val dy=to.y-from.y;val distance=sqrt(dx*dx+dy*dy)
   val moving=u>0f&&u<1f&&distance>.001f
   if(!moving)return Gait(move(from,to,u),0f,0f,0f)
   val strideCount=(2.5f+distance*3.2f).coerceIn(3f,7f)
   val phase=(u*strideCount*2f*PI).toFloat();val step=sin(phase)
-  val velocity=(6f*u*(1f-u)).coerceIn(0f,1.5f)
-  val bob=-abs(step)*.0045f
+  val speedEnvelope=(6f*u*(1f-u)).coerceIn(0f,1f)
   val direction=if(abs(dx)<.001f)0f else if(dx>0f)1f else -1f
-  val lean=direction*velocity*.008f + step*.004f
-  return Gait(move(from,to,u),bob,lean.coerceIn(-.014f,.014f),step)
+  val lean=(direction*speedEnvelope*.006f+step*.002f).coerceIn(-.009f,.009f)
+  return Gait(move(from,to,u),0f,lean,step)
  }
  fun facesRight(x:Float,targetX:Float)=x<=targetX
  fun routeFacing(from:Position,to:Position,progress:Float,targetX:Float):Boolean =
-  if(progress>=0f&&progress<1f&&kotlin.math.abs(to.x-from.x)>.001f)to.x>from.x
-  else facesRight(move(from,to,progress).x,targetX)
- data class RouteSample(val position:Position,val facingRight:Boolean,val moving:Boolean)
- fun sampleRoute(from:Position,to:Position,progress:Float,targetX:Float):RouteSample = RouteSample(
-  move(from,to,progress),routeFacing(from,to,progress,targetX),
-  progress>0f&&progress<1f&&(kotlin.math.abs(to.x-from.x)+kotlin.math.abs(to.y-from.y)>.001f)
- )
- /** Each actor owns its state clock; entering TALK/WORK starts that pose cycle at frame zero. */
+  if(progress>=0f&&progress<1f&&abs(to.x-from.x)>.001f)to.x>from.x else facesRight(move(from,to,progress).x,targetX)
+ data class RouteSample(val position:Position,val facingRight:Boolean,val moving:Boolean,val step:Float=0f,val lean:Float=0f)
+ fun sampleRoute(from:Position,to:Position,progress:Float,targetX:Float):RouteSample {
+  val gait=gait(from,to,progress)
+  return RouteSample(gait.position,routeFacing(from,to,progress,targetX),progress>0f&&progress<1f&&(abs(to.x-from.x)+abs(to.y-from.y)>.001f),gait.step,gait.lean)
+ }
  class Player {
   var state=State.IDLE;private set
   private var started=0L
@@ -51,12 +48,10 @@ object CharacterAnimation {
   val tick=(elapsed.coerceAtLeast(0)/(if(state==State.WALK)185 else 210)).toInt()
   val poses=if(arrivalAtlas)when(state){
    State.IDLE->intArrayOf(0);State.WALK->intArrayOf(1,0,2,0);State.TALK->intArrayOf(3,0)
-   State.THINK->intArrayOf(4);State.WORK,State.COLLECT->intArrayOf(5)
-   State.CARRY->intArrayOf(6);State.HAPPY->intArrayOf(7,0,7)
+   State.THINK->intArrayOf(4);State.WORK,State.COLLECT->intArrayOf(5);State.CARRY->intArrayOf(6);State.HAPPY->intArrayOf(7,0,7)
   }else when(state){
    State.IDLE->intArrayOf(0);State.WALK->intArrayOf(1,0,2,0);State.TALK->intArrayOf(4,0)
-   State.THINK->intArrayOf(3);State.WORK,State.COLLECT->intArrayOf(5,6)
-   State.CARRY->intArrayOf(6);State.HAPPY->intArrayOf(7,0,7)
+   State.THINK->intArrayOf(3);State.WORK,State.COLLECT->intArrayOf(5,6);State.CARRY->intArrayOf(6);State.HAPPY->intArrayOf(7,0,7)
   }
   return poses[tick%poses.size]
  }
