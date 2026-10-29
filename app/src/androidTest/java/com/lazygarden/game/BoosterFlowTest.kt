@@ -22,6 +22,7 @@ class BoosterFlowTest {
  private val hammer=Match3Engine.Booster.HAMMER
  @Before fun reset(){context.getSharedPreferences("garden_progress",0).edit().clear().putInt("level",30).putInt("coins",200).commit()}
  private fun descendants(v:View):List<View> = listOf(v)+if(v is ViewGroup)(0 until v.childCount).flatMap{descendants(v.getChildAt(it))} else emptyList()
+ private fun stockLabel(tile:View):TextView = descendants(tile).filterIsInstance<TextView>().first{it.text.toString().startsWith("×") || it.text.toString().startsWith("+")}
  @Test fun liveHammerStockDecrementsAndPersistsWithoutSpendingCoins(){
   val save=GardenSave(context)
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
@@ -32,7 +33,7 @@ class BoosterFlowTest {
      val tray=views.filterIsInstance<BoosterInventoryTray>().single()
      val board=views.filterIsInstance<Match3BoardView>().single()
      assertFalse(board.isBusy)
-     assertEquals("×${3-used}",descendants(tray.getChildAt(0)).filterIsInstance<TextView>().single().text.toString())
+     assertEquals("×${3-used}",stockLabel(tray.getChildAt(0)).text.toString())
      tray.getChildAt(0).performClick()
      assertEquals(hammer,board.targetBooster)
      val p=board.cellCenter(0);val time=SystemClock.uptimeMillis()
