@@ -3,13 +3,13 @@ import android.content.Context
 import android.graphics.*
 import android.view.View
 
-/** Restoration objective HUD. It can bind to the live board; legacy construction restores the saved active board. */
+/** Restoration objective HUD bound to the live Match-3 board when available. */
 class MaterialObjectiveHud:View{
  private val save:GardenSave
  private val level:Int
  private var liveBoard:Match3Engine?=null
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
- private val reward:Pair<RestorationMaterial,Int>?
+ private val reward:Pair<Material,Int>?
  private val art:MaterialArt
  constructor(context:Context,save:GardenSave,level:Int):super(context){this.save=save;this.level=level;reward=RestorationInventory.rewardForLevel(level,save.tasks);art=MaterialArt(context);contentDescription=label()}
  constructor(context:Context,save:GardenSave,board:Match3Engine):super(context){this.save=save;this.level=board.level;this.liveBoard=board;reward=RestorationInventory.rewardForLevel(level,save.tasks);art=MaterialArt(context);contentDescription=label()}
