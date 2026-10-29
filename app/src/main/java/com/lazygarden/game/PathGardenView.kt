@@ -3,6 +3,7 @@ package com.lazygarden.game
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.RectF
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -15,10 +16,12 @@ class PathGardenView(
  onComplete:()->Unit={}
 ):RestorationGardenView(context,2,initialElapsed,checkpoint,onComplete) {
  private val fx=Paint(Paint.ANTI_ALIAS_FLAG)
+ private val characterPaint=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
 
  override fun onDraw(canvas:Canvas) {
   super.onDraw(canvas)
   val ms=sceneElapsedMillis
+  drawCufi(canvas,ms)
   // CLEAR/REMOVE/LEVEL/PLACE: stone dust follows the active path work instead of a static overlay.
   if(ms in 7_000L..27_000L) {
    val phase=(ms%1_050L)/1_050f
@@ -55,5 +58,26 @@ class PathGardenView(
    }
   }
   fx.alpha=255
+ }
+
+ /** Cufi now enters the actual path scene instead of existing only in story data. */
+ private fun drawCufi(canvas:Canvas,ms:Long) {
+  val arrival=(ms/3_500f).coerceIn(0f,1f)
+  val eased=CharacterAnimation.ease(arrival)
+  val startX=-width*.12f
+  val restX=width*.18f
+  val x=startX+(restX-startX)*eased
+  val ground=height*.76f
+  val w=width*.18f
+  val aspect=CharacterSprites.aspect(context,"cufi")
+  val walking=arrival<1f
+  val frame=if(walking)((ms/150L)%4L).toInt() else if(ms>=30_000L) 6 else 0
+  characterPaint.color=0x44302010
+  canvas.drawOval(RectF(x-w*.30f,ground-w*.035f,x+w*.30f,ground+w*.035f),characterPaint)
+  CharacterSprites.draw(
+   context,canvas,characterPaint,"cufi",frame,
+   RectF(x-w/2f,ground-w*aspect,x+w/2f,ground),
+   facingRight=true
+  )
  }
 }
