@@ -63,6 +63,8 @@ class FlowerGardenView(
   FlowerSequence.Stage.CALL_GEZIMI->"collect_01"
   FlowerSequence.Stage.GEZIMI_ARRIVAL->"arrival_01"
   FlowerSequence.Stage.PREPARE->"plan_01"
+  FlowerSequence.Stage.PLANT->"plant_01"
+  FlowerSequence.Stage.WATER->"water_01"
   FlowerSequence.Stage.CELEBRATE->"finish_01"
   else->stage.name.lowercase()
  }
