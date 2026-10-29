@@ -9,7 +9,7 @@ class RestorationJobsTest {
   assertEquals("nermir",RestorationJobs.worker(6,"ROOF").id)
   assertEquals("besi",RestorationJobs.worker(6,"WINDOWS").id)
   assertEquals("mevludin",RestorationJobs.worker(5,"LIGHT").id)
-  assertEquals("greku",RestorationJobs.worker(3,"REPAIR").id)
+  assertEquals("luli",RestorationJobs.worker(3,"REPAIR").id)
  }
  @Test fun boardContainsEveryRequiredMaterialWithoutDuplicateMatchSymbols(){
   for(task in 0..6){val palette=RestorationJobs.palette(task)
