@@ -25,7 +25,7 @@ object CharacterSprites {
   val rows=if(spec.arrivalAtlas)familyRows else originalRows
   return (rows[spec.row+1]-rows[spec.row])*b.height/(b.width/8f)
  }
- fun draw(context:Context,c:Canvas,p:Paint,id:String,frame:Int,bounds:RectF,facingRight:Boolean):Boolean {
+ fun draw(context:Context,c:Canvas,p:Paint,id:String,frame:Int,bounds:RectF,facingRight:Boolean,motion:CharacterAnimation.PoseMotion=CharacterAnimation.PoseMotion()):Boolean {
   val spec=characters[id]?:return false;val b=GameSkin.bitmap(context,spec.resource)
   val rows=if(spec.arrivalAtlas)familyRows else originalRows;val width=b.width/8
   val pose=frame.coerceIn(0,7)
@@ -39,16 +39,21 @@ object CharacterSprites {
   }
   val groundedBounds=RectF(bounds.left,bounds.bottom-bounds.height()*grounded.height()/source.height(),bounds.right,bounds.bottom)
   p.shader=null;p.colorFilter=null;p.style=Paint.Style.FILL;p.alpha=255
-  // Pose polish is deliberately anchored at the feet: atlas poses gain a tiny squash/lean
-  // without moving the actor root off the world ground plane.
+  // Both atlas-pose polish and live state motion pivot at the feet. This lets scene actors
+  // breathe, talk, work and celebrate without sliding away from the world ground plane.
   val poseWave=sin((pose+1)*1.73f)
   val action=if(pose==0)0f else 1f
-  val sx=1f+abs(poseWave)*.008f*action
-  val sy=1f-abs(poseWave)*.006f*action
-  val lean=poseWave*.45f*action
+  val atlasSx=1f+abs(poseWave)*.008f*action
+  val atlasSy=1f-abs(poseWave)*.006f*action
+  val atlasLean=poseWave*.45f*action
+  val liftPx=bounds.height()*motion.lift.coerceIn(-.02f,.02f)
+  val liveSx=motion.scaleX.coerceIn(.94f,1.06f)
+  val liveSy=motion.scaleY.coerceIn(.94f,1.06f)
+  val liveLean=motion.rotation.coerceIn(-4f,4f)
   val layer=c.save()
-  c.rotate(lean,bounds.centerX(),bounds.bottom)
-  c.scale((if(facingRight)1f else -1f)*sx,sy,bounds.centerX(),bounds.bottom)
+  c.translate(0f,liftPx)
+  c.rotate(atlasLean+liveLean,bounds.centerX(),bounds.bottom)
+  c.scale((if(facingRight)1f else -1f)*atlasSx*liveSx,atlasSy*liveSy,bounds.centerX(),bounds.bottom)
   c.drawBitmap(b,grounded,groundedBounds,p);c.restoreToCount(layer)
   return true
  }
