@@ -20,18 +20,32 @@ object RestorationInventory {
   listOf(MaterialNeed(Material.PLASTER,8),MaterialNeed(Material.PAINT,6),MaterialNeed(Material.GLASS,4),MaterialNeed(Material.TILE,6)),
   // House interior: repair the room before furniture can be placed.
   listOf(MaterialNeed(Material.PLASTER,6),MaterialNeed(Material.PAINT,5),MaterialNeed(Material.BOARD,5),MaterialNeed(Material.SCREW,6)),
-  // Children's room: safe floor/furniture plus working light.
+  // Windows: make the interior bright and weather-tight.
+  listOf(MaterialNeed(Material.GLASS,6),MaterialNeed(Material.HINGE,4),MaterialNeed(Material.PAINT,3),MaterialNeed(Material.TOOL,2)),
+  // Roof: damaged tiles and the structure below them.
+  listOf(MaterialNeed(Material.TILE,10),MaterialNeed(Material.BOARD,5),MaterialNeed(Material.SCREW,8),MaterialNeed(Material.TOOL,2)),
+  // Children's room: safe furniture plus working light.
   listOf(MaterialNeed(Material.BOARD,8),MaterialNeed(Material.PAINT,4),MaterialNeed(Material.LAMP,2),MaterialNeed(Material.CABLE,3)),
-  // Kitchen: cabinets, hinges and wall finish.
-  listOf(MaterialNeed(Material.BOARD,8),MaterialNeed(Material.HINGE,6),MaterialNeed(Material.TILE,5),MaterialNeed(Material.PAINT,3)),
-  // Living room: windows, finish and lighting.
-  listOf(MaterialNeed(Material.GLASS,4),MaterialNeed(Material.PAINT,5),MaterialNeed(Material.LAMP,3),MaterialNeed(Material.CABLE,3)),
-  // Balcony/workshop: structure and weather-proof finish.
-  listOf(MaterialNeed(Material.BOARD,8),MaterialNeed(Material.SCREW,10),MaterialNeed(Material.PAINT,4),MaterialNeed(Material.TILE,4)),
-  // Bikes/play yard: path surface and garden planting.
-  listOf(MaterialNeed(Material.STONE,8),MaterialNeed(Material.SAND,5),MaterialNeed(Material.SEEDLING,6),MaterialNeed(Material.FLOWER,6))
+  // Kitchen plumbing and cabinets.
+  listOf(MaterialNeed(Material.PIPE,4),MaterialNeed(Material.VALVE,2),MaterialNeed(Material.BOARD,8),MaterialNeed(Material.HINGE,6)),
+  // Kitchen electricity and wall finish.
+  listOf(MaterialNeed(Material.LAMP,3),MaterialNeed(Material.CABLE,5),MaterialNeed(Material.TILE,6),MaterialNeed(Material.PLASTER,4)),
+  // Family living room.
+  listOf(MaterialNeed(Material.BOARD,8),MaterialNeed(Material.PAINT,5),MaterialNeed(Material.GLASS,3),MaterialNeed(Material.LAMP,3)),
+  // Balcony planting and seating.
+  listOf(MaterialNeed(Material.BOARD,6),MaterialNeed(Material.FLOWER,6),MaterialNeed(Material.SOIL,4),MaterialNeed(Material.SEEDLING,4)),
+  // Small workshop and storage.
+  listOf(MaterialNeed(Material.BOARD,10),MaterialNeed(Material.SCREW,12),MaterialNeed(Material.HINGE,4),MaterialNeed(Material.TOOL,3)),
+  // Bike corner.
+  listOf(MaterialNeed(Material.BOARD,5),MaterialNeed(Material.SCREW,8),MaterialNeed(Material.HINGE,4),MaterialNeed(Material.PAINT,3)),
+  // Evening yard lighting.
+  listOf(MaterialNeed(Material.LAMP,6),MaterialNeed(Material.CABLE,8),MaterialNeed(Material.STONE,5),MaterialNeed(Material.TOOL,2)),
+  // Children's outdoor play area.
+  listOf(MaterialNeed(Material.SAND,8),MaterialNeed(Material.BOARD,8),MaterialNeed(Material.SCREW,10),MaterialNeed(Material.PAINT,4)),
+  // Garden celebration: final clean-up, flowers and finishing details.
+  listOf(MaterialNeed(Material.FLOWER,10),MaterialNeed(Material.SEEDLING,6),MaterialNeed(Material.FERTILIZER,4),MaterialNeed(Material.PAINT,4))
  )
- const val TASK_COUNT=13
+ const val TASK_COUNT=20
  fun forTask(task:Int)=requirements.getOrElse(task){emptyList()}
  /** Levels around the current restoration intentionally award materials needed by that story job. */
  fun rewardForLevel(level:Int,task:Int):Pair<Material,Int>? {
