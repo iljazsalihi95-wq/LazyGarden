@@ -10,13 +10,10 @@ object CharacterAnimation {
  enum class State { IDLE,WALK,TALK,THINK,WORK,COLLECT,CARRY,HAPPY }
  data class Position(val x:Float,val y:Float)
  data class Gait(val position:Position,val bob:Float,val lean:Float,val step:Float)
+ data class PoseMotion(val scaleX:Float=1f,val scaleY:Float=1f,val rotation:Float=0f,val lift:Float=0f,val pulse:Float=0f)
  fun ease(progress:Float):Float {val t=progress.coerceIn(0f,1f);return t*t*(3-2*t)}
  fun move(from:Position,to:Position,progress:Float):Position {val t=ease(progress);return Position(from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t)}
- /**
-  * Foot-planted stride: world/root Y is never bounced. Step phase is distance-aware and is
-  * intended only for leg/pose animation. This prevents the whole character from appearing
-  * to hover above paths, furniture or the fountain while walking.
-  */
+ /** Foot-planted stride: root Y is never bounced; step drives limbs/pose only. */
  fun gait(from:Position,to:Position,progress:Float):Gait {
   val u=progress.coerceIn(0f,1f);val dx=to.x-from.x;val dy=to.y-from.y;val distance=sqrt(dx*dx+dy*dy)
   val moving=u>0f&&u<1f&&distance>.001f
@@ -28,31 +25,36 @@ object CharacterAnimation {
   val lean=(direction*speedEnvelope*.006f+step*.002f).coerceIn(-.009f,.009f)
   return Gait(move(from,to,u),0f,lean,step)
  }
- fun facesRight(x:Float,targetX:Float)=x<=targetX
- fun routeFacing(from:Position,to:Position,progress:Float,targetX:Float):Boolean =
-  if(progress>=0f&&progress<1f&&abs(to.x-from.x)>.001f)to.x>from.x else facesRight(move(from,to,progress).x,targetX)
- data class RouteSample(val position:Position,val facingRight:Boolean,val moving:Boolean,val step:Float=0f,val lean:Float=0f)
- fun sampleRoute(from:Position,to:Position,progress:Float,targetX:Float):RouteSample {
-  val gait=gait(from,to,progress)
-  return RouteSample(gait.position,routeFacing(from,to,progress,targetX),progress>0f&&progress<1f&&(abs(to.x-from.x)+abs(to.y-from.y)>.001f),gait.step,gait.lean)
+ /** Subtle state-specific secondary motion. Values are deliberately small so feet remain planted. */
+ fun poseMotion(state:State,elapsed:Long):PoseMotion {
+  val seconds=elapsed.coerceAtLeast(0L)/1000f
+  fun wave(hz:Float)=sin((seconds*hz*2f*PI).toFloat())
+  return when(state){
+   State.IDLE->PoseMotion(scaleX=1f+wave(.42f)*.006f,scaleY=1f-wave(.42f)*.004f,pulse=(wave(.42f)+1f)*.5f)
+   State.WALK->PoseMotion(scaleX=1f+abs(wave(2.7f))*.012f,scaleY=1f-abs(wave(2.7f))*.010f,rotation=wave(2.7f)*.7f)
+   State.TALK->PoseMotion(rotation=wave(1.8f)*.9f,pulse=(wave(1.8f)+1f)*.5f)
+   State.THINK->PoseMotion(rotation=-1.2f+wave(.55f)*.35f,scaleY=.995f)
+   State.WORK->PoseMotion(rotation=wave(2.2f)*1.6f,scaleX=1f+abs(wave(2.2f))*.008f)
+   State.COLLECT->PoseMotion(scaleX=1f+abs(wave(1.9f))*.018f,scaleY=1f-abs(wave(1.9f))*.012f,lift=-abs(wave(1.9f))*.004f)
+   State.CARRY->PoseMotion(rotation=wave(1.15f)*.45f,scaleY=.992f)
+   State.HAPPY->PoseMotion(scaleX=1f+abs(wave(2.1f))*.025f,scaleY=1f+abs(wave(2.1f))*.025f,lift=-abs(wave(2.1f))*.006f,pulse=(wave(2.1f)+1f)*.5f)
+  }
  }
+ fun facesRight(x:Float,targetX:Float)=x<=targetX
+ fun routeFacing(from:Position,to:Position,progress:Float,targetX:Float):Boolean = if(progress>=0f&&progress<1f&&abs(to.x-from.x)>.001f)to.x>from.x else facesRight(move(from,to,progress).x,targetX)
+ data class RouteSample(val position:Position,val facingRight:Boolean,val moving:Boolean,val step:Float=0f,val lean:Float=0f)
+ fun sampleRoute(from:Position,to:Position,progress:Float,targetX:Float):RouteSample {val gait=gait(from,to,progress);return RouteSample(gait.position,routeFacing(from,to,progress,targetX),progress>0f&&progress<1f&&(abs(to.x-from.x)+abs(to.y-from.y)>.001f),gait.step,gait.lean)}
  class Player {
   var state=State.IDLE;private set
-  private var started=0L
-  private var initialized=false
+  private var started=0L;private var initialized=false
   fun update(next:State,now:Long){if(!initialized||state!=next){state=next;started=now;initialized=true}}
   fun elapsed(now:Long)=(now-started).coerceAtLeast(0L)
   fun frame(now:Long,arrivalAtlas:Boolean)=CharacterAnimation.frame(state,elapsed(now),arrivalAtlas)
+  fun motion(now:Long)=poseMotion(state,elapsed(now))
  }
  fun frame(state:State,elapsed:Long,arrivalAtlas:Boolean):Int {
   val tick=(elapsed.coerceAtLeast(0)/(if(state==State.WALK)185 else 210)).toInt()
-  val poses=if(arrivalAtlas)when(state){
-   State.IDLE->intArrayOf(0);State.WALK->intArrayOf(1,0,2,0);State.TALK->intArrayOf(3,0)
-   State.THINK->intArrayOf(4);State.WORK,State.COLLECT->intArrayOf(5);State.CARRY->intArrayOf(6);State.HAPPY->intArrayOf(7,0,7)
-  }else when(state){
-   State.IDLE->intArrayOf(0);State.WALK->intArrayOf(1,0,2,0);State.TALK->intArrayOf(4,0)
-   State.THINK->intArrayOf(3);State.WORK,State.COLLECT->intArrayOf(5,6);State.CARRY->intArrayOf(6);State.HAPPY->intArrayOf(7,0,7)
-  }
+  val poses=if(arrivalAtlas)when(state){State.IDLE->intArrayOf(0);State.WALK->intArrayOf(1,0,2,0);State.TALK->intArrayOf(3,0);State.THINK->intArrayOf(4);State.WORK,State.COLLECT->intArrayOf(5);State.CARRY->intArrayOf(6);State.HAPPY->intArrayOf(7,0,7)}else when(state){State.IDLE->intArrayOf(0);State.WALK->intArrayOf(1,0,2,0);State.TALK->intArrayOf(4,0);State.THINK->intArrayOf(3);State.WORK,State.COLLECT->intArrayOf(5,6);State.CARRY->intArrayOf(6);State.HAPPY->intArrayOf(7,0,7)}
   return poses[tick%poses.size]
  }
 }
