@@ -33,16 +33,19 @@ class Match3BoosterController(
         val waves = save.useBooster(board, kind, at)
         if (waves.isEmpty()) return snapshot(Status.INVALID_TARGET, kind)
 
-        // Count unique board cells instead of summing waves: cascades can touch
-        // the same cell more than once and should not inflate the impact burst.
-        val affected = waves.asSequence().flatMap { it.cleared.asSequence() }.distinct().count()
+        // Wave exposes the impacted board cells as `cells`. Count unique cells
+        // across cascades so repeated hits do not exaggerate the FX intensity.
+        val affected = waves.asSequence()
+            .flatMap { it.cells.asSequence() }
+            .distinct()
+            .count()
         return Result(
             status = Status.USED,
             waves = waves,
             stock = save.boosterCount(kind),
             coins = save.coins,
             affectedTiles = affected,
-            cascadeCount = waves.size
+            cascadeCount = waves.count { !it.shuffled }
         )
     }
 
