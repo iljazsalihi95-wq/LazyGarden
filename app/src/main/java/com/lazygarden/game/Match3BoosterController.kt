@@ -15,6 +15,7 @@ class Match3BoosterController(
     private val currentLevel: Int
 ) {
     enum class Status { USED, LOCKED_REPLAY, NEEDS_STOCK, INVALID_TARGET }
+    enum class Impact { NONE, LIGHT, STRONG, EPIC }
 
     data class Result(
         val status: Status,
@@ -22,7 +23,8 @@ class Match3BoosterController(
         val stock: Int = 0,
         val coins: Int = 0,
         val affectedTiles: Int = 0,
-        val cascadeCount: Int = 0
+        val cascadeCount: Int = 0,
+        val impact: Impact = Impact.NONE
     )
 
     val gameplayEnabled: Boolean get() = board.level == currentLevel
@@ -33,19 +35,31 @@ class Match3BoosterController(
         val waves = save.useBooster(board, kind, at)
         if (waves.isEmpty()) return snapshot(Status.INVALID_TARGET, kind)
 
-        // Wave exposes the impacted board cells as `cells`. Count unique cells
-        // across cascades so repeated hits do not exaggerate the FX intensity.
-        val affected = waves.asSequence()
-            .flatMap { it.cells.asSequence() }
-            .distinct()
-            .count()
+        // Normal boosters expose hit cells directly. SHUFFLE intentionally has
+        // no cleared cells, so measure the actual before/after board changes to
+        // give its premium transition the correct visual/audio weight.
+        val cleared = waves.asSequence().flatMap { it.cells.asSequence() }.toSet()
+        val shuffledChanged = waves.asSequence().filter { it.shuffled }.flatMap { wave ->
+            (0..63).asSequence().filter { i ->
+                wave.before[i / 8][i % 8] != wave.after[i / 8][i % 8]
+            }
+        }.toSet()
+        val affected = (cleared + shuffledChanged).size
+        val cascades = waves.count { !it.shuffled }
+        val impact = when {
+            affected >= 24 || cascades >= 4 -> Impact.EPIC
+            affected >= 9 || cascades >= 2 -> Impact.STRONG
+            affected > 0 -> Impact.LIGHT
+            else -> Impact.NONE
+        }
         return Result(
             status = Status.USED,
             waves = waves,
             stock = save.boosterCount(kind),
             coins = save.coins,
             affectedTiles = affected,
-            cascadeCount = waves.count { !it.shuffled }
+            cascadeCount = cascades,
+            impact = impact
         )
     }
 
