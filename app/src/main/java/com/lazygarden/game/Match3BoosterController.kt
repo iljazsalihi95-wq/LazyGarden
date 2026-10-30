@@ -5,9 +5,9 @@ package com.lazygarden.game
  * Keeps inventory/purchase policy out of MainActivity and guarantees that a
  * booster is consumed only after Match3Engine actually produces an effect.
  *
- * The result also carries compact impact telemetry for premium UI feedback:
- * affectedTiles can drive a punch/particle burst and cascadeCount can drive
- * combo intensity without re-running or guessing the engine result in the UI.
+ * The result carries impact telemetry for premium UI feedback. Presentation
+ * can now drive particles, punch/scale and SFX from the real resolved board
+ * result instead of guessing from the booster button that was pressed.
  */
 class Match3BoosterController(
     private val save: GardenSave,
@@ -17,6 +17,13 @@ class Match3BoosterController(
     enum class Status { USED, LOCKED_REPLAY, NEEDS_STOCK, INVALID_TARGET }
     enum class Impact { NONE, LIGHT, STRONG, EPIC }
 
+    data class Feedback(
+        val impact: Impact = Impact.NONE,
+        val intensity: Float = 0f,
+        val particleBursts: Int = 0,
+        val sfxCue: String = ""
+    )
+
     data class Result(
         val status: Status,
         val waves: List<Match3Engine.Wave> = emptyList(),
@@ -24,7 +31,8 @@ class Match3BoosterController(
         val coins: Int = 0,
         val affectedTiles: Int = 0,
         val cascadeCount: Int = 0,
-        val impact: Impact = Impact.NONE
+        val impact: Impact = Impact.NONE,
+        val feedback: Feedback = Feedback()
     )
 
     val gameplayEnabled: Boolean get() = board.level == currentLevel
@@ -37,7 +45,7 @@ class Match3BoosterController(
 
         // Normal boosters expose hit cells directly. SHUFFLE intentionally has
         // no cleared cells, so measure the actual before/after board changes to
-        // give its premium transition the correct visual/audio weight.
+        // give its transition the correct visual/audio weight.
         val cleared = waves.asSequence().flatMap { it.cells.asSequence() }.toSet()
         val shuffledChanged = waves.asSequence().filter { it.shuffled }.flatMap { wave ->
             (0..63).asSequence().filter { i ->
@@ -52,6 +60,7 @@ class Match3BoosterController(
             affected > 0 -> Impact.LIGHT
             else -> Impact.NONE
         }
+        val feedback = feedbackFor(kind, impact, affected, cascades)
         return Result(
             status = Status.USED,
             waves = waves,
@@ -59,13 +68,42 @@ class Match3BoosterController(
             coins = save.coins,
             affectedTiles = affected,
             cascadeCount = cascades,
-            impact = impact
+            impact = impact,
+            feedback = feedback
         )
     }
 
     fun buy(kind: Match3Engine.Booster, count: Int = 1): Boolean =
         gameplayEnabled && !board.won && !board.failed && count > 0 &&
             save.buyBoosterStock(kind, count)
+
+    private fun feedbackFor(
+        kind: Match3Engine.Booster,
+        impact: Impact,
+        affected: Int,
+        cascades: Int
+    ): Feedback {
+        if (impact == Impact.NONE) return Feedback()
+        val boardCoverage = (affected / 24f).coerceIn(0f, 1f)
+        val cascadeEnergy = (cascades / 4f).coerceIn(0f, 1f)
+        val intensity = (0.35f + boardCoverage * 0.45f + cascadeEnergy * 0.20f).coerceIn(0f, 1f)
+        val bursts = when (impact) {
+            Impact.LIGHT -> 1
+            Impact.STRONG -> 2
+            Impact.EPIC -> 4
+            Impact.NONE -> 0
+        }
+        val cue = when (kind) {
+            Match3Engine.Booster.HAMMER -> "booster_hammer"
+            Match3Engine.Booster.ROW -> "booster_row"
+            Match3Engine.Booster.COLUMN -> "booster_column"
+            Match3Engine.Booster.CROSS -> "booster_cross"
+            Match3Engine.Booster.BOMB -> "booster_bomb"
+            Match3Engine.Booster.COLOR -> "booster_color"
+            Match3Engine.Booster.SHUFFLE -> "booster_shuffle"
+        }
+        return Feedback(impact, intensity, bursts, cue)
+    }
 
     private fun snapshot(status: Status, kind: Match3Engine.Booster) =
         Result(status, stock = save.boosterCount(kind), coins = save.coins)
