@@ -2,6 +2,8 @@ package com.lazygarden.game
 
 import android.content.Context
 import android.graphics.*
+import kotlin.math.abs
+import kotlin.math.sin
 
 /** One identity registry and atlas sampler for playable scenes and the persistent estate. */
 object CharacterSprites {
@@ -37,7 +39,16 @@ object CharacterSprites {
   }
   val groundedBounds=RectF(bounds.left,bounds.bottom-bounds.height()*grounded.height()/source.height(),bounds.right,bounds.bottom)
   p.shader=null;p.colorFilter=null;p.style=Paint.Style.FILL;p.alpha=255
-  val layer=c.save();c.scale(if(facingRight)1f else -1f,1f,bounds.centerX(),bounds.bottom)
+  // Pose polish is deliberately anchored at the feet: atlas poses gain a tiny squash/lean
+  // without moving the actor root off the world ground plane.
+  val poseWave=sin((pose+1)*1.73f)
+  val action=if(pose==0)0f else 1f
+  val sx=1f+abs(poseWave)*.008f*action
+  val sy=1f-abs(poseWave)*.006f*action
+  val lean=poseWave*.45f*action
+  val layer=c.save()
+  c.rotate(lean,bounds.centerX(),bounds.bottom)
+  c.scale((if(facingRight)1f else -1f)*sx,sy,bounds.centerX(),bounds.bottom)
   c.drawBitmap(b,grounded,groundedBounds,p);c.restoreToCount(layer)
   return true
  }
