@@ -29,10 +29,7 @@ class GardenSave(ctx:Context) {
  fun restorationMaterialsReady(task:Int=tasks)=restorationNeeds(task).isNotEmpty()&&missingRestorationMaterials(task).isEmpty()
  fun materialStatus(task:Int=tasks)=restorationNeeds(task).joinToString("\n"){"${it.material.label}: ${materialCount(it.material)}/${it.count}"}
  data class MaterialReward(val material:Material,val before:Int,val after:Int,val required:Int)
- val lastMaterialReward:MaterialReward? get(){
-  val material=runCatching{Material.valueOf(p.getString("reward_material",null)?:return null)}.getOrNull()?:return null
-  return MaterialReward(material,p.getInt("reward_material_before",0),p.getInt("reward_material_after",0),p.getInt("reward_material_required",0))
- }
+ val lastMaterialReward:MaterialReward? get(){val material=runCatching{Material.valueOf(p.getString("reward_material",null)?:return null)}.getOrNull()?:return null;return MaterialReward(material,p.getInt("reward_material_before",0),p.getInt("reward_material_after",0),p.getInt("reward_material_required",0))}
  private fun grantMaterial(m:Material,count:Int,edit:android.content.SharedPreferences.Editor){if(count>0)edit.putInt("material_${m.name}",materialCount(m)+count)}
  private fun consumeRestorationMaterials(task:Int,edit:android.content.SharedPreferences.Editor){restorationNeeds(task).forEach{edit.putInt("material_${it.material.name}",(materialCount(it.material)-it.count).coerceAtLeast(0))}}
  fun nextRewardedProvider():String {val current=p.getString("rewarded_provider_next","unity")?:"unity";p.edit().putString("rewarded_provider_next",if(current=="unity")"admob" else "unity").commit();return current}
@@ -61,8 +58,9 @@ class GardenSave(ctx:Context) {
  fun buyBoosterStock(kind:Match3Engine.Booster,count:Int=1):Boolean {if(count<=0)return false;val total=kind.cost.toLong()*count;val stock=boosterCount(kind).toLong()+count;if(total>coins||stock>Int.MAX_VALUE)return false;return p.edit().putInt("coins",coins-total.toInt()).putInt(boosterKey(kind),stock.toInt()).commit()}
  fun useBooster(board:Match3Engine,kind:Match3Engine.Booster,at:Int):List<Match3Engine.Wave>{if(board.won||board.failed||boosterCount(kind)<=0)return emptyList();val waves=board.boost(kind,at);if(waves.isNotEmpty())p.edit().putInt(boosterKey(kind),(boosterCount(kind)-1).coerceAtLeast(0)).putString("active_board",board.encode()).commit();return waves}
  fun buyBooster(board:Match3Engine,kind:Match3Engine.Booster,at:Int):List<Match3Engine.Wave>{if(boosterCount(kind)<=0&&!buyBoosterStock(kind))return emptyList();return useBooster(board,kind,at)}
- val storyPosition get()=p.getInt("story_position",0).coerceIn(0,GardenStory.lines.size)
- val availableStoryLines get()=(tasks*GardenStory.LINES_PER_CHAPTER).coerceAtMost(GardenStory.lines.size)
+ private val storyLineCount get()=GardenStory.chapters.sumOf{it.lines.size}
+ val storyPosition get()=p.getInt("story_position",0).coerceIn(0,storyLineCount)
+ val availableStoryLines get()=(tasks*GardenStory.LINES_PER_CHAPTER).coerceAtMost(storyLineCount)
  val hasPendingStory get()=storyPosition<availableStoryLines
  fun advanceStory(expectedPosition:Int):Boolean {if(expectedPosition!=storyPosition||!hasPendingStory)return false;return p.edit().putInt("story_position",storyPosition+1).commit()}
  fun ownsDecoration(id:String)=GardenDecor.find(id)!=null&&p.getBoolean("decor_owned_$id",false)
