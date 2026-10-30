@@ -18,6 +18,7 @@ class BoosterInventoryTray(
     private val badges = linkedMapOf<Match3Engine.Booster, TextView>()
     private val names = linkedMapOf<Match3Engine.Booster, TextView>()
     private val tiles = linkedMapOf<Match3Engine.Booster, View>()
+    private val boosterIcons = linkedMapOf<Match3Engine.Booster, ImageView>()
     private val lastCounts = linkedMapOf<Match3Engine.Booster, Int>()
     private var gameplayEnabled = true
     private val icons = intArrayOf(
@@ -45,12 +46,14 @@ class BoosterInventoryTray(
             gravity = Gravity.CENTER
             background = GameSkin.background(context, R.drawable.hd_hud, 11f)
             setPadding(dp(2), dp(3), dp(2), dp(3))
+            elevation = dp(2).toFloat()
         }
-        tile.addView(ImageView(context).apply {
+        val iconView = ImageView(context).apply {
             setImageResource(icon)
             scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = GameText.booster(save.language,kind)
-        }, LayoutParams(dp(34), dp(34)))
+        }
+        tile.addView(iconView, LayoutParams(dp(34), dp(34)))
         val name = TextView(context).apply {
             textSize = 8.5f
             maxLines = 1
@@ -67,22 +70,27 @@ class BoosterInventoryTray(
         tile.addView(badge, LayoutParams(-1, dp(23)))
         tile.setOnClickListener {
             if (!gameplayEnabled) return@setOnClickListener
-            press(tile)
+            press(tile, iconView)
             if (save.boosterCount(kind) > 0) onUse(kind) else onBuy(kind)
         }
         tile.setOnLongClickListener {
-            if (!gameplayEnabled) false else { press(tile); onBuy(kind); true }
+            if (!gameplayEnabled) false else { press(tile, iconView); onBuy(kind); true }
         }
         badges[kind] = badge
         names[kind] = name
         tiles[kind] = tile
+        boosterIcons[kind] = iconView
         return tile
     }
 
-    private fun press(view: View) {
+    private fun press(view: View, icon: ImageView) {
         view.animate().cancel()
-        view.animate().scaleX(.90f).scaleY(.90f).setDuration(70).withEndAction {
-            view.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+        icon.animate().cancel()
+        view.animate().scaleX(.92f).scaleY(.92f).translationY(dp(2).toFloat()).setDuration(65).withEndAction {
+            view.animate().scaleX(1f).scaleY(1f).translationY(0f).setDuration(125).start()
+        }.start()
+        icon.animate().rotationBy(8f).scaleX(1.12f).scaleY(1.12f).setDuration(80).withEndAction {
+            icon.animate().rotation(0f).scaleX(1f).scaleY(1f).setDuration(150).start()
         }.start()
     }
 
@@ -109,9 +117,27 @@ class BoosterInventoryTray(
                     }.start()
                 }
             }
+            if (animateChanges && previous != null && previous > count) {
+                boosterIcons[kind]?.apply {
+                    animate().cancel()
+                    scaleX = 1.22f; scaleY = 1.22f; rotation = -7f
+                    animate().scaleX(.82f).scaleY(.82f).rotation(7f).setDuration(95).withEndAction {
+                        animate().scaleX(1f).scaleY(1f).rotation(0f).setDuration(165).start()
+                    }.start()
+                }
+            } else if (animateChanges && previous != null && previous < count) {
+                boosterIcons[kind]?.apply {
+                    animate().cancel()
+                    alpha = .55f; scaleX = .7f; scaleY = .7f
+                    animate().alpha(1f).scaleX(1.16f).scaleY(1.16f).setDuration(130).withEndAction {
+                        animate().scaleX(1f).scaleY(1f).setDuration(150).start()
+                    }.start()
+                }
+            }
             tiles[kind]?.apply {
                 isEnabled = gameplayEnabled
                 alpha = when { !gameplayEnabled -> .42f; count > 0 -> 1f; else -> .72f }
+                elevation = if (gameplayEnabled && count > 0) dp(3).toFloat() else dp(1).toFloat()
                 isActivated = gameplayEnabled && count > 0
                 contentDescription = when {
                     !gameplayEnabled -> "${GameText.booster(save.language,kind)}, ${t("locked")}"
