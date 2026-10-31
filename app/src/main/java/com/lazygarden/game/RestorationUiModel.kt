@@ -33,6 +33,14 @@ object RestorationUiModel {
     fun completedTitle(completed: Int, language: String): String? =
         if (completed in 1..total) RestorationCatalog.title(completed - 1, language) else null
 
+    fun currentTitle(completed: Int, language: String): String? {
+        val safeCompleted = completed.coerceIn(0, total)
+        return if (safeCompleted < total) RestorationCatalog.title(safeCompleted, language) else null
+    }
+
+    fun archive(completed: Int, language: String): List<Chapter> =
+        chapters(completed, language).filter { it.state == State.DONE }
+
     fun progress(completed: Int): String = "${completed.coerceIn(0, total)}/$total"
 
     fun allCompleted(completed: Int): Boolean = completed >= total
