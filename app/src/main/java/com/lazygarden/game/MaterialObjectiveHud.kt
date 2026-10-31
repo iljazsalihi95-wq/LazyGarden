@@ -3,7 +3,7 @@ import android.content.Context
 import android.graphics.*
 import android.view.View
 
-/** Restoration reward HUD: shows the stock that the current restoration actually still needs. */
+/** Restoration reward HUD: stock reward plus the real live board objectives from the engine. */
 class MaterialObjectiveHud:View{
  private val save:GardenSave
  private val level:Int
@@ -26,18 +26,22 @@ class MaterialObjectiveHud:View{
   val base=when{need.count>=10->4;need.count>=6->3;else->2}+if(level%5==0)1 else 0
   return need.material to minOf(left,base)
  }
+ private fun liveGoals(b:Match3Engine?):String{
+  if(b==null)return ""
+  val goals=mutableListOf<String>()
+  if(b.spec.collectCount>0)goals+="◆ ${b.collected[b.spec.collectColor].coerceAtMost(b.spec.collectCount)}/${b.spec.collectCount}"
+  if(b.spec.ice>0)goals+="❄ ${b.clearedIce.coerceAtMost(b.spec.ice)}/${b.spec.ice}"
+  if(b.rescueTarget>0)goals+="♥ ${b.rescued.coerceAtMost(b.rescueTarget)}/${b.rescueTarget}"
+  if(b.terrainRemaining>0)goals+="▣ ${b.terrainRemaining}"
+  return if(goals.isEmpty())"" else " · "+goals.joinToString("  ")
+ }
  private fun label():String{
-  val (material,amount)=reward()?:return "✓ ${GameText.get(save.language,"materials")} · ${GameText.get(save.language,"ready")}"
+  val b=board();val goals=liveGoals(b)
+  val pair=reward()?:return "✓ ${GameText.get(save.language,"materials")} · ${GameText.get(save.language,"ready")}$goals"
+  val (material,amount)=pair
   val need=save.restorationNeeds().firstOrNull{it.material==material}
   val owned=save.materialCount(material);val required=need?.count?:owned
-  val b=board()
-  val levelProgress=when{
-   b==null->""
-   b.rescueTarget>0->" · ${b.rescued.coerceAtMost(b.rescueTarget)}/${b.rescueTarget}"
-   b.spec.collectCount>0->" · ${b.collected[b.spec.collectColor].coerceAtMost(b.spec.collectCount)}/${b.spec.collectCount}"
-   else->""
-  }
-  return "${FountainText.get(save.language,material.name)}  $owned/$required  ·  ${GameText.get(save.language,"reward")} +$amount$levelProgress"
+  return "${FountainText.get(save.language,material.name)}  ${owned.coerceAtMost(required)}/$required · ${GameText.get(save.language,"reward")} +$amount$goals"
  }
  fun bind(board:Match3Engine){if(board.level==level){liveBoard=board;boardChanged()}}
  fun boardChanged(){contentDescription=label();invalidate()}
@@ -46,8 +50,7 @@ class MaterialObjectiveHud:View{
   GameSkin.nine(c,GameSkin.bitmap(context,R.drawable.hd_hud),RectF(8*d,2*d,width-8*d,height-2*d),12*d,p)
   reward()?.let{art.draw(c,p,it.first,RectF(14*d,3*d,48*d,height-3*d))}
   val text=label();contentDescription=text
-  p.color=0xff446538.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textSize=11.5f*d;p.textAlign=Paint.Align.LEFT
+  p.color=0xff446538.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textSize=10.5f*d;p.textAlign=Paint.Align.LEFT
   c.drawText(text,54*d,height*.5f+4*d,p)
-  postInvalidateOnAnimation()
  }
 }
