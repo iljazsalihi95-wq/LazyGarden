@@ -25,6 +25,24 @@ class Match3EngineTest {
    val copy=Match3Engine(30);assertTrue(copy.restore(e.encode()));assertEquals(e.encode(),copy.encode())
   }
  }
+ @Test fun premiumBoostersStayFunctionalAcrossEarlyMidAndLateCampaign(){
+  val levels=listOf(1,50,125,200,250)
+  for(level in levels)for(kind in Match3Engine.Booster.entries){
+   val e=Match3Engine(level,Random(level*97+kind.ordinal));val moves=e.moves;val before=e.encode()
+   val target=(0 until 64).firstOrNull{index->e.boost(kind,index).isNotEmpty()}
+   if(target!=null){
+    assertEquals("$kind must never spend a normal move",moves,e.moves)
+    assertNotEquals("$kind must visibly change gameplay at level $level",before,e.encode())
+    assertTrue("$kind must leave valid tiles",e.board.all{row->row.all{it in 0..29}})
+    assertTrue("$kind must leave a serializable board",Match3Engine(level).restore(e.encode()))
+   }
+  }
+ }
+ @Test fun boosterPricesArePositiveAndDistinctEnoughForInventoryEconomy(){
+  val costs=Match3Engine.Booster.entries.map{it.cost}
+  assertTrue(costs.all{it>0})
+  assertTrue("premium booster shop needs multiple price tiers",costs.toSet().size>=3)
+ }
  @Test fun invalidBoosterTargetDoesNotMutate(){val e=Match3Engine(1);val state=e.encode();assertTrue(e.boost(Match3Engine.Booster.HAMMER,-1).isEmpty());assertEquals(state,e.encode())}
  @Test fun malformedTokenCannotBeSilentlyDropped(){val e=Match3Engine(1);assertFalse(e.restore(e.encode()+",bad"))}
  @Test fun terminalBoardsRejectSwapsAndBoosters(){
