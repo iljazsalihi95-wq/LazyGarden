@@ -4,6 +4,21 @@ import org.junit.Test
 class CharacterAnimationTest {
  @Test fun movementClampsToEndpointsAndFacingFollowsTarget(){val a=CharacterAnimation.Position(1f,2f);val b=CharacterAnimation.Position(9f,8f);assertEquals(a,CharacterAnimation.move(a,b,-1f));assertEquals(b,CharacterAnimation.move(a,b,2f));assertEquals(CharacterAnimation.Position(5f,5f),CharacterAnimation.move(a,b,.5f));assertTrue(CharacterAnimation.facesRight(1f,9f));assertFalse(CharacterAnimation.facesRight(9f,1f))}
  @Test fun allEightStatesSampleValidFramesOnBothSheets(){for(sheet in listOf(true,false))for(state in CharacterAnimation.State.entries)for(t in 0L..3000L step 90)assertTrue(CharacterAnimation.frame(state,t,sheet) in 0..7)}
+ @Test fun workCollectAndCelebrationActuallyAnimateOnBothAtlases(){
+  for(sheet in listOf(true,false)){
+   for(state in listOf(CharacterAnimation.State.WORK,CharacterAnimation.State.COLLECT,CharacterAnimation.State.HAPPY)){
+    val frames=(0L..1200L step 90).map{CharacterAnimation.frame(state,it,sheet)}.toSet()
+    assertTrue("$state must animate on atlas=$sheet",frames.size>=2)
+   }
+  }
+ }
+ @Test fun premiumSecondaryMotionStaysGroundedAndStateSpecific(){
+  val work=(0L..1200L step 120).map{CharacterAnimation.poseMotion(CharacterAnimation.State.WORK,it)}
+  val collect=(0L..1200L step 120).map{CharacterAnimation.poseMotion(CharacterAnimation.State.COLLECT,it)}
+  val happy=(0L..1200L step 120).map{CharacterAnimation.poseMotion(CharacterAnimation.State.HAPPY,it)}
+  assertTrue(work.map{it.rotation}.toSet().size>2);assertTrue(collect.map{it.scaleX}.toSet().size>2);assertTrue(happy.map{it.pulse}.toSet().size>2)
+  for(m in work+collect+happy){assertTrue(m.lift<=0f);assertTrue(kotlin.math.abs(m.lift)<=.0061f);assertTrue(m.scaleX in .98f..1.04f);assertTrue(m.scaleY in .98f..1.04f)}
+ }
  @Test fun walkingKeepsFacingTheDestinationEvenAfterCrossingTheFountain(){
   val a=CharacterAnimation.Position(90f,0f);val b=CharacterAnimation.Position(30f,0f)
   assertFalse(CharacterAnimation.routeFacing(a,b,.1f,50f));assertFalse(CharacterAnimation.routeFacing(a,b,.9f,50f))
