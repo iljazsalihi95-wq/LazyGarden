@@ -8,10 +8,11 @@ class MaterialObjectiveHud:View{
  private val save:GardenSave
  private val level:Int
  private var liveBoard:Match3Engine?=null
+ private var lastLabel:String?=null
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val art:MaterialArt
- constructor(context:Context,save:GardenSave,level:Int):super(context){this.save=save;this.level=level;art=MaterialArt(context);contentDescription=label()}
- constructor(context:Context,save:GardenSave,board:Match3Engine):super(context){this.save=save;this.level=board.level;this.liveBoard=board;art=MaterialArt(context);contentDescription=label()}
+ constructor(context:Context,save:GardenSave,level:Int):super(context){this.save=save;this.level=level;art=MaterialArt(context);contentDescription=label();lastLabel=contentDescription?.toString()}
+ constructor(context:Context,save:GardenSave,board:Match3Engine):super(context){this.save=save;this.level=board.level;this.liveBoard=board;art=MaterialArt(context);contentDescription=label();lastLabel=contentDescription?.toString()}
  private fun board():Match3Engine?{
   liveBoard?.let{return it}
   if(level!=save.level)return null
@@ -49,7 +50,17 @@ class MaterialObjectiveHud:View{
   return "${FountainText.get(save.language,material.name)} ${owned.coerceAtMost(required)}/$required · ${GameText.get(save.language,"reward")} +$amount$goals"
  }
  fun bind(board:Match3Engine){if(board.level==level){liveBoard=board;boardChanged()}}
- fun boardChanged(){contentDescription=label();invalidate()}
+ fun boardChanged(){
+  val next=label();contentDescription=next
+  if(lastLabel!=null&&lastLabel!=next&&isAttachedToWindow){
+   animate().cancel();scaleX=.97f;scaleY=.97f;alpha=.82f
+   animate().scaleX(1.04f).scaleY(1.04f).alpha(1f).setDuration(120).withEndAction{
+    animate().scaleX(1f).scaleY(1f).setDuration(130).start()
+   }.start()
+  }
+  lastLabel=next
+  invalidate()
+ }
  private fun fitText(text:String,maxWidth:Float,d:Float):Float{
   var size=11.5f*d
   p.textSize=size
