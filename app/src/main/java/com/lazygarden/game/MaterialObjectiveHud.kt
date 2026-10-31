@@ -26,13 +26,16 @@ class MaterialObjectiveHud:View{
   val base=when{need.count>=10->4;need.count>=6->3;else->2}+if(level%5==0)1 else 0
   return need.material to minOf(left,base)
  }
+ private fun goal(done:Boolean,icon:String,current:Int,target:Int)=
+  "${if(done)"✓" else icon} ${current.coerceAtMost(target)}/$target"
  private fun liveGoals(b:Match3Engine?):String{
   if(b==null)return ""
   val goals=mutableListOf<String>()
-  if(b.spec.collectCount>0)goals+="◆ ${b.collected[b.spec.collectColor].coerceAtMost(b.spec.collectCount)}/${b.spec.collectCount}"
-  if(b.spec.ice>0)goals+="❄ ${b.clearedIce.coerceAtMost(b.spec.ice)}/${b.spec.ice}"
-  if(b.rescueTarget>0)goals+="♥ ${b.rescued.coerceAtMost(b.rescueTarget)}/${b.rescueTarget}"
+  if(b.spec.collectCount>0){val n=b.collected[b.spec.collectColor];goals+=goal(n>=b.spec.collectCount,"◆",n,b.spec.collectCount)}
+  if(b.spec.ice>0)goals+=goal(b.clearedIce>=b.spec.ice,"❄",b.clearedIce,b.spec.ice)
+  if(b.rescueTarget>0)goals+=goal(b.rescued>=b.rescueTarget,"♥",b.rescued,b.rescueTarget)
   if(b.terrainRemaining>0)goals+="▣ ${b.terrainRemaining}"
+  else if(b.spec.terrain>0)goals+="✓ ▣"
   return if(goals.isEmpty())"" else " · "+goals.joinToString("  ")
  }
  private fun label():String{
@@ -41,7 +44,7 @@ class MaterialObjectiveHud:View{
   val (material,amount)=pair
   val need=save.restorationNeeds().firstOrNull{it.material==material}
   val owned=save.materialCount(material);val required=need?.count?:owned
-  return "${FountainText.get(save.language,material.name)}  ${owned.coerceAtMost(required)}/$required · ${GameText.get(save.language,"reward")} +$amount$goals"
+  return "${FountainText.get(save.language,material.name)} ${owned.coerceAtMost(required)}/$required · ${GameText.get(save.language,"reward")} +$amount$goals"
  }
  fun bind(board:Match3Engine){if(board.level==level){liveBoard=board;boardChanged()}}
  fun boardChanged(){contentDescription=label();invalidate()}
