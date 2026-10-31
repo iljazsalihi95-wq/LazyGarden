@@ -93,4 +93,9 @@ object GardenStory {
    StoryLine(GardenCharacter.BEJDI,"Atëherë le ta festojmë këtë pjesë dhe pastaj vazhdojmë me aventurën tjetër!")))
  )
  const val LINES_PER_CHAPTER=3
+ init {
+  check(chapters.size==RestorationInventory.TASK_COUNT){"Story chapters must match the 20 restoration campaign"}
+  check(chapters.size==RestorationCatalog.entries.size){"Story and restoration catalog must stay aligned"}
+  check(chapters.all{it.lines.size==LINES_PER_CHAPTER}){"Every story chapter must keep a complete 3-line scene"}
+ }
 }
