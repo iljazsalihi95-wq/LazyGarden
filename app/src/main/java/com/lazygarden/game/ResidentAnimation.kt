@@ -24,8 +24,20 @@ object ResidentAnimation {
   return cycle[Math.floorMod(tick+phase,cycle.size)]
  }
 
- /** Stable phase for a resident id, keeping simultaneous actors out of lockstep. */
- fun phase(actorId:String):Int = Math.floorMod(actorId.hashCode(),7)
+ /**
+  * Stable phase for a resident id, keeping simultaneous actors out of lockstep.
+  * Mixes several character positions before folding into the animation period;
+  * plain String.hashCode() modulo 7 clustered the short family ids too often.
+  */
+ fun phase(actorId:String):Int {
+  var mixed=0x45d9f3b
+  actorId.forEachIndexed { index, ch ->
+   mixed = mixed xor (ch.code shl ((index and 3)*4))
+   mixed *= 0x119de1f3
+   mixed = Integer.rotateLeft(mixed,5)
+  }
+  return Math.floorMod(mixed,7)
+ }
 
  /**
   * Small secondary-motion envelope used by scene renderers for premium motion.
