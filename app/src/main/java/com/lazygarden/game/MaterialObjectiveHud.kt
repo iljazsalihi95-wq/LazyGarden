@@ -50,12 +50,31 @@ class MaterialObjectiveHud:View{
  }
  fun bind(board:Match3Engine){if(board.level==level){liveBoard=board;boardChanged()}}
  fun boardChanged(){contentDescription=label();invalidate()}
+ private fun fitText(text:String,maxWidth:Float,d:Float):Float{
+  var size=11.5f*d
+  p.textSize=size
+  while(size>8f*d&&p.measureText(text)>maxWidth){size-=.5f*d;p.textSize=size}
+  return size
+ }
  override fun onDraw(c:Canvas){
   super.onDraw(c);val d=resources.displayMetrics.density
-  GameSkin.nine(c,GameSkin.bitmap(context,R.drawable.hd_hud),RectF(8*d,2*d,width-8*d,height-2*d),12*d,p)
-  reward()?.let{art.draw(c,p,it.first,RectF(14*d,3*d,48*d,height-3*d))}
+  val bounds=RectF(8*d,2*d,width-8*d,height-2*d)
+  GameSkin.nine(c,GameSkin.bitmap(context,R.drawable.hd_hud),bounds,12*d,p)
+  val pair=reward()
+  pair?.let{
+   p.style=Paint.Style.FILL;p.color=0x22ffffff
+   c.drawCircle(31*d,height*.5f,20*d,p)
+   art.draw(c,p,it.first,RectF(14*d,3*d,48*d,height-3*d))
+   p.color=0xffffc84a.toInt();p.style=Paint.Style.FILL
+   c.drawCircle(46*d,12*d,8*d,p)
+   p.color=0xff6b451d.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textAlign=Paint.Align.CENTER;p.textSize=8.5f*d
+   c.drawText("+${it.second}",46*d,15*d,p)
+  }
   val text=label();contentDescription=text
-  p.color=0xff446538.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textSize=10.5f*d;p.textAlign=Paint.Align.LEFT
-  c.drawText(text,54*d,height*.5f+4*d,p)
+  val left=if(pair==null)18*d else 56*d
+  p.color=if(text.startsWith("✓"))0xff2f7a42.toInt() else 0xff446538.toInt()
+  p.typeface=Typeface.DEFAULT_BOLD;p.textAlign=Paint.Align.LEFT
+  fitText(text,(width-left-14*d).coerceAtLeast(20*d),d)
+  c.drawText(text,left,height*.5f-(p.ascent()+p.descent())*.5f,p)
  }
 }
