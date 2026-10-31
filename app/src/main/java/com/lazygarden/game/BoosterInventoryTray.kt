@@ -107,10 +107,20 @@ class BoosterInventoryTray(
             val previous = lastCounts.put(kind, count)
             names[kind]?.text = GameText.booster(save.language,kind)
             badges[kind]?.apply {
-                text = if (count > 0) "×$count" else "+ ${kind.cost}"
+                val stockText = if (count > 0) "×$count" else "+ ${kind.cost}"
+                text = stockText
                 setTextColor(if (count > 0) 0xff3f6d36.toInt() else 0xff8b4a2b.toInt())
                 if (animateChanges && previous != null && previous != count) {
                     animate().cancel()
+                    if (previous > count) {
+                        // Make real stock consumption visible before settling on the new inventory count.
+                        text = "−${previous - count}"
+                        setTextColor(0xffb33a2f.toInt())
+                        postDelayed({
+                            text = stockText
+                            setTextColor(if (count > 0) 0xff3f6d36.toInt() else 0xff8b4a2b.toInt())
+                        }, 240L)
+                    }
                     scaleX = .72f; scaleY = .72f
                     animate().scaleX(1.18f).scaleY(1.18f).setDuration(120).withEndAction {
                         animate().scaleX(1f).scaleY(1f).setDuration(140).start()
@@ -121,8 +131,14 @@ class BoosterInventoryTray(
                 boosterIcons[kind]?.apply {
                     animate().cancel()
                     scaleX = 1.22f; scaleY = 1.22f; rotation = -7f
-                    animate().scaleX(.82f).scaleY(.82f).rotation(7f).setDuration(95).withEndAction {
-                        animate().scaleX(1f).scaleY(1f).rotation(0f).setDuration(165).start()
+                    animate().scaleX(.82f).scaleY(.82f).rotation(7f).alpha(.58f).setDuration(95).withEndAction {
+                        animate().scaleX(1f).scaleY(1f).rotation(0f).alpha(1f).setDuration(165).start()
+                    }.start()
+                }
+                tiles[kind]?.apply {
+                    animate().cancel()
+                    animate().translationY(dp(3).toFloat()).setDuration(80).withEndAction {
+                        animate().translationY(0f).setDuration(150).start()
                     }.start()
                 }
             } else if (animateChanges && previous != null && previous < count) {
