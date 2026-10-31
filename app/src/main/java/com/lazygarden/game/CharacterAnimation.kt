@@ -32,12 +32,21 @@ object CharacterAnimation {
   return when(state){
    State.IDLE->PoseMotion(scaleX=1f+wave(.42f)*.006f,scaleY=1f-wave(.42f)*.004f,pulse=(wave(.42f)+1f)*.5f)
    State.WALK->PoseMotion(scaleX=1f+abs(wave(2.7f))*.012f,scaleY=1f-abs(wave(2.7f))*.010f,rotation=wave(2.7f)*.7f)
-   State.TALK->PoseMotion(rotation=wave(1.8f)*.9f,pulse=(wave(1.8f)+1f)*.5f)
-   State.THINK->PoseMotion(rotation=-1.2f+wave(.55f)*.35f,scaleY=.995f)
-   State.WORK->PoseMotion(rotation=wave(2.2f)*1.6f,scaleX=1f+abs(wave(2.2f))*.008f)
-   State.COLLECT->PoseMotion(scaleX=1f+abs(wave(1.9f))*.018f,scaleY=1f-abs(wave(1.9f))*.012f,lift=-abs(wave(1.9f))*.004f)
-   State.CARRY->PoseMotion(rotation=wave(1.15f)*.45f,scaleY=.992f)
-   State.HAPPY->PoseMotion(scaleX=1f+abs(wave(2.1f))*.025f,scaleY=1f+abs(wave(2.1f))*.025f,lift=-abs(wave(2.1f))*.006f,pulse=(wave(2.1f)+1f)*.5f)
+   State.TALK->PoseMotion(rotation=wave(1.8f)*.9f,scaleX=1f+abs(wave(.9f))*.004f,pulse=(wave(1.8f)+1f)*.5f)
+   State.THINK->PoseMotion(rotation=-1.2f+wave(.55f)*.35f,scaleY=.995f,pulse=(wave(.55f)+1f)*.25f)
+   State.WORK-> {
+    val stroke=wave(2.2f);val effort=abs(wave(1.1f))
+    PoseMotion(rotation=stroke*1.8f,scaleX=1f+effort*.010f,scaleY=1f-effort*.006f,lift=-effort*.002f,pulse=(stroke+1f)*.5f)
+   }
+   State.COLLECT-> {
+    val scoop=abs(wave(1.9f))
+    PoseMotion(scaleX=1f+scoop*.018f,scaleY=1f-scoop*.012f,lift=-scoop*.004f,rotation=wave(.95f)*.55f,pulse=scoop)
+   }
+   State.CARRY->PoseMotion(rotation=wave(1.15f)*.45f,scaleX=1f+abs(wave(1.15f))*.004f,scaleY=.992f)
+   State.HAPPY-> {
+    val cheer=abs(wave(2.1f));val sway=wave(1.05f)
+    PoseMotion(scaleX=1f+cheer*.025f,scaleY=1f+cheer*.025f,rotation=sway*.8f,lift=-cheer*.006f,pulse=(wave(2.1f)+1f)*.5f)
+   }
   }
  }
  fun facesRight(x:Float,targetX:Float)=x<=targetX
@@ -52,8 +61,15 @@ object CharacterAnimation {
   fun frame(now:Long,arrivalAtlas:Boolean)=CharacterAnimation.frame(state,elapsed(now),arrivalAtlas)
   fun motion(now:Long)=poseMotion(state,elapsed(now))
  }
+ private fun frameDuration(state:State)=when(state){
+  State.WALK->165L
+  State.WORK,State.COLLECT->180L
+  State.HAPPY->170L
+  State.TALK->205L
+  State.IDLE,State.THINK,State.CARRY->240L
+ }
  fun frame(state:State,elapsed:Long,arrivalAtlas:Boolean):Int {
-  val tick=(elapsed.coerceAtLeast(0)/(if(state==State.WALK)185 else 210)).toInt()
+  val tick=(elapsed.coerceAtLeast(0)/frameDuration(state)).toInt()
   val poses=if(arrivalAtlas)when(state){State.IDLE->intArrayOf(0);State.WALK->intArrayOf(1,0,2,0);State.TALK->intArrayOf(3,0);State.THINK->intArrayOf(4);State.WORK,State.COLLECT->intArrayOf(5);State.CARRY->intArrayOf(6);State.HAPPY->intArrayOf(7,0,7)}else when(state){State.IDLE->intArrayOf(0);State.WALK->intArrayOf(1,0,2,0);State.TALK->intArrayOf(4,0);State.THINK->intArrayOf(3);State.WORK,State.COLLECT->intArrayOf(5,6);State.CARRY->intArrayOf(6);State.HAPPY->intArrayOf(7,0,7)}
   return poses[tick%poses.size]
  }
