@@ -25,7 +25,7 @@ class InventoryScreen(context:Context,save:GardenSave,category:Int,close:()->Uni
    val ready=materialReady&&coinReady&&starReady
    val summary=LinearLayout(context).apply{orientation=VERTICAL;setPadding(dp(12),dp(8),dp(12),dp(8));background=statusBg(ready)}
    summary.addView(text(if(ready)"✓ Restaurimi është gati" else "⚠ Mungojnë për restaurimin",15f))
-   summary.addView(text("${if(coinReady)"✓" else "✕"} 120 Game Coins   •   ${if(starReady)"✓" else "✕"} ${if(save.tasks==0)"0" else "1"} ★",12f).apply{setTextColor(if(coinReady&&starReady)0xff35653b.toInt() else 0xff8a3f2c.toInt())})
+   summary.addView(text("${if(coinReady)"✓" else "✕"} ${save.coins}/120 Game Coins   •   ${if(starReady)"✓" else "✕"} ${if(save.tasks==0)"0" else "${save.stars}/1"} ★",12f).apply{setTextColor(if(coinReady&&starReady)0xff35653b.toInt() else 0xff8a3f2c.toInt())})
    val rows=needs.joinToString("   •   "){n->val have=save.materialCount(n.material);val mark=if(have>=n.count)"✓" else "−${n.count-have}";"$mark ${FountainText.get(save.language,n.material.name)} $have/${n.count}"}
    summary.addView(text(rows,12f).apply{setTextColor(if(materialReady)0xff35653b.toInt() else 0xff8a3f2c.toInt())})
    if(!ready)summary.addView(text("▶ Luaj Match-3 për materialet që mungojnë",11f).apply{setTextColor(0xff8a3f2c.toInt())})
@@ -33,9 +33,7 @@ class InventoryScreen(context:Context,save:GardenSave,category:Int,close:()->Uni
   }
 
   val tabs=LinearLayout(context)
-  listOf("materials","tools","boosters","special_items").forEachIndexed{i,key->tabs.addView(GameButton(context).apply{
-   text=FountainText.get(save.language,key);textSize=11f;setPadding(0,0,0,0);alpha=if(i==category)1f else .65f;contentDescription="inventory_$key";setOnClickListener{select(i)}
-  },LayoutParams(0,dp(50),1f))};addView(tabs)
+  listOf("materials","tools","boosters","special_items").forEachIndexed{i,key->tabs.addView(GameButton(context).apply{text=FountainText.get(save.language,key);textSize=11f;setPadding(0,0,0,0);alpha=if(i==category)1f else .65f;contentDescription="inventory_$key";setOnClickListener{select(i)}},LayoutParams(0,dp(50),1f))};addView(tabs)
   val scroll=ScrollView(context);val grid=GridLayout(context).apply{columnCount=3;setPadding(dp(2),dp(12),dp(2),dp(12))}
   fun item(label:String,count:String,ready:Boolean?=null,draw:(Canvas,Paint,RectF)->Unit,action:(()->Unit)?=null){
    val shelf=LinearLayout(context).apply{orientation=VERTICAL;gravity=Gravity.CENTER;background=ready?.let{statusBg(it)}?:GameSkin.background(context,R.drawable.hd_hud,15f);setPadding(dp(4),dp(8),dp(4),dp(8))}
@@ -49,14 +47,13 @@ class InventoryScreen(context:Context,save:GardenSave,category:Int,close:()->Uni
   when(category){
    0,1->Material.entries.filter{(it==Material.TOOL)==(category==1)}.forEach{m->
     val need=save.restorationNeeds().firstOrNull{it.material==m}?.count;val have=save.materialCount(m);val required=need?.let{have>=it}
-    val count=if(need==null)"×$have" else if(have>=need)"✓ $have/$need" else "$have/$need  •  −${need-have}"
+    val count=if(need==null)"×$have" else "$have / $need"
     item(FountainText.get(save.language,m.name),count,required,{c,p,r->materialArt.draw(c,p,m,r)})
    }
    2->{val icons=intArrayOf(R.drawable.boost_hammer,R.drawable.boost_row,R.drawable.boost_column,R.drawable.boost_cross,R.drawable.boost_bomb,R.drawable.boost_color,R.drawable.boost_shuffle)
     Match3Engine.Booster.entries.forEachIndexed{i,kind->item(GameText.booster(save.language,kind),"×${save.boosterCount(kind)}",null,{c,p,r->c.drawBitmap(GameSkin.bitmap(context,icons[i]),null,r,p)},{buy(kind)})}
    }
-   else->{item(FountainText.get(save.language,"keys"),"×${save.keys}",null,{c,p,r->c.drawBitmap(GameSkin.bitmap(context,R.drawable.hd_lock),null,r,p)})
-    item(FountainText.get(save.language,"tickets"),"×${save.tickets}",null,{c,p,r->c.drawBitmap(GameSkin.bitmap(context,R.drawable.hd_icon_map),null,r,p)})}
+   else->{item(FountainText.get(save.language,"keys"),"×${save.keys}",null,{c,p,r->c.drawBitmap(GameSkin.bitmap(context,R.drawable.hd_lock),null,r,p)});item(FountainText.get(save.language,"tickets"),"×${save.tickets}",null,{c,p,r->c.drawBitmap(GameSkin.bitmap(context,R.drawable.hd_icon_map),null,r,p)})}
   }
   scroll.addView(grid);addView(scroll,LayoutParams(-1,0,1f))
  }
