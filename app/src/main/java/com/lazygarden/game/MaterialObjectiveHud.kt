@@ -34,8 +34,10 @@ class MaterialObjectiveHud:View{
   if(b.spec.collectCount>0){val n=b.collected[b.spec.collectColor];goals+=goal(n>=b.spec.collectCount,"◆",n,b.spec.collectCount)}
   if(b.spec.ice>0)goals+=goal(b.clearedIce>=b.spec.ice,"❄",b.clearedIce,b.spec.ice)
   if(b.rescueTarget>0)goals+=goal(b.rescued>=b.rescueTarget,"♥",b.rescued,b.rescueTarget)
-  if(b.terrainRemaining>0)goals+="▣ ${b.terrainRemaining}"
-  else if(b.spec.terrain>0)goals+="✓ ▣"
+  if(b.spec.terrainCount>0){
+   val cleared=(b.spec.terrainCount-b.terrainRemaining).coerceIn(0,b.spec.terrainCount)
+   goals+=goal(b.terrainRemaining==0,"▣",cleared,b.spec.terrainCount)
+  }
   return if(goals.isEmpty())"" else " · "+goals.joinToString("  ")
  }
  private fun label():String{
