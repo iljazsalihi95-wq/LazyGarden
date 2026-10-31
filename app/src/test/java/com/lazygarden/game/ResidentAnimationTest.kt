@@ -31,7 +31,8 @@ class ResidentAnimationTest {
     }
 
     @Test fun secondaryMotionStaysSubtleAndFootSafe() {
-        ResidentAnimation.State.entries.forEach { state ->
+        // values() keeps this regression test compatible with the project's Kotlin toolchain.
+        ResidentAnimation.State.values().forEach { state ->
             repeat(24) { tick ->
                 val m=ResidentAnimation.motion(state,tick,ResidentAnimation.phase("lina"))
                 assertTrue(m.scale in .97f..1.04f)
