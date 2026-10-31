@@ -8,7 +8,7 @@ object GameText {
     private val text = mapOf(
         "sq" to mapOf(
             "home_tagline" to "Ndërto · Luaj · Dekoro\nKopshti i ëndrrave",
-            "estate_progress" to "Prona jonë · {count}/7 restaurime",
+            "estate_progress" to "Prona jonë · {count}/20 restaurime",
             "view_estate" to "Shiko pronën",
             "language_audio" to "Gjuha dhe audio",
             "sfx" to "Efektet zanore",
@@ -38,7 +38,7 @@ object GameText {
         ),
         "de" to mapOf(
             "home_tagline" to "Baue · Spiele · Gestalte\nDein Traumgarten",
-            "estate_progress" to "Unser Anwesen · {count}/7 Restaurierungen",
+            "estate_progress" to "Unser Anwesen · {count}/20 Restaurierungen",
             "view_estate" to "Anwesen ansehen",
             "language_audio" to "Sprache und Audio",
             "sfx" to "Soundeffekte",
@@ -68,7 +68,7 @@ object GameText {
         ),
         "it" to mapOf(
             "home_tagline" to "Costruisci · Gioca · Decora\nIl giardino dei sogni",
-            "estate_progress" to "La nostra proprietà · {count}/7 restauri",
+            "estate_progress" to "La nostra proprietà · {count}/20 restauri",
             "view_estate" to "Esplora la proprietà",
             "language_audio" to "Lingua e audio",
             "sfx" to "Effetti sonori",
@@ -98,7 +98,7 @@ object GameText {
         ),
         "mk" to mapOf(
             "home_tagline" to "Изгради · Играј · Украси\nГрадина од соништата",
-            "estate_progress" to "Нашиот имот · {count}/7 обнови",
+            "estate_progress" to "Нашиот имот · {count}/20 обнови",
             "view_estate" to "Погледни го имотот",
             "language_audio" to "Јазик и звук",
             "sfx" to "Звучни ефекти",
@@ -128,7 +128,7 @@ object GameText {
         ),
         "tr" to mapOf(
             "home_tagline" to "İnşa et · Oyna · Süsle\nHayalindeki bahçe",
-            "estate_progress" to "Mülkümüz · {count}/7 onarım",
+            "estate_progress" to "Mülkümüz · {count}/20 onarım",
             "view_estate" to "Mülkü görüntüle",
             "language_audio" to "Dil ve ses",
             "sfx" to "Ses efektleri",
