@@ -70,7 +70,25 @@ object CharacterAnimation {
  }
  fun frame(state:State,elapsed:Long,arrivalAtlas:Boolean):Int {
   val tick=(elapsed.coerceAtLeast(0)/frameDuration(state)).toInt()
-  val poses=if(arrivalAtlas)when(state){State.IDLE->intArrayOf(0);State.WALK->intArrayOf(1,0,2,0);State.TALK->intArrayOf(3,0);State.THINK->intArrayOf(4);State.WORK,State.COLLECT->intArrayOf(5);State.CARRY->intArrayOf(6);State.HAPPY->intArrayOf(7,0,7)}else when(state){State.IDLE->intArrayOf(0);State.WALK->intArrayOf(1,0,2,0);State.TALK->intArrayOf(4,0);State.THINK->intArrayOf(3);State.WORK,State.COLLECT->intArrayOf(5,6);State.CARRY->intArrayOf(6);State.HAPPY->intArrayOf(7,0,7)}
+  val poses=if(arrivalAtlas)when(state){
+   State.IDLE->intArrayOf(0)
+   State.WALK->intArrayOf(1,0,2,0)
+   State.TALK->intArrayOf(3,0)
+   State.THINK->intArrayOf(4)
+   State.WORK->intArrayOf(5,0,5)
+   State.COLLECT->intArrayOf(5,6,5)
+   State.CARRY->intArrayOf(6)
+   State.HAPPY->intArrayOf(7,0,7)
+  }else when(state){
+   State.IDLE->intArrayOf(0)
+   State.WALK->intArrayOf(1,0,2,0)
+   State.TALK->intArrayOf(4,0)
+   State.THINK->intArrayOf(3)
+   State.WORK->intArrayOf(5,6,5)
+   State.COLLECT->intArrayOf(5,6)
+   State.CARRY->intArrayOf(6)
+   State.HAPPY->intArrayOf(7,0,7)
+  }
   return poses[tick%poses.size]
  }
 }
