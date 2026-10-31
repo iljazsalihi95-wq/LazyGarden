@@ -24,11 +24,11 @@ class InventoryScreen(context:Context,save:GardenSave,category:Int,close:()->Uni
    val coinReady=save.coins>=120;val starReady=save.tasks==0||save.stars>=1
    val ready=materialReady&&coinReady&&starReady
    val summary=LinearLayout(context).apply{orientation=VERTICAL;setPadding(dp(12),dp(8),dp(12),dp(8));background=statusBg(ready)}
-   summary.addView(text(if(ready)"✓ Restaurimi është gati" else "⚠ Mungojnë për restaurimin",15f))
+   summary.addView(text(FountainText.get(save.language,if(ready)"restoration_ready" else "restoration_missing"),15f))
    summary.addView(text("${if(coinReady)"✓" else "✕"} ${save.coins}/120 Game Coins   •   ${if(starReady)"✓" else "✕"} ${if(save.tasks==0)"0" else "${save.stars}/1"} ★",12f).apply{setTextColor(if(coinReady&&starReady)0xff35653b.toInt() else 0xff8a3f2c.toInt())})
    val rows=needs.joinToString("   •   "){n->val have=save.materialCount(n.material);val mark=if(have>=n.count)"✓" else "−${n.count-have}";"$mark ${FountainText.get(save.language,n.material.name)} $have/${n.count}"}
    summary.addView(text(rows,12f).apply{setTextColor(if(materialReady)0xff35653b.toInt() else 0xff8a3f2c.toInt())})
-   if(!ready)summary.addView(text("▶ Luaj Match-3 për materialet që mungojnë",11f).apply{setTextColor(0xff8a3f2c.toInt())})
+   if(!ready)summary.addView(text(FountainText.get(save.language,"play_for_materials"),11f).apply{setTextColor(0xff8a3f2c.toInt())})
    addView(summary,LayoutParams(-1,dp(if(ready)90 else 108)).apply{setMargins(dp(4),0,dp(4),dp(6))})
   }
 
