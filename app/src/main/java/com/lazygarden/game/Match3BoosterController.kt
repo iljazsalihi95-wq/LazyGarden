@@ -28,6 +28,8 @@ class Match3BoosterController(
         val status: Status,
         val waves: List<Match3Engine.Wave> = emptyList(),
         val stock: Int = 0,
+        val stockBefore: Int = stock,
+        val consumed: Int = 0,
         val coins: Int = 0,
         val affectedTiles: Int = 0,
         val cascadeCount: Int = 0,
@@ -39,9 +41,13 @@ class Match3BoosterController(
 
     fun use(kind: Match3Engine.Booster, at: Int): Result {
         if (!gameplayEnabled) return snapshot(Status.LOCKED_REPLAY, kind)
-        if (save.boosterCount(kind) <= 0) return snapshot(Status.NEEDS_STOCK, kind)
+        val stockBefore = save.boosterCount(kind)
+        if (stockBefore <= 0) return snapshot(Status.NEEDS_STOCK, kind)
         val waves = save.useBooster(board, kind, at)
         if (waves.isEmpty()) return snapshot(Status.INVALID_TARGET, kind)
+
+        val stockAfter = save.boosterCount(kind)
+        val consumed = (stockBefore - stockAfter).coerceAtLeast(0)
 
         // Normal boosters expose hit cells directly. SHUFFLE intentionally has
         // no cleared cells, so measure the actual before/after board changes to
@@ -64,7 +70,9 @@ class Match3BoosterController(
         return Result(
             status = Status.USED,
             waves = waves,
-            stock = save.boosterCount(kind),
+            stock = stockAfter,
+            stockBefore = stockBefore,
+            consumed = consumed,
             coins = save.coins,
             affectedTiles = affected,
             cascadeCount = cascades,
@@ -105,6 +113,8 @@ class Match3BoosterController(
         return Feedback(impact, intensity, bursts, cue)
     }
 
-    private fun snapshot(status: Status, kind: Match3Engine.Booster) =
-        Result(status, stock = save.boosterCount(kind), coins = save.coins)
+    private fun snapshot(status: Status, kind: Match3Engine.Booster): Result {
+        val stock = save.boosterCount(kind)
+        return Result(status, stock = stock, stockBefore = stock, consumed = 0, coins = save.coins)
+    }
 }
