@@ -11,7 +11,7 @@ import android.widget.*
 import kotlin.math.sin
 
 /** Story scene layered over the real estate: characters enter, settle and speak instead of showing a static portrait. */
-class StoryScreen(context:Context,save:GardenSave,chapter:Int,line:Int,replay:Boolean,next:()->Unit,later:()->Unit):FrameLayout(context),SceneLifecycle{
+class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:Int,private val replay:Boolean,next:()->Unit,later:()->Unit):FrameLayout(context),SceneLifecycle{
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
  private fun text(value:String,size:Float,color:Int=0xff5d3c24.toInt())=TextView(context).apply{text=value;textSize=size;setTextColor(color);typeface=Typeface.DEFAULT_BOLD}
  private fun button(value:String,primary:Boolean,action:()->Unit)=GameButton(context,primary).apply{
