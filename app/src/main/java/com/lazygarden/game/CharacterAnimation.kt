@@ -29,23 +29,41 @@ object CharacterAnimation {
  fun poseMotion(state:State,elapsed:Long):PoseMotion {
   val seconds=elapsed.coerceAtLeast(0L)/1000f
   fun wave(hz:Float)=sin((seconds*hz*2f*PI).toFloat())
+  // Fade secondary motion in after a state change so dialogue/work poses do not visually snap.
+  val settle=ease((elapsed.coerceAtLeast(0L)/260f).coerceIn(0f,1f))
+  fun scaled(value:Float)=value*settle
   return when(state){
-   State.IDLE->PoseMotion(scaleX=1f+wave(.42f)*.006f,scaleY=1f-wave(.42f)*.004f,pulse=(wave(.42f)+1f)*.5f)
-   State.WALK->PoseMotion(scaleX=1f+abs(wave(2.7f))*.012f,scaleY=1f-abs(wave(2.7f))*.010f,rotation=wave(2.7f)*.7f)
-   State.TALK->PoseMotion(rotation=wave(1.8f)*.9f,scaleX=1f+abs(wave(.9f))*.004f,pulse=(wave(1.8f)+1f)*.5f)
-   State.THINK->PoseMotion(rotation=-1.2f+wave(.55f)*.35f,scaleY=.995f,pulse=(wave(.55f)+1f)*.25f)
+   State.IDLE->{
+    val breath=wave(.42f)
+    PoseMotion(scaleX=1f+scaled(breath*.006f),scaleY=1f-scaled(breath*.004f),pulse=(breath+1f)*.5f*settle)
+   }
+   State.WALK->{
+    val stride=wave(2.7f);val plant=abs(stride)
+    PoseMotion(scaleX=1f+scaled(plant*.012f),scaleY=1f-scaled(plant*.010f),rotation=scaled(stride*.7f),pulse=plant*settle)
+   }
+   State.TALK->{
+    val gesture=wave(1.8f);val emphasis=abs(wave(.9f))
+    PoseMotion(rotation=scaled(gesture*.9f),scaleX=1f+scaled(emphasis*.006f),scaleY=1f-scaled(emphasis*.003f),lift=scaled(-emphasis*.0015f),pulse=(gesture+1f)*.5f*settle)
+   }
+   State.THINK->{
+    val ponder=wave(.55f)
+    PoseMotion(rotation=scaled(-1.2f+ponder*.35f),scaleX=1f-scaled(.003f),scaleY=1f-scaled(.005f),pulse=(ponder+1f)*.25f*settle)
+   }
    State.WORK-> {
-    val stroke=wave(2.2f);val effort=abs(wave(1.1f))
-    PoseMotion(rotation=stroke*1.8f,scaleX=1f+effort*.010f,scaleY=1f-effort*.006f,lift=-effort*.002f,pulse=(stroke+1f)*.5f)
+    val stroke=wave(2.2f);val effort=abs(wave(1.1f));val impact=abs(stroke)
+    PoseMotion(rotation=scaled(stroke*1.8f),scaleX=1f+scaled(effort*.010f),scaleY=1f-scaled(effort*.006f),lift=scaled(-effort*.002f),pulse=impact*settle)
    }
    State.COLLECT-> {
-    val scoop=abs(wave(1.9f))
-    PoseMotion(scaleX=1f+scoop*.018f,scaleY=1f-scoop*.012f,lift=-scoop*.004f,rotation=wave(.95f)*.55f,pulse=scoop)
+    val scoop=abs(wave(1.9f));val reach=wave(.95f)
+    PoseMotion(scaleX=1f+scaled(scoop*.018f),scaleY=1f-scaled(scoop*.012f),lift=scaled(-scoop*.004f),rotation=scaled(reach*.55f),pulse=scoop*settle)
    }
-   State.CARRY->PoseMotion(rotation=wave(1.15f)*.45f,scaleX=1f+abs(wave(1.15f))*.004f,scaleY=.992f)
+   State.CARRY->{
+    val weight=wave(1.15f);val brace=abs(weight)
+    PoseMotion(rotation=scaled(weight*.45f),scaleX=1f+scaled(brace*.005f),scaleY=1f-scaled(.008f+brace*.002f),lift=scaled(-.0015f),pulse=brace*.35f*settle)
+   }
    State.HAPPY-> {
     val cheer=abs(wave(2.1f));val sway=wave(1.05f)
-    PoseMotion(scaleX=1f+cheer*.025f,scaleY=1f+cheer*.025f,rotation=sway*.8f,lift=-cheer*.006f,pulse=(wave(2.1f)+1f)*.5f)
+    PoseMotion(scaleX=1f+scaled(cheer*.025f),scaleY=1f+scaled(cheer*.025f),rotation=scaled(sway*.8f),lift=scaled(-cheer*.006f),pulse=(wave(2.1f)+1f)*.5f*settle)
    }
   }
  }
