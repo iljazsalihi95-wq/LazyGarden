@@ -1,7 +1,9 @@
 package com.lazygarden.game
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
 import android.view.View
+import kotlin.math.*
 
 /** Restoration reward HUD: every required restoration material plus live board objectives. */
 class MaterialObjectiveHud:View{
@@ -11,6 +13,8 @@ class MaterialObjectiveHud:View{
  private var lastLabel:String?=null
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val art:MaterialArt
+ private var shimmer=0f
+ private var ambient:ValueAnimator?=null
  constructor(context:Context,save:GardenSave,level:Int):super(context){this.save=save;this.level=level;art=MaterialArt(context);contentDescription=label();lastLabel=contentDescription?.toString()}
  constructor(context:Context,save:GardenSave,board:Match3Engine):super(context){this.save=save;this.level=board.level;this.liveBoard=board;art=MaterialArt(context);contentDescription=label();lastLabel=contentDescription?.toString()}
  private fun board():Match3Engine?{
@@ -68,13 +72,25 @@ class MaterialObjectiveHud:View{
   if(lastLabel!=null&&lastLabel!=next&&isAttachedToWindow){animate().cancel();scaleX=.97f;scaleY=.97f;alpha=.82f;animate().scaleX(1.04f).scaleY(1.04f).alpha(1f).setDuration(120).withEndAction{animate().scaleX(1f).scaleY(1f).setDuration(130).start()}.start()}
   lastLabel=next;invalidate()
  }
+ override fun onAttachedToWindow(){
+  super.onAttachedToWindow()
+  ambient?.cancel()
+  ambient=ValueAnimator.ofFloat(0f,1f).apply{duration=2200;repeatCount=ValueAnimator.INFINITE;addUpdateListener{shimmer=it.animatedValue as Float;invalidate()};start()}
+ }
+ override fun onDetachedFromWindow(){ambient?.removeAllUpdateListeners();ambient?.cancel();ambient=null;super.onDetachedFromWindow()}
  private fun fitText(text:String,maxWidth:Float,d:Float):Float{var size=10.5f*d;p.textSize=size;while(size>7f*d&&p.measureText(text)>maxWidth){size-=.4f*d;p.textSize=size};return size}
  override fun onDraw(c:Canvas){
   super.onDraw(c);val d=resources.displayMetrics.density
   val bounds=RectF(8*d,2*d,width-8*d,height-2*d);GameSkin.nine(c,GameSkin.bitmap(context,R.drawable.hd_hud),bounds,12*d,p)
+  val fraction=materialFraction()
+  // Premium moving highlight keeps the objective readable but visually alive.
+  val shineX=bounds.left+(bounds.width()+60*d)*shimmer-30*d
+  p.shader=LinearGradient(shineX-26*d,0f,shineX+26*d,0f,intArrayOf(0x00ffffff,0x35ffffff,0x00ffffff),null,Shader.TileMode.CLAMP)
+  c.drawRoundRect(bounds,12*d,12*d,p);p.shader=null
   val pair=reward();pair?.let{
-   p.style=Paint.Style.FILL;p.color=0x22ffffff;c.drawCircle(31*d,height*.45f,20*d,p)
-   p.style=Paint.Style.STROKE;p.strokeWidth=2*d;p.color=0x55ffc84a;c.drawCircle(31*d,height*.45f,22*d,p);p.style=Paint.Style.FILL
+   val pulse=1f+.06f*sin(shimmer*PI.toFloat()*2)
+   p.style=Paint.Style.FILL;p.color=0x22ffffff;c.drawCircle(31*d,height*.45f,20*d*pulse,p)
+   p.style=Paint.Style.STROKE;p.strokeWidth=2*d;p.color=if(fraction>=1f)0x884f9a58.toInt() else 0x77ffc84a;c.drawCircle(31*d,height*.45f,22*d*pulse,p);p.style=Paint.Style.FILL
    art.draw(c,p,it.first,RectF(14*d,3*d,48*d,height-9*d));p.color=0xffffc84a.toInt();c.drawCircle(46*d,12*d,8*d,p);p.color=0xff6b451d.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textAlign=Paint.Align.CENTER;p.textSize=8.5f*d;c.drawText("+${it.second}",46*d,15*d,p)
   }
   val text=label();contentDescription=text;val left=if(pair==null)18*d else 56*d
@@ -82,8 +98,13 @@ class MaterialObjectiveHud:View{
   val barLeft=left;val barRight=width-16*d;val barTop=height-10*d;val barBottom=height-6*d
   if(barRight>barLeft){
    p.style=Paint.Style.FILL;p.color=0x22654323;c.drawRoundRect(RectF(barLeft,barTop,barRight,barBottom),2*d,2*d,p)
-   val fraction=materialFraction();val fillRight=barLeft+(barRight-barLeft)*fraction
-   if(fillRight>barLeft){p.color=if(fraction>=1f)0xff4f9a58.toInt() else 0xffffc84a.toInt();c.drawRoundRect(RectF(barLeft,barTop,fillRight,barBottom),2*d,2*d,p)}
+   val fillRight=barLeft+(barRight-barLeft)*fraction
+   if(fillRight>barLeft){
+    p.shader=LinearGradient(barLeft,barTop,fillRight,barBottom,intArrayOf(if(fraction>=1f)0xff4f9a58.toInt() else 0xffffc84a.toInt(),if(fraction>=1f)0xff79c982.toInt() else 0xffffe58a.toInt()),null,Shader.TileMode.CLAMP)
+    c.drawRoundRect(RectF(barLeft,barTop,fillRight,barBottom),2*d,2*d,p);p.shader=null
+    val sparkX=barLeft+(fillRight-barLeft)*(.15f+.85f*shimmer)
+    p.color=0xddffffff.toInt();c.drawCircle(sparkX,(barTop+barBottom)/2,1.7f*d,p)
+   }
   }
  }
 }
