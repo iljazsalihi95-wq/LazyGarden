@@ -2,6 +2,8 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
 
 android {
     signingConfigs.getByName("debug") {
+        // Keep one stable signing identity for every installable CI build so Android can
+        // install a new APK as an UPDATE instead of forcing an uninstall/data reset.
         storeFile = rootProject.file("ci/lazygarden-debug.keystore")
         storePassword = "android"
         keyAlias = "androiddebugkey"
@@ -24,7 +26,16 @@ android {
     compileSdk = 35
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
-    defaultConfig { testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"; applicationId = "com.lazygarden.game"; minSdk = 24; targetSdk = 35; versionCode = 13; versionName = "0.11.1" }
+    defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        applicationId = "com.lazygarden.game"
+        minSdk = 24
+        targetSdk = 35
+        // Every distributed build must move forward. Together with the stable package
+        // and keystore above this preserves garden_progress during normal APK updates.
+        versionCode = 14
+        versionName = "0.12.0"
+    }
 }
 
 dependencies {
