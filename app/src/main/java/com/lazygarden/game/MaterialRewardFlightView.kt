@@ -8,16 +8,17 @@ import kotlin.math.*
 /** Earned material grows out of the result, then flies into its inventory counter. */
 class MaterialRewardFlightView(context:Context,private val material:Material,private val amount:Int,private val arrived:()->Unit):View(context),SceneLifecycle{
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
- private val art=MaterialArt(context);private var t=0f;private var animator:ValueAnimator?=null
- private var paused=false
+ private val art=MaterialArt(context);private val sfx=GardenSfx(context);private val save=GardenSave(context)
+ private var t=0f;private var animator:ValueAnimator?=null
+ private var paused=false;private var arrivalCue=false
  internal val animationFraction get()=t
- override fun pauseScene(){paused=true;animator?.pause()}
- override fun resumeScene(){paused=false;if(windowVisibility==VISIBLE)animator?.resume()}
- override fun onWindowVisibilityChanged(visibility:Int){super.onWindowVisibilityChanged(visibility);if(visibility==VISIBLE&&!paused)animator?.resume() else animator?.pause()}
- override fun onAttachedToWindow(){super.onAttachedToWindow();animator=ValueAnimator.ofFloat(0f,1f).apply{duration=1750;startDelay=120
-  addUpdateListener{t=it.animatedValue as Float;invalidate()}
+ override fun pauseScene(){paused=true;animator?.pause();sfx.pause()}
+ override fun resumeScene(){paused=false;if(windowVisibility==VISIBLE){animator?.resume();sfx.resume()}}
+ override fun onWindowVisibilityChanged(visibility:Int){super.onWindowVisibilityChanged(visibility);if(visibility==VISIBLE&&!paused){animator?.resume();sfx.resume()} else {animator?.pause();sfx.pause()}}
+ override fun onAttachedToWindow(){super.onAttachedToWindow();if(save.sfxEnabled)sfx.play("reward");animator=ValueAnimator.ofFloat(0f,1f).apply{duration=1750;startDelay=120
+  addUpdateListener{t=it.animatedValue as Float;if(!arrivalCue&&t>=.86f){arrivalCue=true;if(save.sfxEnabled)sfx.play("bloom")};invalidate()}
   addListener(object:android.animation.AnimatorListenerAdapter(){override fun onAnimationEnd(a:android.animation.Animator){if(isAttachedToWindow){arrived();(parent as? android.view.ViewGroup)?.removeView(this@MaterialRewardFlightView)}}});start();if(paused||windowVisibility!=VISIBLE)pause()}}
- override fun onDetachedFromWindow(){animator?.removeAllListeners();animator?.removeAllUpdateListeners();animator?.cancel();super.onDetachedFromWindow()}
+ override fun onDetachedFromWindow(){animator?.removeAllListeners();animator?.removeAllUpdateListeners();animator?.cancel();sfx.release();super.onDetachedFromWindow()}
  override fun onDraw(c:Canvas){if(t<=0||t>=1)return
   val d=resources.displayMetrics.density
   val launch=(t/.20f).coerceIn(0f,1f)
