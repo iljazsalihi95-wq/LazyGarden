@@ -36,6 +36,13 @@ class MaterialObjectiveHud:View{
    "${if(done)"✓" else "•"}${FountainText.get(save.language,need.material.name)} $owned/${need.count}"
   }
  }
+ private fun materialFraction():Float{
+  val needs=save.restorationNeeds()
+  if(needs.isEmpty())return 1f
+  val required=needs.sumOf{it.count}.coerceAtLeast(1)
+  val owned=needs.sumOf{minOf(save.materialCount(it.material),it.count)}
+  return (owned.toFloat()/required).coerceIn(0f,1f)
+ }
  private fun goal(done:Boolean,icon:String,current:Int,target:Int)="${if(done)"✓" else icon} ${current.coerceAtMost(target)}/$target"
  private fun liveGoals(b:Match3Engine?):String{
   if(b==null)return ""
@@ -62,8 +69,18 @@ class MaterialObjectiveHud:View{
  override fun onDraw(c:Canvas){
   super.onDraw(c);val d=resources.displayMetrics.density
   val bounds=RectF(8*d,2*d,width-8*d,height-2*d);GameSkin.nine(c,GameSkin.bitmap(context,R.drawable.hd_hud),bounds,12*d,p)
-  val pair=reward();pair?.let{p.style=Paint.Style.FILL;p.color=0x22ffffff;c.drawCircle(31*d,height*.5f,20*d,p);art.draw(c,p,it.first,RectF(14*d,3*d,48*d,height-3*d));p.color=0xffffc84a.toInt();c.drawCircle(46*d,12*d,8*d,p);p.color=0xff6b451d.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textAlign=Paint.Align.CENTER;p.textSize=8.5f*d;c.drawText("+${it.second}",46*d,15*d,p)}
+  val pair=reward();pair?.let{
+   p.style=Paint.Style.FILL;p.color=0x22ffffff;c.drawCircle(31*d,height*.45f,20*d,p)
+   p.style=Paint.Style.STROKE;p.strokeWidth=2*d;p.color=0x55ffc84a;c.drawCircle(31*d,height*.45f,22*d,p);p.style=Paint.Style.FILL
+   art.draw(c,p,it.first,RectF(14*d,3*d,48*d,height-9*d));p.color=0xffffc84a.toInt();c.drawCircle(46*d,12*d,8*d,p);p.color=0xff6b451d.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textAlign=Paint.Align.CENTER;p.textSize=8.5f*d;c.drawText("+${it.second}",46*d,15*d,p)
+  }
   val text=label();contentDescription=text;val left=if(pair==null)18*d else 56*d
-  p.color=if(save.missingRestorationMaterials().isEmpty())0xff2f7a42.toInt() else 0xff446538.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textAlign=Paint.Align.LEFT;fitText(text,(width-left-14*d).coerceAtLeast(20*d),d);c.drawText(text,left,height*.5f-(p.ascent()+p.descent())*.5f,p)
+  p.color=if(save.missingRestorationMaterials().isEmpty())0xff2f7a42.toInt() else 0xff446538.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textAlign=Paint.Align.LEFT;fitText(text,(width-left-14*d).coerceAtLeast(20*d),d);c.drawText(text,left,height*.43f-(p.ascent()+p.descent())*.5f,p)
+  val barLeft=left;val barRight=width-16*d;val barTop=height-10*d;val barBottom=height-6*d
+  if(barRight>barLeft){
+   p.style=Paint.Style.FILL;p.color=0x22654323;c.drawRoundRect(RectF(barLeft,barTop,barRight,barBottom),2*d,2*d,p)
+   val fraction=materialFraction();val fillRight=barLeft+(barRight-barLeft)*fraction
+   if(fillRight>barLeft){p.color=if(fraction>=1f)0xff4f9a58.toInt() else 0xffffc84a.toInt();c.drawRoundRect(RectF(barLeft,barTop,fillRight,barBottom),2*d,2*d,p)}
+  }
  }
 }
