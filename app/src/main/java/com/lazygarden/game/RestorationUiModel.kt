@@ -13,6 +13,15 @@ object RestorationUiModel {
         val state: State
     )
 
+    data class Progress(
+        val completed: Int,
+        val total: Int,
+        val remaining: Int,
+        val percent: Int,
+        val current: Chapter?,
+        val completedChapter: Chapter?
+    )
+
     val total: Int get() = RestorationCatalog.entries.size
 
     fun chapters(completed: Int, language: String): List<Chapter> {
@@ -40,6 +49,20 @@ object RestorationUiModel {
 
     fun archive(completed: Int, language: String): List<Chapter> =
         chapters(completed, language).filter { it.state == State.DONE }
+
+    /** Canonical snapshot for premium HUD/profile/archive screens. */
+    fun snapshot(completed: Int, language: String): Progress {
+        val safeCompleted = completed.coerceIn(0, total)
+        val list = chapters(safeCompleted, language)
+        return Progress(
+            completed = safeCompleted,
+            total = total,
+            remaining = total - safeCompleted,
+            percent = if (total == 0) 100 else (safeCompleted * 100 / total),
+            current = list.firstOrNull { it.state == State.CURRENT },
+            completedChapter = list.lastOrNull { it.state == State.DONE }
+        )
+    }
 
     fun progress(completed: Int): String = "${completed.coerceIn(0, total)}/$total"
 
