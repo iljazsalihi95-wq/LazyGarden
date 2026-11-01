@@ -26,10 +26,17 @@ class InventoryScreen(context:Context,save:GardenSave,category:Int,close:()->Uni
    val summary=LinearLayout(context).apply{orientation=VERTICAL;setPadding(dp(12),dp(8),dp(12),dp(8));background=statusBg(ready)}
    summary.addView(text(FountainText.get(save.language,if(ready)"restoration_ready" else "restoration_missing"),15f))
    summary.addView(text("${if(coinReady)"✓" else "✕"} ${save.coins}/120 Game Coins   •   ${if(starReady)"✓" else "✕"} ${if(save.tasks==0)"0" else "${save.stars}/1"} ★",12f).apply{setTextColor(if(coinReady&&starReady)0xff35653b.toInt() else 0xff8a3f2c.toInt())})
-   val rows=needs.joinToString("   •   "){n->val have=save.materialCount(n.material);val mark=if(have>=n.count)"✓" else "−${n.count-have}";"$mark ${FountainText.get(save.language,n.material.name)} $have/${n.count}"}
-   summary.addView(text(rows,12f).apply{setTextColor(if(materialReady)0xff35653b.toInt() else 0xff8a3f2c.toInt())})
+   needs.forEach{n->
+    val have=save.materialCount(n.material);val left=(n.count-have).coerceAtLeast(0);val ok=left==0
+    val row=LinearLayout(context).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(2),0,dp(2))}
+    val icon=object:android.view.View(context){private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG);private val art=MaterialArt(context);override fun onDraw(c:Canvas){art.draw(c,p,n.material,RectF(dp(2).toFloat(),dp(2).toFloat(),width-dp(2).toFloat(),height-dp(2).toFloat()))}}
+    row.addView(icon,LayoutParams(dp(30),dp(30)))
+    row.addView(text("${if(ok)"✓" else "•"} ${FountainText.get(save.language,n.material.name)}",12f).apply{gravity=Gravity.START or Gravity.CENTER_VERTICAL;setTextColor(if(ok)0xff35653b.toInt() else 0xff6f482b.toInt())},LayoutParams(0,dp(30),1f))
+    row.addView(text("$have / ${n.count}${if(ok)"" else "   −$left"}",12f).apply{gravity=Gravity.END or Gravity.CENTER_VERTICAL;setTextColor(if(ok)0xff35653b.toInt() else 0xffa34831.toInt())},LayoutParams(dp(96),dp(30)))
+    summary.addView(row)
+   }
    if(!ready)summary.addView(text(FountainText.get(save.language,"play_for_materials"),11f).apply{setTextColor(0xff8a3f2c.toInt())})
-   addView(summary,LayoutParams(-1,dp(if(ready)90 else 108)).apply{setMargins(dp(4),0,dp(4),dp(6))})
+   addView(summary,LayoutParams(-1,-2).apply{setMargins(dp(4),0,dp(4),dp(6))})
   }
 
   val tabs=LinearLayout(context)
