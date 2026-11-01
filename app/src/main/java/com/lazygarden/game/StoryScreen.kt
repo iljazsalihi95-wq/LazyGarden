@@ -36,7 +36,8 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
   column.addView(header,LinearLayout.LayoutParams(-1,dp(76)))
 
   val stage=FrameLayout(context)
-  val portrait=ImageView(context).apply{setImageResource(entry.character.portrait);scaleType=ImageView.ScaleType.FIT_CENTER;contentDescription="${entry.character.displayName}";alpha=0f;translationX=if(line%2==0)-dp(90).toFloat() else dp(90).toFloat();scaleX=.9f;scaleY=.9f}
+  // Stable accessibility contract is intentionally preserved while visuals animate independently.
+  val portrait=ImageView(context).apply{setImageResource(entry.character.portrait);scaleType=ImageView.ScaleType.FIT_CENTER;contentDescription="Personazhi ${entry.character.displayName}";alpha=0f;translationX=if(line%2==0)-dp(90).toFloat() else dp(90).toFloat();scaleX=.9f;scaleY=.9f}
   stage.addView(portrait,FrameLayout.LayoutParams(-1,-1,Gravity.CENTER))
   if(phoneLine){
    val phone=text("☎",32f,0xffffe5a1.toInt()).apply{gravity=Gravity.CENTER;alpha=0f;contentDescription="Phone call"}
