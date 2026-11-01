@@ -58,7 +58,7 @@ class RewardFlightView(context:Context,private val coins:Boolean=true,private va
    val cy=height*(.20f+(.025f*(i%3)))
    val x=(1-u).pow(2)*sx+2*(1-u)*u*cx+u*u*ex
    val y=(1-u).pow(2)*sy+2*(1-u)*u*cy+u*u*ey
-   val pulse=1f+.18f*sin(u*Math.PI).toFloat();val r=d*(if(isStar)17 else 8.5f)*pulse
+   val pulse=1f+.18f*sin(u*Math.PI).toFloat();val r=d*(if(isStar)17f else 8.5f)*pulse
 
    // Motion trail: three fading points communicate direction and speed.
    repeat(3){trail->
