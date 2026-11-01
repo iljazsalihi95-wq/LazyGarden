@@ -23,6 +23,8 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
  private var paused=false
  private fun ui(key:String)=GameText.get(save.language,key)
  private fun localized(replayValue:String,sq:String,de:String,it:String,mk:String,tr:String):String=when(save.language){"de"->de;"it"->it;"mk"->mk;"tr"->tr;else->if(replay)replayValue else sq}
+ private fun continueStoryText()=when(save.language){"de"->"Geschichte fortsetzen";"it"->"Continua la storia";"mk"->"Продолжи ја приказната";"tr"->"Hikâyeye devam et";else->"Vazhdo tregimin"}
+ private fun laterText()=when(save.language){"de"->"Später lesen";"it"->"Leggi più tardi";"mk"->"Прочитај подоцна";"tr"->"Daha sonra oku";else->"Lexo më vonë"}
  init {
   val story=GardenStory.chapters[chapter];val entry=story.lines[line]
   val phoneLine=entry.text.lowercase().let{it.contains("thërr")||it.contains("telefon")}
@@ -53,8 +55,8 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
   card.addView(ScrollView(context).apply{addView(body)},LinearLayout.LayoutParams(-1,dp(140)))
   val progress=if(replay)ui("story") else ui("progress_saved")
   card.addView(text("${line+1}/${GardenStory.LINES_PER_CHAPTER} · $progress",12f))
-  card.addView(button("▶ ${ui("continue")}",true,next),LinearLayout.LayoutParams(-1,dp(53)).apply{topMargin=dp(10)})
-  card.addView(button(if(replay)ui("story") else ui("close"),false,later),LinearLayout.LayoutParams(-1,dp(44)).apply{topMargin=dp(7)})
+  card.addView(button(continueStoryText(),true,next),LinearLayout.LayoutParams(-1,dp(53)).apply{topMargin=dp(10)})
+  card.addView(button(if(replay)ui("story") else laterText(),false,later),LinearLayout.LayoutParams(-1,dp(44)).apply{topMargin=dp(7)})
   column.addView(card,LinearLayout.LayoutParams(-1,-2).apply{setMargins(dp(14),0,dp(14),dp(12))})
   addView(column,LayoutParams(-1,-1))
 
