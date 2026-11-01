@@ -50,6 +50,20 @@ object RestorationUiModel {
     fun archive(completed: Int, language: String): List<Chapter> =
         chapters(completed, language).filter { it.state == State.DONE }
 
+    /**
+     * Canonical task-list text for the restoration sheet. Keeping the state marker here
+     * prevents individual screens from re-introducing their own 7-item title arrays.
+     */
+    fun taskList(completed: Int, language: String): String =
+        chapters(completed, language).joinToString("\n\n") { chapter ->
+            val marker = when (chapter.state) {
+                State.DONE -> "✓"
+                State.CURRENT -> "→"
+                State.LOCKED -> "🔒"
+            }
+            "$marker ${chapter.title}"
+        }
+
     /** Canonical snapshot for premium HUD/profile/archive screens. */
     fun snapshot(completed: Int, language: String): Progress {
         val safeCompleted = completed.coerceIn(0, total)
