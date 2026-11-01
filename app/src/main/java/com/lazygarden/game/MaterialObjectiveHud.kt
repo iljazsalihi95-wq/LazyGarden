@@ -31,9 +31,12 @@ class MaterialObjectiveHud:View{
   val needs=save.restorationNeeds()
   if(needs.isEmpty())return "✓ ${GameText.get(save.language,"materials")}"
   return needs.joinToString("  "){need->
-   val owned=save.materialCount(need.material).coerceAtMost(need.count)
-   val done=owned>=need.count
-   "${if(done)"✓" else "•"}${FountainText.get(save.language,need.material.name)} $owned/${need.count}"
+   val rawOwned=save.materialCount(need.material)
+   val owned=rawOwned.coerceAtMost(need.count)
+   val missing=(need.count-owned).coerceAtLeast(0)
+   val done=missing==0
+   val deficit=if(done)"" else " (−$missing)"
+   "${if(done)"✓" else "•"}${FountainText.get(save.language,need.material.name)} $owned/${need.count}$deficit"
   }
  }
  private fun materialFraction():Float{
