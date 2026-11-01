@@ -10,14 +10,11 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.*
 import kotlin.math.sin
 
-/** Story scene layered over the real estate: characters enter, settle and speak instead of showing a static portrait. */
+/** Live story scene over the estate: speaker and conversation partner enter, react and stage phone calls. */
 class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:Int,private val replay:Boolean,next:()->Unit,later:()->Unit):FrameLayout(context),SceneLifecycle{
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
  private fun text(value:String,size:Float,color:Int=0xff5d3c24.toInt())=TextView(context).apply{text=value;textSize=size;setTextColor(color);typeface=Typeface.DEFAULT_BOLD}
- private fun button(value:String,primary:Boolean,action:()->Unit)=GameButton(context,primary).apply{
-  text=value;isAllCaps=false;textSize=if(primary)20f else 14f;setTextColor(Color.WHITE);minHeight=dp(48)
-  setOnClickListener{isEnabled=false;action()}
- }
+ private fun button(value:String,primary:Boolean,action:()->Unit)=GameButton(context,primary).apply{text=value;isAllCaps=false;textSize=if(primary)20f else 14f;setTextColor(Color.WHITE);minHeight=dp(48);setOnClickListener{isEnabled=false;action()}}
  private val sfx=GardenSfx(context)
  private var motion:ValueAnimator?=null
  private var paused=false
@@ -27,10 +24,14 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
  private fun laterText()=when(save.language){"de"->"Später lesen";"it"->"Leggi più tardi";"mk"->"Прочитај подоцна";"tr"->"Daha sonra oku";else->"Lexo më vonë"}
  init {
   val story=GardenStory.chapters[chapter];val entry=story.lines[line]
-  val phoneLine=entry.text.lowercase().let{it.contains("thërr")||it.contains("telefon")}
+  val lower=entry.text.lowercase();val phoneLine=lower.contains("thërr")||lower.contains("telefon")||lower.contains("po i thërr")
+  val partner=when{
+   line>0->story.lines[line-1].character
+   story.lines.size>1->story.lines[1].character
+   else->entry.character
+  }
   val world=GardenWorldView(context,save.tasks,decorations=save.decorations)
-  addView(world,LayoutParams(-1,-1))
-  addView(View(context).apply{setBackgroundColor(0x55304a36)},LayoutParams(-1,-1))
+  addView(world,LayoutParams(-1,-1));addView(View(context).apply{setBackgroundColor(0x55304a36)},LayoutParams(-1,-1))
 
   val column=LinearLayout(context).apply{orientation=LinearLayout.VERTICAL}
   val replayWord=localized("Rilexim","Kapitulli","Kapitel","Capitolo","Поглавје","Bölüm")
@@ -38,12 +39,13 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
   column.addView(header,LinearLayout.LayoutParams(-1,dp(76)))
 
   val stage=FrameLayout(context)
-  // Stable accessibility contract is intentionally preserved while visuals animate independently.
-  val portrait=ImageView(context).apply{setImageResource(entry.character.portrait);scaleType=ImageView.ScaleType.FIT_CENTER;contentDescription="Personazhi ${entry.character.displayName}";alpha=0f;translationX=if(line%2==0)-dp(90).toFloat() else dp(90).toFloat();scaleX=.9f;scaleY=.9f}
-  stage.addView(portrait,FrameLayout.LayoutParams(-1,-1,Gravity.CENTER))
+  val partnerView=ImageView(context).apply{setImageResource(partner.portrait);scaleType=ImageView.ScaleType.FIT_CENTER;contentDescription="${partner.displayName} · conversation partner";alpha=0f;translationX=dp(120).toFloat();scaleX=.72f;scaleY=.72f}
+  stage.addView(partnerView,FrameLayout.LayoutParams(dp(190),-1,Gravity.END or Gravity.CENTER_VERTICAL).apply{marginEnd=dp(6)})
+  val portrait=ImageView(context).apply{setImageResource(entry.character.portrait);scaleType=ImageView.ScaleType.FIT_CENTER;contentDescription="Personazhi ${entry.character.displayName}";alpha=0f;translationX=-dp(100).toFloat();scaleX=.88f;scaleY=.88f}
+  stage.addView(portrait,FrameLayout.LayoutParams(dp(230),-1,Gravity.START or Gravity.CENTER_VERTICAL).apply{marginStart=dp(8)})
   if(phoneLine){
-   val phone=text("☎",32f,0xffffe5a1.toInt()).apply{gravity=Gravity.CENTER;alpha=0f;contentDescription="Phone call"}
-   stage.addView(phone,FrameLayout.LayoutParams(dp(56),dp(56),Gravity.END or Gravity.CENTER_VERTICAL).apply{marginEnd=dp(24)})
+   val phone=text("☎",34f,0xffffe5a1.toInt()).apply{gravity=Gravity.CENTER;alpha=0f;contentDescription="Phone call"}
+   stage.addView(phone,FrameLayout.LayoutParams(dp(60),dp(60),Gravity.CENTER))
    phone.animate().alpha(1f).rotationBy(12f).setStartDelay(300).setDuration(220).withEndAction{phone.animate().rotationBy(-24f).setDuration(180).withEndAction{phone.animate().rotationBy(12f).setDuration(180).start()}.start()}.start()
    if(save.sfxEnabled)postDelayed({if(isAttachedToWindow&&!paused)sfx.play("phone")},260)
   }
@@ -57,12 +59,12 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
   card.addView(text("${line+1}/${GardenStory.LINES_PER_CHAPTER} · $progress",12f))
   card.addView(button(continueStoryText(),true,next),LinearLayout.LayoutParams(-1,dp(53)).apply{topMargin=dp(10)})
   card.addView(button(if(replay)ui("story") else laterText(),false,later),LinearLayout.LayoutParams(-1,dp(44)).apply{topMargin=dp(7)})
-  column.addView(card,LinearLayout.LayoutParams(-1,-2).apply{setMargins(dp(14),0,dp(14),dp(12))})
-  addView(column,LayoutParams(-1,-1))
+  column.addView(card,LinearLayout.LayoutParams(-1,-2).apply{setMargins(dp(14),0,dp(14),dp(12))});addView(column,LayoutParams(-1,-1))
 
   portrait.animate().alpha(1f).translationX(0f).scaleX(1f).scaleY(1f).setDuration(520).setInterpolator(AccelerateDecelerateInterpolator()).start()
+  partnerView.animate().alpha(.82f).translationX(0f).scaleX(.78f).scaleY(.78f).setStartDelay(140).setDuration(600).setInterpolator(AccelerateDecelerateInterpolator()).start()
   card.animate().alpha(1f).translationY(0f).setStartDelay(180).setDuration(360).start()
-  motion=ValueAnimator.ofFloat(0f,1f).apply{duration=2400;repeatCount=ValueAnimator.INFINITE;repeatMode=ValueAnimator.RESTART;addUpdateListener{v->val f=v.animatedValue as Float;portrait.translationY=sin(f*Math.PI*2).toFloat()*dp(3);portrait.rotation=sin(f*Math.PI*2).toFloat()*.45f};start()}
+  motion=ValueAnimator.ofFloat(0f,1f).apply{duration=2400;repeatCount=ValueAnimator.INFINITE;repeatMode=ValueAnimator.RESTART;addUpdateListener{v->val f=v.animatedValue as Float;portrait.translationY=sin(f*Math.PI*2).toFloat()*dp(3);portrait.rotation=sin(f*Math.PI*2).toFloat()*.45f;partnerView.translationY=sin(f*Math.PI*2+1.4).toFloat()*dp(2);partnerView.rotation=sin(f*Math.PI*2+1.4).toFloat()*.3f};start()}
  }
  override fun pauseScene(){paused=true;motion?.pause();sfx.pause()}
  override fun resumeScene(){paused=false;motion?.resume();sfx.resume()}
