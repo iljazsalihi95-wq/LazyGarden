@@ -25,7 +25,7 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
   val lower=entry.text.lowercase();val phoneLine=lower.contains("thërr")||lower.contains("telefon")||lower.contains("anruf")||lower.contains("call")
   val workLine=line>=GardenStory.LINES_PER_CHAPTER-2
   val partner=if(line>0)story.lines[line-1].character else story.lines.getOrElse(1){entry}.character
-  val worker=GardenStory.characters.firstOrNull{it.id==site.worker}
+  val worker=GardenCharacter.entries.firstOrNull{it.name.lowercase()==site.worker.lowercase()}
   val world=GardenWorldView(context,save.tasks,decorations=save.decorations);addView(world,LayoutParams(-1,-1));addView(View(context).apply{setBackgroundColor(0x55304a36)},LayoutParams(-1,-1))
   val column=LinearLayout(context).apply{orientation=LinearLayout.VERTICAL};val replayWord=localized("Rilexim","Kapitulli","Kapitel","Capitolo","Поглавје","Bölüm")
   column.addView(text("${if(replay)replayWord else "$replayWord ${chapter+1}"} · ${story.title}",20f,0xffffe5a1.toInt()).apply{gravity=Gravity.CENTER;setPadding(dp(18),dp(15),dp(18),dp(8));setShadowLayer(3f,0f,2f,Color.BLACK)},LinearLayout.LayoutParams(-1,dp(76)))
