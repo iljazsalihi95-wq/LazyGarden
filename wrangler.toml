@@ -1,0 +1,6 @@
+name = "lazygarden-backend"
+main = "cloudflare-worker/src/index.js"
+compatibility_date = "2026-11-02"
+
+[vars]
+OPENAI_TEXT_MODEL = "gpt-6-luna"
