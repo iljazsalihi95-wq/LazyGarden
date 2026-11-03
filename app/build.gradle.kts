@@ -33,8 +33,11 @@ android {
         targetSdk = 35
         // Every distributed build must move forward. Together with the stable package
         // and keystore above this preserves garden_progress during normal APK updates.
-        versionCode = 14
-        versionName = "0.12.0"
+        // CI run numbers are monotonic, so each GitHub APK updates the previous one.
+        // Local builds use a fixed fallback for development only.
+        val ciRun = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
+        versionCode = if (ciRun != null) 100 + ciRun else 15
+        versionName = if (ciRun != null) "0.13.$ciRun" else "0.13.0-local"
     }
 }
 
