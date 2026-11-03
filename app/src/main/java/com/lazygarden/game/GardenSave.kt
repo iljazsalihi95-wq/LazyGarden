@@ -38,7 +38,7 @@ class GardenSave(ctx:Context) {
   val missing=missingRestorationMaterials(task);if(missing.isEmpty())return null
   val need=missing.minByOrNull{materialCount(it.material).toFloat()/it.count.coerceAtLeast(1)}?:return null
   val left=(need.count-materialCount(need.material)).coerceAtLeast(1)
-  val normal=when{need.count>=10->4;need.count>=6->3;else->2}+if(levelNumber%5==0)1 else 0
+  val normal=when{need.count>=10->6;need.count>=6->5;else->3}+if(levelNumber%5==0)2 else 0
   return need to normal.coerceAtMost(left)
  }
  fun nextRewardedProvider():String {val current=p.getString("rewarded_provider_next","unity")?:"unity";p.edit().putString("rewarded_provider_next",if(current=="unity")"admob" else "unity").commit();return current}
