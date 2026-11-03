@@ -81,7 +81,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   val fx=dst.left+dw*.55f;val fy=dst.top+dh*.515f
   val amount=if(tasks>0)1f else if(constructing)FountainSequence.water(sceneMs) else 0f
   if(amount>0f){val layer=c.saveLayer(null,Paint().apply{alpha=(255*amount).toInt()});WorldRestorationArt.water(c,p,dst,life*12000f);c.restoreToCount(layer)}
-  if(!constructing&&(settings.fountainQuestActive||settings.fountainQuestCompleted)){drawPersistentFamily(c,fx);return}
+  if(!constructing){drawPersistentFamily(c,fx);return}
 
   if(tasks==0 && amount<1f){
    // Debris marks the blocked intake; it clears progressively during the repair.
