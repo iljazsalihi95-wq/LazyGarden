@@ -81,7 +81,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   val fx=dst.left+dw*.55f;val fy=dst.top+dh*.515f
   val amount=if(tasks>0)1f else if(constructing)FountainSequence.water(sceneMs) else 0f
   if(amount>0f){val layer=c.saveLayer(null,Paint().apply{alpha=(255*amount).toInt()});WorldRestorationArt.water(c,p,dst,life*12000f);c.restoreToCount(layer)}
-  if(!constructing){drawPersistentFamily(c,fx);return}
+  if(!constructing){drawPersistentFamily(c,dst,fx);return}
 
   if(tasks==0 && amount<1f){
    // Debris marks the blocked intake; it clears progressively during the repair.
@@ -144,13 +144,13 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
    for(i in 0..5){val t=(life*8+i*.17f)%1f;p.color=0xffffd87a.toInt();p.alpha=((1-t)*230).toInt();c.drawCircle(fx+dw*.12f+sin(i*3f)*dw*.04f*t,by-dh*.05f-t*dh*.035f,dw*.003f,p)};p.alpha=255
   }
  }
- private fun drawPersistentFamily(c:Canvas,fountainX:Float){
+ private fun drawPersistentFamily(c:Canvas,dst:RectF,fountainX:Float){
   data class Resident(val id:String,val x:Float,val y:Float,val child:Boolean=false)
   val cast=listOf(Resident("meli",.32f,.65f),Resident("lazi",.50f,.67f),Resident("rexha",.70f,.64f),Resident("cufi",.42f,.74f,true),Resident("rona",.59f,.74f,true)).filter{it.id in residentCast}
   for(actor in cast.sortedBy{it.y}){
-   val start=CharacterAnimation.Position(width*actor.x,height*actor.y)
+   val start=CharacterAnimation.Position(dst.left+dst.width()*actor.x,dst.top+dst.height()*actor.y)
    val visit=if(actor.child)ResidentAnimation.flowerVisit(life) else 0f
-   val destination=CharacterAnimation.Position(width*(if(actor.id=="cufi").34f else .69f),height*.73f)
+   val destination=CharacterAnimation.Position(dst.left+dst.width()*(if(actor.id=="cufi").25f else .79f),dst.top+dst.height()*.72f)
    val returning=life>=.75f
    val route=if(returning)CharacterAnimation.sampleRoute(destination,start,1-visit,fountainX)else CharacterAnimation.sampleRoute(start,destination,visit,fountainX)
    val position=if(actor.child)route.position else start
@@ -158,7 +158,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
    val state=if(walking)CharacterAnimation.State.WALK else if(actor.child&&visit==1f)CharacterAnimation.State.THINK else CharacterAnimation.State.IDLE
    val player=familyPlayers.getOrPut(actor.id){CharacterAnimation.Player()};player.update(state,ambientMs)
    val frame=player.frame(ambientMs,CharacterSprites.definition(actor.id)!!.arrivalAtlas)
-   val w=width*(if(actor.child).105f else .15f);val h=w*CharacterSprites.aspect(context,actor.id)
+   val w=dst.width()*(if(actor.child).105f else .15f);val h=w*CharacterSprites.aspect(context,actor.id)
    val y=position.y+kotlin.math.sin(player.elapsed(ambientMs)/700f+actor.id.hashCode()%7)*resources.displayMetrics.density
    p.shader=null;p.color=0x44302010;c.drawOval(RectF(position.x-w*.3f,y-w*.06f,position.x+w*.3f,y+w*.025f),p)
    CharacterSprites.draw(context,c,p,actor.id,frame,RectF(position.x-w/2,y-h,position.x+w/2,y),if(walking)route.facingRight else CharacterAnimation.facesRight(position.x,fountainX))
