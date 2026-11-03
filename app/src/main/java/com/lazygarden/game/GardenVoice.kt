@@ -66,11 +66,11 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   prepare(media,cue);true
  }catch(_:Exception){player?.release();player=null;fallback(cue)}
  private fun fetchAiAudio(cue:Line){
-  val scene=URLEncoder.encode(cue.sceneId,"UTF-8");val line=URLEncoder.encode(cue.lineId,"UTF-8");val lang=URLEncoder.encode(cue.language,"UTF-8")
+  val scene=URLEncoder.encode(cue.sceneId,"UTF-8");val line=URLEncoder.encode(cue.lineId,"UTF-8");val lang=URLEncoder.encode(cue.language,"UTF-8");val speaker=URLEncoder.encode(cue.characterId,"UTF-8")
   network.execute{
    var connection:HttpURLConnection?=null
    try{
-    val endpoint="$VOICE_BACKEND?action=line&lang=$lang&scene_id=$scene&line_id=$line"
+    val endpoint="$VOICE_BACKEND?action=line&lang=$lang&scene_id=$scene&line_id=$line&character_id=$speaker"
     connection=(URL(endpoint).openConnection() as HttpURLConnection).apply{instanceFollowRedirects=true;connectTimeout=4500;readTimeout=6000;requestMethod="GET"}
     val json=connection.inputStream.bufferedReader().use{it.readText()}
     val root=JSONObject(json);val row=root.optJSONObject("line")
