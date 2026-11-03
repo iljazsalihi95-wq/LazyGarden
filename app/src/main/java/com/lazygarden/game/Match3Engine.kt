@@ -245,7 +245,7 @@ object Campaign {
             (chapter+stage)%6,
             if(chapter==0 && stage<3)0 else 8+chapter*3+pattern*3,
             when {number<8->0;number<26->1;number<51->3;number<76->4;else->5},
-            if(number<8)0 else (3+chapter+pattern).coerceAtMost(14),
-            when {number<26->0;number<76->1;number<176->if(stage%5==4)2 else 1;else->2})
+            if(number<8)1 else (3+chapter+pattern).coerceAtMost(14),
+            if(number>=176)2 else 1)
     }
 }
