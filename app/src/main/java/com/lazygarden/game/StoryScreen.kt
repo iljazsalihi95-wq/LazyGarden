@@ -15,7 +15,7 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
  private fun text(value:String,size:Float,color:Int=0xff5d3c24.toInt())=TextView(context).apply{text=value;textSize=size;setTextColor(color);typeface=Typeface.DEFAULT_BOLD}
  private fun button(value:String,primary:Boolean,action:()->Unit)=GameButton(context,primary).apply{text=value;isAllCaps=false;textSize=if(primary)20f else 14f;setTextColor(Color.WHITE);minHeight=dp(48);setOnClickListener{isEnabled=false;action()}}
- private val sfx=GardenSfx(context);private var motion:ValueAnimator?=null;private var paused=false
+ private val sfx=GardenSfx(context);private val voice=GardenVoice(context){save.voiceEnabled};private var motion:ValueAnimator?=null;private var paused=false
  private fun ui(key:String)=GameText.get(save.language,key)
  private fun localized(replayValue:String,sq:String,de:String,it:String,mk:String,tr:String)=when(save.language){"de"->de;"it"->it;"mk"->mk;"tr"->tr;else->if(replay)replayValue else sq}
  private fun continueStoryText()=when(save.language){"de"->"Geschichte fortsetzen";"it"->"Continua la storia";"mk"->"Продолжи ја приказната";"tr"->"Hikâyeye devam et";else->"Vazhdo tregimin"}
@@ -29,6 +29,8 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
  }
  init{
   val story=GardenStory.chapters[chapter];val entry=story.lines[line];val site=RestorationWorksites.forTask(chapter)
+  // Each story line is voiced by its actual speaker, never by a shared narrator.
+  post { if(isAttachedToWindow && !paused) voice.speakLine("story_${chapter+1}", "line_${line+1}", entry.character.name.lowercase(), save.language, entry.text) }
   val lower=entry.text.lowercase();val phoneLine=lower.contains("thërr")||lower.contains("telefon")||lower.contains("anruf")||lower.contains("call")
   val workLine=line>=GardenStory.LINES_PER_CHAPTER-2
   val partner=if(line>0)story.lines[line-1].character else story.lines.getOrElse(1){entry}.character
@@ -65,6 +67,6 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
   portrait.animate().alpha(1f).translationX(0f).scaleX(1f).scaleY(1f).setDuration(520).setInterpolator(AccelerateDecelerateInterpolator()).start();partnerView.animate().alpha(.82f).translationX(0f).scaleX(.78f).scaleY(.78f).setStartDelay(140).setDuration(600).start();card.animate().alpha(1f).translationY(0f).setStartDelay(180).setDuration(360).start()
   motion=ValueAnimator.ofFloat(0f,1f).apply{duration=2200;repeatCount=ValueAnimator.INFINITE;addUpdateListener{v->val f=v.animatedValue as Float;portrait.translationY=sin(f*Math.PI*2).toFloat()*dp(3);partnerView.translationY=sin(f*Math.PI*2+1.4).toFloat()*dp(2);workerView?.let{if(it.alpha>.5f){it.translationY=sin(f*Math.PI*4+.7).toFloat()*dp(if(workLine)5 else 2);if(workLine)it.rotation=sin(f*Math.PI*4).toFloat()*1.1f}}};start()}
  }
- override fun pauseScene(){paused=true;motion?.pause();sfx.pause()};override fun resumeScene(){paused=false;motion?.resume();sfx.resume()}
- override fun onDetachedFromWindow(){motion?.removeAllUpdateListeners();motion?.cancel();motion=null;sfx.release();super.onDetachedFromWindow()}
+ override fun pauseScene(){paused=true;motion?.pause();sfx.pause();voice.stop()};override fun resumeScene(){paused=false;motion?.resume();sfx.resume()}
+ override fun onDetachedFromWindow(){motion?.removeAllUpdateListeners();motion?.cancel();motion=null;sfx.release();voice.release();super.onDetachedFromWindow()}
 }
