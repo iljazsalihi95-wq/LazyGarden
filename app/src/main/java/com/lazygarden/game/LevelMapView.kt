@@ -35,6 +35,22 @@ class LevelMapView(context:Context,private val save:GardenSave,private val chapt
     p.style=Paint.Style.STROKE;p.strokeWidth=2*d;p.color=0xff284b57.toInt();c.drawText("$level",pt.x,pt.y+2*d,p)
     p.style=Paint.Style.FILL;p.color=Color.WHITE;c.drawText("$level",pt.x,pt.y+2*d,p)
    }
+   // Every fifth stop is a story landmark, not just another anonymous match-3 node.
+   if(level%5==0){
+    val reached=level<=save.level
+    val flagX=pt.x+size*.43f;val flagY=pt.y-bh*.42f
+    val flag=Path().apply{
+     moveTo(flagX,flagY+16*d);lineTo(flagX,flagY-16*d)
+     lineTo(flagX+22*d,flagY-12*d);lineTo(flagX+17*d,flagY-3*d)
+     lineTo(flagX+22*d,flagY+5*d);lineTo(flagX,flagY+2*d);close()
+    }
+    p.style=Paint.Style.FILL;p.color=if(reached)0xffffd268.toInt() else 0xff81949a.toInt()
+    c.drawPath(flag,p)
+    p.color=0xff314c40.toInt();p.strokeWidth=2*d;c.drawLine(flagX,flagY-16*d,flagX,flagY+18*d,p)
+    p.textAlign=Paint.Align.CENTER;p.typeface=Typeface.DEFAULT_BOLD;p.textSize=9*d
+    p.color=if(reached)0xff263a31.toInt() else Color.WHITE
+    c.drawText(if(level%25==0)"★" else "!",flagX+12*d,flagY-3*d,p)
+   }
    val rating=save.rating(level)
    for(st in 0 until rating){val x=pt.x+(st-(rating-1)/2f)*12*d;c.drawBitmap(star,null,RectF(x-8*d,pt.y+bh/2-12*d,x+8*d,pt.y+bh/2+4*d),p)}
    if(level==save.level)c.drawBitmap(star,null,RectF(pt.x-8*d,pt.y-bh/2-10*d,pt.x+8*d,pt.y-bh/2+6*d),p)
