@@ -18,6 +18,7 @@ import java.util.concurrent.Executors
 class GardenVoice(private val context:Context,private val enabled:()->Boolean={true}) {
  companion object {
   private const val VOICE_BACKEND="https://script.google.com/macros/s/AKfycby5NE2pnupggwtbbSn07lBSIUKns1rhO6kFkvKI4RzzzzDN0sE7XKD1TFTQy2UM68lv/exec"
+  private const val SPEECH_BACKEND="https://lazygarden-backend.lazisalihi.workers.dev/api/voice/speech"
  }
  private var player:MediaPlayer?=null
  private var released=false
@@ -55,8 +56,8 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
  private fun play(cue:Line):Boolean{
   currentLine=cue
   cue.asset?.let{return playAsset(cue,it)}
-  // Ask the Sheet/Apps Script backend for the exact scene/line/language voice already generated/cached.
-  fetchAiAudio(cue)
+  // Use Cloudflare AI speech directly; the API key stays in Worker secrets.
+  fetchWorkerSpeech(cue)
   return true
  }
  private fun playAsset(cue:Line,asset:String):Boolean = try {
@@ -65,6 +66,31 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   context.assets.openFd(asset).use{media.setDataSource(it.fileDescriptor,it.startOffset,it.length)}
   prepare(media,cue);true
  }catch(_:Exception){player?.release();player=null;fallback(cue)}
+ private fun fetchWorkerSpeech(cue:Line){
+  if(cue.subtitle.isBlank()){fetchAiAudio(cue);return}
+  network.execute{
+   var connection:HttpURLConnection?=null
+   try{
+    connection=(URL(SPEECH_BACKEND).openConnection() as HttpURLConnection).apply{
+     requestMethod="POST";connectTimeout=5000;readTimeout=18000
+     doOutput=true;setRequestProperty("Content-Type","application/json")
+    }
+    val payload=JSONObject().put("character_id",cue.characterId.lowercase(Locale.ROOT))
+     .put("language",cue.language).put("text",cue.subtitle).toString()
+    connection.outputStream.use{it.write(payload.toByteArray(Charsets.UTF_8))}
+    if(connection.responseCode !in 200..299)throw IllegalStateException("Speech backend unavailable")
+    val file=java.io.File.createTempFile("garden_voice_",".mp3",context.cacheDir)
+    try{
+     connection.inputStream.use{input->file.outputStream().use{output->input.copyTo(output)}}
+     main.post{
+      if(!released&&currentLine===cue)playRemote(cue,file.absolutePath)
+      else file.delete()
+     }
+    }catch(e:Exception){file.delete();throw e}
+   }catch(_:Exception){main.post{if(!released&&currentLine===cue)fetchAiAudio(cue)}}
+   finally{connection?.disconnect()}
+  }
+ }
  private fun fetchAiAudio(cue:Line){
   val scene=URLEncoder.encode(cue.sceneId,"UTF-8");val line=URLEncoder.encode(cue.lineId,"UTF-8");val lang=URLEncoder.encode(cue.language,"UTF-8");val speaker=URLEncoder.encode(cue.characterId,"UTF-8")
   network.execute{
