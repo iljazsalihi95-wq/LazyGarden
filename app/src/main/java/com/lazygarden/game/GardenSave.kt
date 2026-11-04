@@ -30,6 +30,37 @@ class GardenSave(ctx:Context) {
  fun materialStatus(task:Int=tasks)=restorationNeeds(task).joinToString("\n"){"${it.material.label}: ${materialCount(it.material)}/${it.count}"}
  fun restorationBlockers(task:Int=tasks):List<String>{val out=mutableListOf<String>();if(coins<120)out+="Game Coins ${coins}/120 (−${120-coins})";if(task>0&&stars<1)out+="★ ${stars}/1";missingRestorationMaterials(task).forEach{out+="${it.material.label}: ${materialCount(it.material)}/${it.count} (−${it.count-materialCount(it.material)})"};return out}
  fun restorationReady(task:Int=tasks)=!constructing&&task<RestorationInventory.TASK_COUNT&&restorationBlockers(task).isEmpty()
+
+ /** A key replaces missing construction materials, never the story star or basic labour cost. */
+ fun restorationReadyWithKey(task:Int=tasks)=!constructing&&task<RestorationInventory.TASK_COUNT&&keys>0&&coins>=120&&(task==0||stars>=1)
+ fun beginRestorationWithKey():Boolean {
+  if(!restorationReadyWithKey())return false
+  val edit=p.edit().putInt("keys",keys-1).putInt("coins",coins-120)
+   .putInt("stars",(stars-if(tasks==0)0 else 1).coerceAtLeast(0))
+   .putBoolean("constructing",true).putLong("restoration_elapsed",0L)
+  if(tasks==1)edit.remove("flower_choice")
+  if(tasks==0)edit.putString("fountain_quest_stage",FountainQuest.Stage.MATERIAL_DELIVERY.name).putLong("fountain_quest_elapsed",0L)
+  return edit.commit()
+ }
+ /** Buying missing stock is an alternative to grinding; prices depend on the material. */
+ fun missingMaterialCost(task:Int=tasks):Int=missingRestorationMaterials(task).sumOf{
+  (it.count-materialCount(it.material)).coerceAtLeast(0)*when(it.material){
+   Material.PIPE,Material.PUMP_PART,Material.GLASS,Material.LAMP,Material.CABLE->35
+   Material.VALVE,Material.HINGE,Material.TOOL->45
+   else->20
+  }
+ }
+ fun buyMissingMaterials():Boolean {
+  if(constructing||tasks>=RestorationInventory.TASK_COUNT)return false
+  val missing=missingRestorationMaterials()
+  if(missing.isEmpty())return false
+  val cost=missingMaterialCost()
+  if(cost<=0||coins<cost)return false
+  val edit=p.edit().putInt("coins",coins-cost)
+  missing.forEach{edit.putInt("material_${it.material.name}",it.count)}
+  return edit.commit()
+ }
+
  data class MaterialReward(val material:Material,val before:Int,val after:Int,val required:Int)
  val lastMaterialReward:MaterialReward? get(){val material=runCatching{Material.valueOf(p.getString("reward_material",null)?:return null)}.getOrNull()?:return null;return MaterialReward(material,p.getInt("reward_material_before",0),p.getInt("reward_material_after",0),p.getInt("reward_material_required",0))}
  private fun grantMaterial(m:Material,count:Int,edit:android.content.SharedPreferences.Editor){if(count>0)edit.putInt("material_${m.name}",materialCount(m)+count)}
