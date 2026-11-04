@@ -125,7 +125,7 @@ class FountainQuestFlowTest {
   save.saveBoard(solve(1))
   ActivityScenario.launch(MainActivity::class.java).use{s->
    s.onActivity{a->currentActivity=a;views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="▶ Vazhdo · 1"}.performClick()}
-   assertEquals(2,save.materialCount(Material.PIPE));assertEquals(2,save.level)
+   assertEquals(3,save.materialCount(Material.PIPE));assertEquals(2,save.level)
    var flight:MaterialRewardFlightView?=null
    var coinsFlight:RewardFlightView?=null
    onUi{a->flight=views(a.window.decorView).filterIsInstance<MaterialRewardFlightView>().single();coinsFlight=views(a.window.decorView).filterIsInstance<RewardFlightView>().single()}
@@ -156,7 +156,7 @@ class FountainQuestFlowTest {
    }finally{monitor.removeLifecycleCallback(callback)}
    shot("premium-07-match-material-reward");SystemClock.sleep(2000)
    onUi{a->assertTrue(views(a.window.decorView).filterIsInstance<TextView>().any{it.text.toString()=="Tuba  2/4"})}
-   assertFalse(save.win(solve(1)));assertEquals(2,save.materialCount(Material.PIPE));pauseForTeardown()
+   assertFalse(save.win(solve(1)));assertEquals(3,save.materialCount(Material.PIPE));pauseForTeardown()
   }
  }
  @Test fun materialDeliveryCheckpointResumesWithoutChargingTwice(){
@@ -200,14 +200,14 @@ class FountainQuestFlowTest {
    s.onActivity{a->currentActivity=a;views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Ndërto"}.performClick()}
    awaitQuestLayout()
    onUi{a->val v=quest(a);val d=a.resources.displayMetrics.density;tap(v,v.width*.25f,v.height-70*d)}
-   assertEquals(2,save.level);assertEquals(2,save.materialCount(Material.PIPE));assertEquals(150,save.coins)
+   assertEquals(2,save.level);assertEquals(3,save.materialCount(Material.PIPE));assertEquals(150,save.coins)
    onUi{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="Vazhdo"}.performClick();assertEquals(FountainQuest.Stage.COLLECT,quest(a).currentStage)}
    awaitQuestLayout()
    onUi{a->val v=quest(a);val d=a.resources.displayMetrics.density;tap(v,v.width-36*d,30*d);assertTrue(views(a.window.decorView).any{it is InventoryScreen});assertTrue(views(a.window.decorView).filterIsInstance<TextView>().any{it.text.toString()=="2 / 4"})}
    shot("premium-08-earned-material-inventory")
    onUi{a->views(a.window.decorView).first{it.contentDescription=="inventory_boosters"}.performClick();assertEquals(7,views(a.window.decorView).filterIsInstance<TextView>().count{it.text.toString()=="×3"})}
    onUi{a->views(a.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="‹"}.performClick();assertEquals(FountainQuest.Stage.COLLECT,quest(a).currentStage)}
-   assertEquals(0,save.tasks);assertEquals(2,save.materialCount(Material.PIPE));assertEquals(150,save.coins);pauseForTeardown()
+   assertEquals(0,save.tasks);assertEquals(3,save.materialCount(Material.PIPE));assertEquals(150,save.coins);pauseForTeardown()
   }
  }
 
@@ -218,7 +218,7 @@ class FountainQuestFlowTest {
    p.edit().putBoolean("fountain_quest_active",true).putString("fountain_quest_stage",name).putLong("fountain_quest_elapsed",1375).putInt("material_PIPE",2).putInt("coins",150).commit()
    val restored=GardenSave(context)
    assertEquals(name,restored.fountainQuestStage.name);assertEquals(1375L,restored.fountainQuestElapsed)
-   assertEquals(2,restored.materialCount(Material.PIPE));assertEquals(150,restored.coins)
+   assertEquals(3,restored.materialCount(Material.PIPE));assertEquals(150,restored.coins)
    assertTrue(restored.startFountainQuest());assertEquals(name,restored.fountainQuestStage.name)
   }
  }
