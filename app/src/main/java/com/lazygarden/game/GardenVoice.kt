@@ -21,6 +21,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   private const val SPEECH_BACKEND="https://lazygarden-backend.lazisalihi.workers.dev/api/voice/speech"
  }
  private var player:MediaPlayer?=null
+ private var cachedSpeechFile:java.io.File?=null
  private var released=false
  private var lastId=""
  private var generation=0
@@ -83,7 +84,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
     try{
      connection.inputStream.use{input->file.outputStream().use{output->input.copyTo(output)}}
      main.post{
-      if(!released&&currentLine===cue)playRemote(cue,file.absolutePath)
+      if(!released&&currentLine===cue){cachedSpeechFile?.delete();cachedSpeechFile=file;playRemote(cue,file.absolutePath)}
       else file.delete()
      }
     }catch(e:Exception){file.delete();throw e}
@@ -114,8 +115,8 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
  }
  private fun prepare(media:MediaPlayer,cue:Line){
   media.setOnPreparedListener{if(player===it&&!released&&enabled()){it.start();talking(true)}else if(player===it)stop()}
-  media.setOnCompletionListener{if(player===it){it.release();player=null;talking(false);currentLine=null;playQueued()}}
-  media.setOnErrorListener{it,_,_->if(player===it){it.release();player=null;talking(false);fallback(cue)};true}
+  media.setOnCompletionListener{if(player===it){it.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;talking(false);currentLine=null;playQueued()}}
+  media.setOnErrorListener{it,_,_->if(player===it){it.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;talking(false);fallback(cue)};true}
   media.prepareAsync()
  }
  private fun playQueued(){val next=queued?:return;queued=null;if(!released&&enabled())play(next)}
@@ -141,7 +142,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   return tts.speak(line.subtitle,TextToSpeech.QUEUE_FLUSH,null,lastId)==TextToSpeech.SUCCESS
  }
  private fun talking(value:Boolean){if(isTalking!=value){isTalking=value;onTalkingChanged(value)}}
- fun stop(){pending=null;queued=null;lastId="";if(ttsReady)tts.stop();player?.release();player=null;currentLine=null;talking(false)}
+ fun stop(){pending=null;queued=null;lastId="";if(ttsReady)tts.stop();player?.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;currentLine=null;talking(false)}
  fun release(){stop();released=true;tts.shutdown();network.shutdownNow();main.removeCallbacksAndMessages(null)}
 }
 
