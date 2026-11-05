@@ -19,4 +19,10 @@ class StoryTranslationsTest {
    for(language in listOf("de","it","mk","tr"))assertNotEquals("$language/$key",UiText.get("sq",key),UiText.get(language,key))
   }
  }
+ @Test fun everySpokenWorkStepUsesTheSelectedLanguage(){
+  for(task in 2..19)for(step in RestorationSequence.plan(task).steps.filter{it.line.isNotBlank()}){
+   for(language in listOf("de","it","mk","tr"))assertNotEquals("$language/$task/${step.key}",step.line,SceneText.line(step.line,language))
+  }
+ }
+
 }

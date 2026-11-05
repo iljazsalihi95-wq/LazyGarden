@@ -30,6 +30,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
  private val network=Executors.newSingleThreadExecutor()
  data class Line(val sceneId:String,val lineId:String,val characterId:String,val language:String,val asset:String?,val subtitle:String,val durationMillis:Long)
  var currentLine:Line?=null;private set
+ private var queued:Line?=null
  var isTalking=false;private set
  var onTalkingChanged:(Boolean)->Unit={}
  private val manifest by lazy { VoiceManifest(context) }

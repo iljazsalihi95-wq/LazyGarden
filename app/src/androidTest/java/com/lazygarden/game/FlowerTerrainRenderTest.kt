@@ -21,7 +21,7 @@ class FlowerTerrainRenderTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             for((name,time)in listOf("choice" to 14000L,"planting" to 24000L,"watering" to 28500L,"finished" to 33500L)){
                 lateinit var scene:FlowerGardenView
-                scenario.onActivity{activity->scene=FlowerGardenView(activity,initialChoice=if(name=="choice")null else "tulip",initialElapsed=time);activity.setContentView(scene)}
+                scenario.onActivity{activity->scene=FlowerGardenView(activity,initialChoice=if(name=="choice")null else "tulip",initialElapsed=time);activity.setContentView(scene);scene.pauseScene()}
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync()
                 SystemClock.sleep(300)
                 scenario.onActivity{scene.pauseScene()}

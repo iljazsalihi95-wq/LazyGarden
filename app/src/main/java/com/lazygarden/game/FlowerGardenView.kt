@@ -68,7 +68,7 @@ class FlowerGardenView(
   else->stage.name.lowercase()
  }
  override fun onDraw(c:Canvas){
-  super.onDraw(c);val s=maxOf(width.toFloat()/garden.width,height.toFloat()/garden.height)*2.1f;val dw=garden.width*s;val dh=garden.height*s
+  super.onDraw(c);val s=maxOf(width.toFloat()/garden.width,height.toFloat()/garden.height)*1.75f;val dw=garden.width*s;val dh=garden.height*s
   val left=(width*.44f-dw*.20f).coerceIn(width-dw,0f);val top=(height*.67f-dh*.715f).coerceIn(height-dh,0f)
   val dst=RectF(left,top,left+dw,top+dh);backdrop.draw(c,dst);WorldRestorationArt.water(c,p,dst,life*12000f)
   bed.set(dst.left+dw*.055f,dst.top+dh*.65f,dst.left+dw*.285f,dst.top+dh*.78f);drawBed(c,dst);drawPeople(c,dst,dw)
@@ -78,13 +78,14 @@ class FlowerGardenView(
   if(st==FlowerSequence.Stage.CHOOSE&&chosen==null)drawPicker(c)
  }
  private fun drawBed(c:Canvas,dst:RectF){
-  val outline=Path();FlowerSitePlan.boundary.forEachIndexed{i,point->val x=dst.left+dst.width()*point.x;val y=dst.top+dst.height()*point.y;if(i==0)outline.moveTo(x,y) else outline.lineTo(x,y)};outline.close()
+  val outline=Path().apply{addOval(bed,Path.Direction.CW)}
   val layer=c.save();c.clipPath(outline)
   p.shader=null;p.alpha=255;p.color=0xff61432a.toInt();c.drawPath(outline,p)
+  SpriteArt.draw(c,p,props,4,3,3,bed)
   val prep=FlowerSequence.prepare(ms)
   // Soil furrows and tools stay inside the surveyed bed. The stone path is never painted over.
   p.color=0xff3b291d.toInt();p.strokeWidth=dp(2f)
-  for(i in 0..5){val y=bed.top+bed.height()*(.18f+i*.12f);c.drawLine(bed.left,y,bed.right,y+dp(3f)*prep,p)}
+  for(i in 0..3){val y=bed.top+bed.height()*(.27f+i*.14f);p.alpha=70;c.drawLine(bed.left+bed.width()*.12f,y,bed.right-bed.width()*.12f,y+dp(3f)*prep,p)};p.alpha=255
   val count=(FlowerSequence.planting(ms)*12).toInt().coerceIn(0,12)
   val bloom=FlowerSequence.bloom(ms)
   FlowerSitePlan.plants.take(count).forEach { point->plants.draw(c,p,chosen?.id?:"tulip",dst.left+dst.width()*point.x,dst.top+dst.height()*point.y,dst.width()*.055f*(.45f+.55f*bloom)) }

@@ -33,5 +33,5 @@ object SceneText {
   "E ndërtuam së bashku!" to listOf("E ndërtuam së bashku!","Wir haben es gemeinsam geschafft!","L’abbiamo costruita insieme!","Ја изградивме заедно!","Birlikte yaptık!"),
   "Kjo pronë është përsëri shtëpi!" to listOf("Kjo pronë është përsëri shtëpi!","Dieses Anwesen ist wieder ein Zuhause!","Questa proprietà è di nuovo una casa!","Овој имот повторно е дом!","Bu mülk yeniden bir yuva oldu!")
  )
- fun line(sq:String,language:String):String=lines[sq]?.getOrNull(listOf("sq","de","it","mk","tr").indexOf(language).coerceAtLeast(0))?:sq
+ fun line(sq:String,language:String):String=WorkTranslations.line(sq,language)?:lines[sq]?.getOrNull(listOf("sq","de","it","mk","tr").indexOf(language).coerceAtLeast(0))?:sq
 }
