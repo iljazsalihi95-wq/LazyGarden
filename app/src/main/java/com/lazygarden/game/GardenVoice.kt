@@ -3,8 +3,6 @@ package com.lazygarden.game
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import android.os.Handler
 import android.os.Looper
 import org.json.JSONObject
@@ -14,7 +12,7 @@ import java.net.URL
 import java.util.Locale
 import java.util.concurrent.Executors
 
-/** AI/recorded voice first, Android TTS only as an offline fallback. */
+/** AI/recorded audio only. Offline playback uses previously cached clips. */
 class GardenVoice(private val context:Context,private val enabled:()->Boolean={true}) {
  companion object {
   @Volatile private var workerRetryAt=0L
@@ -28,24 +26,10 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
  private var cachedSpeechFile:java.io.File?=null
  private var released=false
  private var lastId=""
- private var generation=0
  private val main=Handler(Looper.getMainLooper())
  private val network=Executors.newSingleThreadExecutor()
  data class Line(val sceneId:String,val lineId:String,val characterId:String,val language:String,val asset:String?,val subtitle:String,val durationMillis:Long)
  var currentLine:Line?=null;private set
- private var ttsReady=false
- private var pending:Line?=null
- private var queued:Line?=null
- private val femaleIds=setOf("meli","rona","medina","hafsa")
- private val childIds=setOf("rona","medina","hafsa","bejdi","meti","cufi","rejani","unejsi")
- private val tts=TextToSpeech(context.applicationContext){status->main.post{
-  if(!released){ttsReady=status==TextToSpeech.SUCCESS;pending?.let{pending=null;playFallback(it)}}
- }}
- init {tts.setOnUtteranceProgressListener(object:UtteranceProgressListener(){
-  override fun onStart(id:String?){main.post{if(id==lastId&&!released)talking(true)}}
-  override fun onDone(id:String?){main.post{if(id==lastId){talking(false);currentLine=null;playQueued()}}}
-  @Deprecated("Android callback") override fun onError(id:String?){main.post{if(id==lastId){talking(false);currentLine=null;playQueued()}}}
- })}
  var isTalking=false;private set
  var onTalkingChanged:(Boolean)->Unit={}
  private val manifest by lazy { VoiceManifest(context) }
@@ -118,7 +102,10 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
     connection=(URL(endpoint).openConnection() as HttpURLConnection).apply{instanceFollowRedirects=true;connectTimeout=4500;readTimeout=6000;requestMethod="GET"}
     val json=connection.inputStream.bufferedReader().use{it.readText()}
     val root=JSONObject(json);val row=root.optJSONObject("line")
-    val audio=row?.optString("audio_url","").orEmpty().takeIf{it.startsWith("https://")}.orEmpty()
+    val sameLanguage=row?.optString("lang",row.optString("language"))==cue.language
+    val sameActor=row?.optString("character_id")==cue.characterId
+    val sameText=row?.optString("text")?.trim()==cue.subtitle.trim()
+    val audio=if(sameLanguage&&sameActor&&sameText)row?.optString("audio_url","").orEmpty().takeIf{it.startsWith("https://")}.orEmpty() else ""
     if(audio.isBlank())scriptRetryAt=android.os.SystemClock.elapsedRealtime()+60_000
     main.post{if(!released&&currentLine===cue){if(audio.isNotBlank())playRemote(cue,audio) else fallback(cue)}}
    }catch(_:Exception){scriptRetryAt=android.os.SystemClock.elapsedRealtime()+60_000;main.post{if(!released&&currentLine===cue)fallback(cue)}}finally{connection?.disconnect()}
@@ -138,31 +125,14 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   media.prepareAsync()
  }
  private fun playQueued(){val next=queued?:return;queued=null;if(!released&&enabled())play(next)}
+ /** No device TTS: a missing AI clip keeps the localized subtitle without a foreign-accent voice. */
  private fun fallback(line:Line):Boolean {
-  if(line.subtitle.isBlank()){currentLine=null;playQueued();return false}
-  if(ttsReady)return playFallback(line)
-  pending=line;return true
- }
- private fun playFallback(line:Line):Boolean {
-  if(released||!enabled())return false
-  val locale=Locale.forLanguageTag(when(line.language){"de"->"de-DE";"it"->"it-IT";"mk"->"mk-MK";"tr"->"tr-TR";else->"sq-AL"})
-  if(tts.isLanguageAvailable(locale)<TextToSpeech.LANG_AVAILABLE){currentLine=null;playQueued();return false}
-  tts.language=locale
-  val localVoices=tts.voices?.filter{it.locale.language==locale.language&&!it.isNetworkConnectionRequired}?.sortedWith(compareByDescending<android.speech.tts.Voice>{it.quality}.thenBy{it.latency}).orEmpty()
-  if(localVoices.isNotEmpty()){
-   val index=VoiceProfiles.localIndex(line.characterId,localVoices.size)
-   tts.voice=localVoices[index.coerceAtMost(localVoices.lastIndex)]
-  }
-  val profile=VoiceProfiles.forActor(line.characterId)
-  tts.setPitch(profile.pitch);tts.setSpeechRate(profile.rate)
-  currentLine=line;lastId="${line.sceneId}/${line.lineId}/${++generation}"
-  val accepted=tts.speak(line.subtitle,TextToSpeech.QUEUE_FLUSH,null,lastId)==TextToSpeech.SUCCESS
-  if(!accepted){currentLine=null;talking(false);playQueued()}
-  return accepted
+  if(currentLine===line)currentLine=null
+  talking(false);playQueued();return false
  }
  private fun talking(value:Boolean){if(isTalking!=value){isTalking=value;onTalkingChanged(value)}}
- fun stop(){pending=null;queued=null;lastId="";if(ttsReady)tts.stop();player?.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;currentLine=null;talking(false)}
- fun release(){stop();released=true;tts.shutdown();network.shutdownNow();main.removeCallbacksAndMessages(null)}
+ fun stop(){queued=null;lastId="";player?.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;currentLine=null;talking(false)}
+ fun release(){stop();released=true;network.shutdownNow();main.removeCallbacksAndMessages(null)}
 }
 
 /** Exact packaged scene/line/character/language mapping; used before network audio. */

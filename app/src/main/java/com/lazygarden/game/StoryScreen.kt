@@ -21,12 +21,12 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
  private fun laterText()=when(save.language){"de"->"Später lesen";"it"->"Leggi più tardi";"mk"->"Прочитај подоцна";"tr"->"Daha sonra oku";else->"Lexo më vonë"}
 
  init{
-  val story=GardenStory.chapters[chapter];val authored=story.lines[line];val entry=authored.copy(text=GardenContent.line(chapter,line,save.language,authored.text))
+  val story=GardenStory.chapters[chapter];val authored=story.lines[line];val entry=authored.copy(text=GardenContent.line(chapter,line,save.language,StoryTranslations.line(chapter,line,save.language)))
   val partner=if(line>0)story.lines[line-1].character else story.lines.getOrElse(1){entry}.character
   val columnBackground=View(context).apply{setBackgroundColor(0xff102e29.toInt())};addView(columnBackground,LayoutParams(-1,-1))
   speakCurrent={if(isAttachedToWindow&&!paused)voice.speakLine("story_${chapter+1}","line_${line+1}",entry.character.name.lowercase(java.util.Locale.ROOT),save.language,entry.text)}
   val column=LinearLayout(context).apply{orientation=LinearLayout.VERTICAL};val replayWord=localized("Rilexim","Kapitulli","Kapitel","Capitolo","Поглавје","Bölüm")
-  column.addView(text("${if(replay)replayWord else "$replayWord ${chapter+1}"} · ${story.title}",20f,0xffffe5a1.toInt()).apply{gravity=Gravity.CENTER;setPadding(dp(18),dp(15),dp(18),dp(8));setShadowLayer(3f,0f,2f,Color.BLACK)},LinearLayout.LayoutParams(-1,dp(76)))
+  column.addView(text("${if(replay)replayWord else "$replayWord ${chapter+1}"} · ${RestorationCatalog.title(chapter,save.language)}",20f,0xffffe5a1.toInt()).apply{gravity=Gravity.CENTER;setPadding(dp(18),dp(15),dp(18),dp(8));setShadowLayer(3f,0f,2f,Color.BLACK)},LinearLayout.LayoutParams(-1,dp(76)))
   val stage=StorySceneView(context,save,chapter,line,entry.character.name.lowercase(java.util.Locale.ROOT),partner.name.lowercase(java.util.Locale.ROOT),{voice.isTalking},{speakCurrent?.invoke()},continueConversation=line>0,chapterCast=(story.lines.map{it.character.name.lowercase(java.util.Locale.ROOT)}+RestorationWorksites.castForTask(chapter)).distinct().take(4))
   scene=stage
   column.addView(stage,LinearLayout.LayoutParams(-1,0,1f))
