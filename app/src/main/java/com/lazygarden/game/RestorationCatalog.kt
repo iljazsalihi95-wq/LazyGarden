@@ -51,5 +51,5 @@ object RestorationCatalog {
     }
 
     fun title(task: Int, language: String): String =
-        entries.getOrNull(task)?.title(language) ?: entries.last().title(language)
+        GardenContent.title(task,language,entries.getOrNull(task)?.title(language) ?: entries.last().title(language))
 }

@@ -65,7 +65,7 @@ class GardenSave(ctx:Context) {
  val lastMaterialReward:MaterialReward? get(){val material=runCatching{Material.valueOf(p.getString("reward_material",null)?:return null)}.getOrNull()?:return null;return MaterialReward(material,p.getInt("reward_material_before",0),p.getInt("reward_material_after",0),p.getInt("reward_material_required",0))}
  private fun grantMaterial(m:Material,count:Int,edit:android.content.SharedPreferences.Editor){if(count>0)edit.putInt("material_${m.name}",materialCount(m)+count)}
  private fun consumeRestorationMaterials(task:Int,edit:android.content.SharedPreferences.Editor){restorationNeeds(task).forEach{edit.putInt("material_${it.material.name}",(materialCount(it.material)-it.count).coerceAtLeast(0))}}
- private fun nextMissingMaterialReward(levelNumber:Int,task:Int=tasks):Pair<MaterialNeed,Int>?{
+ fun nextMissingMaterialReward(levelNumber:Int,task:Int=tasks):Pair<MaterialNeed,Int>?{
   val missing=missingRestorationMaterials(task);if(missing.isEmpty())return null
   val need=missing.minByOrNull{materialCount(it.material).toFloat()/it.count.coerceAtLeast(1)}?:return null
   val left=(need.count-materialCount(need.material)).coerceAtLeast(1)

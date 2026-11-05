@@ -28,7 +28,7 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
   else->if(phone)"☎ Po telefonohet mjeshtri" else if(work)"🔨 $worker mbërrin dhe nis punën" else "Familja po zbulon zonën e radhës"
  }
  init{
-  val story=GardenStory.chapters[chapter];val entry=story.lines[line];val site=RestorationWorksites.forTask(chapter)
+  val story=GardenStory.chapters[chapter];val authored=story.lines[line];val entry=authored.copy(text=GardenContent.line(chapter,line,save.language,authored.text));val site=RestorationWorksites.forTask(chapter)
   // Each story line is voiced by its actual speaker, never by a shared narrator.
   post { if(isAttachedToWindow && !paused) voice.speakLine("story_${chapter+1}", "line_${line+1}", entry.character.name.lowercase(), save.language, entry.text) }
   val lower=entry.text.lowercase();val phoneLine=lower.contains("thërr")||lower.contains("telefon")||lower.contains("anruf")||lower.contains("call")

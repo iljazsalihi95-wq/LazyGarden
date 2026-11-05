@@ -23,13 +23,14 @@ class MainActivity : AppCompatActivity() {
  private lateinit var ads:RewardedVideos
  private lateinit var sfx:GardenSfx
  private var screen="garden"
+ private var inventoryReturnToFountain=false
  private var balanceText:TextView?=null
  private var starText:TextView?=null
  private var rewardAnimator:ValueAnimator?=null
  private var completionDialog:AlertDialog?=null
  private fun t(key:String)=GameText.get(save.language,key)
  private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
- override fun onCreate(state:Bundle?){super.onCreate(state);WindowCompat.setDecorFitsSystemWindows(window,false);save=GardenSave(this);ads=RewardedVideos(this,save);sfx=GardenSfx(this);showGarden();if(save.hasPendingStory&&!save.constructing)showStory();onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true){override fun handleOnBackPressed(){if(screen=="garden")finish() else {engine?.let{save.saveBoard(it)};showGarden(screen=="fountain_quest")}}})}
+ override fun onCreate(state:Bundle?){super.onCreate(state);WindowCompat.setDecorFitsSystemWindows(window,false);GardenContent.load(this);Thread({runCatching{GardenContent.refresh(applicationContext)}},"garden-content").start();save=GardenSave(this);ads=RewardedVideos(this,save);sfx=GardenSfx(this);showGarden();if(save.hasPendingStory&&!save.constructing)showStory();onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true){override fun handleOnBackPressed(){if(screen=="garden")finish() else {engine?.let{save.saveBoard(it)};showGarden(screen=="fountain_quest")}}})}
  override fun onResume(){super.onResume();world?.resumeScene();rewardAnimator?.resume();sfx.resume()}
  override fun onPause(){world?.pauseScene();rewardAnimator?.pause();sfx.pause();engine?.let{save.saveBoard(it)};super.onPause()}
  override fun onDestroy(){completionDialog?.dismiss();world?.pauseScene();rewardAnimator?.cancel();ads.release();sfx.release();super.onDestroy()}
@@ -59,7 +60,7 @@ class MainActivity : AppCompatActivity() {
   val top=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(8),dp(12),0)}
   val balances=LinearLayout(this).apply{gravity=Gravity.CENTER;background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,18f);setPadding(dp(12),0,dp(12),0)}
   balances.addView(label("${save.coins} Game Coins",16f,0xff64401b.toInt()).apply{balanceText=this},LinearLayout.LayoutParams(0,dp(44),1f));balances.addView(ImageView(this).apply{setImageResource(R.drawable.reward_star);scaleType=ImageView.ScaleType.FIT_CENTER},LinearLayout.LayoutParams(dp(28),dp(30)));balances.addView(label("${save.stars}",19f,0xff64401b.toInt()).apply{starText=this},LinearLayout.LayoutParams(dp(48),dp(44)));top.addView(balances)
-  top.addView(ImageView(this).apply{setImageResource(R.drawable.hd_logo);scaleType=ImageView.ScaleType.FIT_CENTER;contentDescription="Logo LazyGarden"},LinearLayout.LayoutParams(-1,dp(132)));top.addView(label(t("home_tagline"),15f,0xff633a19.toInt()).apply{background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,18f);setPadding(dp(14),dp(4),dp(14),dp(4))},LinearLayout.LayoutParams(-1,dp(53)).apply{setMargins(dp(48),0,dp(48),0)});root.addView(top,FrameLayout.LayoutParams(-1,-2,Gravity.TOP))
+  top.addView(ImageView(this).apply{setImageResource(R.drawable.hd_logo);scaleType=ImageView.ScaleType.FIT_CENTER;contentDescription="Logo LazyGarden"},LinearLayout.LayoutParams(-1,dp(132)));top.addView(label(GardenContent.event(save.language)?:t("home_tagline"),15f,0xff633a19.toInt()).apply{background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,18f);setPadding(dp(14),dp(4),dp(14),dp(4))},LinearLayout.LayoutParams(-1,dp(53)).apply{setMargins(dp(48),0,dp(48),0)});root.addView(top,FrameLayout.LayoutParams(-1,-2,Gravity.TOP))
   fun side(value:String,icon:Int,action:()->Unit)=premiumButton(value,false,action).apply{textSize=if(value.length>11)10f else 13f;setPadding(dp(6),dp(9),dp(6),dp(8));val drawable=BitmapDrawable(resources,GameSkin.bitmap(this@MainActivity,icon)).apply{setBounds(0,0,dp(40),dp(40))};setCompoundDrawables(null,drawable,null,null);compoundDrawablePadding=dp(1)}
   val leftMenu=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};leftMenu.addView(side("Bonus ▶",R.drawable.reward_star){showAdOffers()},LinearLayout.LayoutParams(dp(79),dp(83)));leftMenu.addView(side(t("settings"),R.drawable.hd_icon_gear){settings()},LinearLayout.LayoutParams(dp(79),dp(83)).apply{topMargin=dp(8)});root.addView(leftMenu,FrameLayout.LayoutParams(-2,-2,Gravity.START or Gravity.BOTTOM).apply{setMargins(dp(9),0,0,dp(158))})
   val rightMenu=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};rightMenu.addView(side(t("build"),R.drawable.boost_hammer){tasks()},LinearLayout.LayoutParams(dp(79),dp(83)));rightMenu.addView(side(t("decorate"),R.drawable.tile_flower){showDecor()},LinearLayout.LayoutParams(dp(79),dp(83)).apply{topMargin=dp(8)});root.addView(rightMenu,FrameLayout.LayoutParams(-2,-2,Gravity.END or Gravity.BOTTOM).apply{setMargins(0,0,dp(9),dp(158))})
@@ -73,8 +74,9 @@ class MainActivity : AppCompatActivity() {
   attach(FountainQuestView(this,save,{showMatch3()},{showInventory()},{showGarden(true)},{showGarden()}))
  }
  private fun showInventory(category:Int=0){
+  if(screen!="inventory")inventoryReturnToFountain=screen=="fountain_quest"
   screen="inventory";engine=null
-  attach(InventoryScreen(this,save,category,{showFountainQuest()},{showInventory(it)},{kind->
+  attach(InventoryScreen(this,save,category,{if(inventoryReturnToFountain)showFountainQuest() else showGarden(true)},{showInventory(it)},{kind->
    AlertDialog.Builder(this).setTitle(GameText.booster(save.language,kind))
     .setMessage("${GameText.get(save.language,"buy")} ×1 · ${kind.cost} ${GameText.get(save.language,"coins")}")
     .setPositiveButton(GameText.get(save.language,"buy")){_,_->
@@ -114,7 +116,7 @@ class MainActivity : AppCompatActivity() {
  }
  private fun restorationFailure(){
   AlertDialog.Builder(this).setTitle("Ende nuk mund të ndërtohet")
-   .setMessage("Duhet të kesh 120 Game Coins dhe një yll (përveç restaurimit të parë). Çelësi zëvendëson materialet; përndryshe mund t'i blesh me monedha.\\n\\n${save.restorationBlockers().joinToString("\\n")}")
+   .setMessage("Duhet të kesh 120 Game Coins dhe një yll (përveç restaurimit të parë). Çelësi zëvendëson materialet; përndryshe mund t'i blesh me monedha.\n\n${save.restorationBlockers().joinToString("\n")}")
    .setPositiveButton("Nivelet"){_,_->showMap()}.setNegativeButton("Mbyll",null).show()
  }
  private fun showEstate(){screen="estate";engine=null;val root=FrameLayout(this);root.addView(GardenWorldView(this,save.tasks,decorations=save.decorations),FrameLayout.LayoutParams(-1,-1));val controls=LinearLayout(this).apply{setPadding(dp(10),dp(8),dp(10),0)};controls.addView(premiumButton("‹ Ballina"){showGarden()},LinearLayout.LayoutParams(0,dp(46),1f).apply{marginEnd=dp(10)});controls.addView(premiumButton("Dekoro"){showDecor()},LinearLayout.LayoutParams(0,dp(46),1f));root.addView(controls,FrameLayout.LayoutParams(-1,-2,Gravity.TOP));root.addView(label("${RestorationUiModel.progress(save.tasks)} restaurime · ${save.decorations.size} ${if(save.decorations.size==1)"dekorim" else "dekorime"}",14f).apply{setPadding(0,0,0,dp(14))},FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));attach(root)}
@@ -138,8 +140,9 @@ class MainActivity : AppCompatActivity() {
   bar.addView(premiumButton("‹"){save.saveBoard(board);showGarden()},LinearLayout.LayoutParams(dp(48),dp(36)))
   val coins=label("${save.coins} ${t("coins")}",15f,0xff66411f.toInt())
   bar.addView(coins,LinearLayout.LayoutParams(0,dp(36),1f));root.addView(bar)
-  if(RestorationInventory.rewardForLevel(levelNumber,save.tasks)!=null&&levelNumber==save.level)root.addView(MaterialObjectiveHud(this,save,levelNumber),LinearLayout.LayoutParams(-1,dp(40)))
-  val boardView=Match3BoardView(this,board,{save.saveBoard(board)},{won->
+  val objectiveHud=MaterialObjectiveHud(this,save,board)
+  root.addView(objectiveHud,LinearLayout.LayoutParams(-1,dp(64)))
+  val boardView=Match3BoardView(this,board,{save.saveBoard(board);objectiveHud.boardChanged()},{won->
    val rewarded=if(won)save.win(board) else false
    engine=null;showResult(board,rewarded)
   })
@@ -163,7 +166,7 @@ class MainActivity : AppCompatActivity() {
   tray.setGameplayEnabled(controller.gameplayEnabled&&!board.won&&!board.failed)
   boardView.onBoosterTarget={kind,at->
    val result=controller.use(kind,at)
-   refresh()
+   refresh();objectiveHud.boardChanged()
    when(result.status){
     Match3BoosterController.Status.LOCKED_REPLAY->Toast.makeText(this,t("locked"),Toast.LENGTH_SHORT).show()
     Match3BoosterController.Status.NEEDS_STOCK->Toast.makeText(this,t("no_stock"),Toast.LENGTH_SHORT).show()

@@ -10,7 +10,7 @@ import kotlin.math.hypot
 class LevelMapView(context:Context,private val save:GardenSave,private val chapter:Int=(save.level-1)/25,private val play:(Int)->Unit):View(context){
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val d=resources.displayMetrics.density
- private val art=BitmapFactory.decodeResource(resources,R.drawable.garden_map)
+ private val art=GameSkin.bitmap(context,R.drawable.garden_map)
  private val star=BitmapFactory.decodeResource(resources,R.drawable.reward_star)
  private val badge=GameSkin.bitmap(context,R.drawable.hd_level_badge)
  private val lock=GameSkin.bitmap(context,R.drawable.hd_lock)

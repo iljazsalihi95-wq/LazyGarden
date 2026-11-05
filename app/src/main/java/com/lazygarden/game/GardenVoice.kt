@@ -56,6 +56,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
  }
  private fun play(cue:Line):Boolean{
   currentLine=cue
+  GardenContent.asset(context,"${cue.sceneId}/${cue.lineId}/${cue.characterId}/${cue.language}")?.let{playRemote(cue,it.absolutePath);return true}
   cue.asset?.let{return playAsset(cue,it)}
   // Use Cloudflare AI speech directly; the API key stays in Worker secrets.
   fetchWorkerSpeech(cue)

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "minAppContentApi": 1,
+  "version": 1,
+  "levels": [
+    {"id":8,"moves":31,"target":820,"ice":6,"collectColor":1,"collectCount":14,"terrainKind":1,"terrainCount":5,"rescue":1},
+    {"id":9,"moves":32,"target":850,"ice":8,"collectColor":3,"collectCount":12,"terrainKind":1,"terrainCount":6,"rescue":1},
+    {"id":10,"moves":34,"target":950,"ice":10,"collectColor":2,"collectCount":17,"terrainKind":1,"terrainCount":7,"rescue":1}
+  ],
+  "chapters": [
+    {"id":1,"titles":{"sq":"Uji kthehet në oborr","de":"Wasser im Familienhof","it":"L'acqua torna in cortile","mk":"Водата се враќа во дворот","tr":"Avluya su geri dönüyor"},
+     "lines":[
+       {"character":"meli","text":{"sq":"Dëgjojeni shatërvanin! Rona dhe Cufi pastruan gjethet, dhe oborri ynë mori përsëri jetë.","de":"Hört den Brunnen! Rona und Cufi haben die Blätter entfernt. Unser Hof lebt wieder.","it":"Ascoltate la fontana! Rona e Cufi hanno tolto le foglie. Il cortile è tornato a vivere.","mk":"Слушнете ја фонтаната! Рона и Цуфи ги исчистија лисјата. Дворот повторно оживеа.","tr":"Çeşmeyi dinleyin! Rona ve Cufi yaprakları temizledi. Avlumuz yeniden canlandı."}},
+       {"character":"lazi","text":{"sq":"Rexha e provoi pompën dhe tubat e rinj. Tani mund të ulemi këtu së bashku. Por pranë shatërvanit ende mungojnë lulet.","de":"Rexha hat die Pumpe und die neuen Rohre geprüft. Jetzt können wir hier zusammen sitzen. Neben dem Brunnen fehlen noch Blumen.","it":"Rexha ha controllato la pompa e i tubi nuovi. Ora possiamo sederci qui insieme. Ma accanto alla fontana mancano ancora i fiori.","mk":"Реџа ги провери пумпата и новите цевки. Сега можеме да седиме тука заедно. Но крај фонтаната сè уште нема цвеќиња.","tr":"Rexha pompayı ve yeni boruları kontrol etti. Artık burada birlikte oturabiliriz. Ama çeşmenin yanında hâlâ çiçekler eksik."}},
+       {"character":"rexha","text":{"sq":"Uji rrjedh si duhet. Te kapaku gjeta një shenjë të vjetër në formë ylli. Ruajeni; ndoshta dikush nga familja e njeh.","de":"Das Wasser fließt richtig. Am Deckel fand ich ein altes Sternzeichen. Hebt es auf; vielleicht kennt es jemand aus der Familie.","it":"L'acqua scorre bene. Sul coperchio ho trovato un vecchio simbolo a stella. Conservatelo; forse qualcuno della famiglia lo riconosce.","mk":"Водата тече добро. На капакот најдов стар знак во облик на ѕвезда. Зачувајте го; можеби некој од семејството го познава.","tr":"Su düzgün akıyor. Kapakta eski bir yıldız işareti buldum. Saklayın; belki aileden biri onu tanır."}}
+     ]}
+  ],
+  "events": [],
+  "assets": []
+}

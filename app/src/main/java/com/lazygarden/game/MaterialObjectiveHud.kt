@@ -6,7 +6,7 @@ import android.view.View
 import kotlin.math.*
 
 /** Restoration reward HUD: every required restoration material plus live board objectives. */
-class MaterialObjectiveHud:View{
+class MaterialObjectiveHud:View,SceneLifecycle{
  private val save:GardenSave
  private val level:Int
  private var liveBoard:Match3Engine?=null
@@ -15,10 +15,11 @@ class MaterialObjectiveHud:View{
  private val art:MaterialArt
  private var shimmer=0f
  private var ambient:ValueAnimator?=null
+ private var paused=false
  constructor(context:Context,save:GardenSave,level:Int):super(context){this.save=save;this.level=level;art=MaterialArt(context);contentDescription=label();lastLabel=contentDescription?.toString()}
  constructor(context:Context,save:GardenSave,board:Match3Engine):super(context){this.save=save;this.level=board.level;this.liveBoard=board;art=MaterialArt(context);contentDescription=label();lastLabel=contentDescription?.toString()}
  private fun board():Match3Engine?{liveBoard?.let{return it};if(level!=save.level)return null;val raw=save.activeBoard?:return null;return Match3Engine(level).takeIf{it.restore(raw)}}
- private fun reward():Pair<Material,Int>?{val missing=save.missingRestorationMaterials();if(missing.isEmpty())return null;val need=missing.minByOrNull{save.materialCount(it.material).toFloat()/it.count.coerceAtLeast(1)}?:return null;val left=(need.count-save.materialCount(need.material)).coerceAtLeast(0);val base=when{need.count>=10->4;need.count>=6->3;else->2}+if(level%5==0)1 else 0;return need.material to minOf(left,base)}
+ private fun reward():Pair<Material,Int>?=save.nextMissingMaterialReward(level)?.let{it.first.material to it.second}
  private fun materialProgress():String{val needs=save.restorationNeeds();if(needs.isEmpty())return "✓ ${GameText.get(save.language,"materials")}";return needs.joinToString("   "){need->val owned=save.materialCount(need.material).coerceAtMost(need.count);val missing=(need.count-owned).coerceAtLeast(0);"${if(missing==0)"✓" else "•"} ${FountainText.get(save.language,need.material.name)} $owned/${need.count}${if(missing==0)"" else " (−$missing)"}"}}
  private fun materialFraction():Float{val needs=save.restorationNeeds();if(needs.isEmpty())return 1f;val required=needs.sumOf{it.count}.coerceAtLeast(1);val owned=needs.sumOf{minOf(save.materialCount(it.material),it.count)};return (owned.toFloat()/required).coerceIn(0f,1f)}
  private fun goal(done:Boolean,icon:String,current:Int,target:Int)="${if(done)"✓" else icon} ${current.coerceAtMost(target)}/$target"
@@ -27,7 +28,10 @@ class MaterialObjectiveHud:View{
  private fun label():String=listOf(materialProgress(),rewardText(),liveGoals(board())).filter{it.isNotBlank()}.joinToString(" · ")
  fun bind(board:Match3Engine){if(board.level==level){liveBoard=board;boardChanged()}}
  fun boardChanged(){val next=label();contentDescription=next;if(lastLabel!=null&&lastLabel!=next&&isAttachedToWindow){animate().cancel();scaleX=.97f;scaleY=.97f;alpha=.82f;animate().scaleX(1.04f).scaleY(1.04f).alpha(1f).setDuration(120).withEndAction{animate().scaleX(1f).scaleY(1f).setDuration(130).start()}.start()};lastLabel=next;invalidate()}
- override fun onAttachedToWindow(){super.onAttachedToWindow();ambient?.cancel();ambient=ValueAnimator.ofFloat(0f,1f).apply{duration=2200;repeatCount=ValueAnimator.INFINITE;addUpdateListener{shimmer=it.animatedValue as Float;invalidate()};start()}}
+ override fun onAttachedToWindow(){super.onAttachedToWindow();startAmbient()}
+ override fun pauseScene(){paused=true;ambient?.pause();animate().cancel()}
+ override fun resumeScene(){paused=false;if(ambient==null)startAmbient() else ambient?.resume()}
+ private fun startAmbient(){if(paused||!isAttachedToWindow)return;ambient?.cancel();ambient=ValueAnimator.ofFloat(0f,1f).apply{duration=2200;repeatCount=ValueAnimator.INFINITE;addUpdateListener{shimmer=it.animatedValue as Float;invalidate()};start()}}
  override fun onDetachedFromWindow(){ambient?.removeAllUpdateListeners();ambient?.cancel();ambient=null;super.onDetachedFromWindow()}
  private fun fitText(text:String,maxWidth:Float,start:Float,min:Float):Float{var size=start;p.textSize=size;while(size>min&&p.measureText(text)>maxWidth){size-=.4f;p.textSize=size};return size}
  override fun onDraw(c:Canvas){super.onDraw(c);val d=resources.displayMetrics.density;val bounds=RectF(8*d,2*d,width-8*d,height-2*d);GameSkin.nine(c,GameSkin.bitmap(context,R.drawable.hd_hud),bounds,12*d,p);val fraction=materialFraction();val shineX=bounds.left+(bounds.width()+60*d)*shimmer-30*d;p.shader=LinearGradient(shineX-26*d,0f,shineX+26*d,0f,intArrayOf(0x00ffffff,0x35ffffff,0x00ffffff),null,Shader.TileMode.CLAMP);c.drawRoundRect(bounds,12*d,12*d,p);p.shader=null

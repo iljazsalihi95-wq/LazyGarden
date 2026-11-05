@@ -4,7 +4,7 @@ import kotlin.random.Random
 
 /** Pure Kotlin rules; presentation never mutates the board directly. */
 class Match3Engine(val level: Int, private val random: Random = Random.Default) {
-    val spec = Campaign.level(level)
+    var spec = Campaign.level(level); private set
     val board = Array(8) { IntArray(8) }
     val ice = Array(8) { IntArray(8) }
     val terrain=Array(8){IntArray(8)} // 1 crate, 2/3 stone layers, 4 soil, 5 flower to water
@@ -216,11 +216,16 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
         return waves
     }
     fun addMoves(count:Int):Boolean {if(won||count !in 1..5||moves>spec.moves+10)return false;moves+=count;revision++;return true}
-    fun encode(): String = (listOf(level,moves,score,clearedIce) + collected.toList() + board.flatMap{it.toList()} + ice.flatMap{it.toList()} + listOf(rescued,if(modernGoals)1 else 0) + terrain.flatMap{it.toList()} + cargo.flatMap{it.toList()}).joinToString(",")
+    fun encode(): String = (listOf(level,moves,score,clearedIce) + collected.toList() + board.flatMap{it.toList()} + ice.flatMap{it.toList()} + listOf(rescued,if(modernGoals)1 else 0) + terrain.flatMap{it.toList()} + cargo.flatMap{it.toList()} + listOf(spec.moves,spec.target,spec.ice,spec.collectColor,spec.collectCount,spec.terrainKind,spec.terrainCount,spec.rescue)).joinToString(",")
     fun restore(raw:String):Boolean {
-        val v=raw.split(',').map{it.toIntOrNull() ?: return false}
+        val tokens=raw.split(',').map{it.toIntOrNull() ?: return false}
+        val pinned=if(tokens.size==276)LevelSpec(tokens[268],tokens[269],tokens[270],tokens[271],tokens[272],tokens[273],tokens[274],tokens[275]) else Campaign.bundledLevel(level)
+        if(!GardenContent.validSpec(pinned))return false
+        val spec=pinned
+        val v=if(tokens.size==276)tokens.take(268) else tokens
         if(v.size !in listOf(138,268) || v[0]!=level || v[1] !in 0..(spec.moves+15) || v[2]<0 || v[3] !in 0..spec.ice || v.slice(4..9).any{it<0} || v.slice(10..73).any{it !in 0..29} || v.slice(74..137).any{it !in 0..1}) return false
         if(v.size==268&&(v[138] !in 0..spec.rescue || v[139] !in 0..1 || v.slice(140..203).any{it !in 0..5} || v.slice(204..267).any{it !in 0..2}))return false
+        this.spec=pinned
         modernGoals=v.size==268&&v[139]==1;rescued=if(v.size==268)v[138] else 0
         for(i in 0..63){terrain[i/8][i%8]=if(modernGoals)v[140+i] else 0;cargo[i/8][i%8]=if(modernGoals)v[204+i] else 0}
         moves=v[1];score=v[2];clearedIce=v[3]
@@ -234,7 +239,8 @@ data class LevelSpec(val moves:Int,val target:Int,val ice:Int,val collectColor:I
 object Campaign {
     const val COUNT=250
     // Ten chapters introduce collection, frost, mixed goals and tighter move budgets.
-    fun level(number:Int):LevelSpec {
+    fun level(number:Int):LevelSpec = GardenContent.active?.levels?.get(number) ?: bundledLevel(number)
+    fun bundledLevel(number:Int):LevelSpec {
         require(number in 1..COUNT)
         val chapter=(number-1)/25
         val stage=(number-1)%25
