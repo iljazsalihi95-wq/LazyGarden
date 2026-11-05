@@ -19,14 +19,18 @@ object CharacterSprites {
  private val groundedSources=mutableMapOf<String,Rect>()
  private val familyRows=floatArrayOf(0f,280/768f,536/768f,1f)
  private val originalRows=floatArrayOf(0f,.25f,.5f,.75f,1f)
- fun definition(id:String)=characters[id]
+ fun definition(id:String)=characters[id]?:when(id){
+  "bejdi"->Definition(R.drawable.resident_atlas,1,false)
+  "meti"->Definition(R.drawable.resident_atlas,3,false)
+  else->null
+ }
  fun aspect(context:Context,id:String):Float {
-  val spec=characters.getValue(id);val b=GameSkin.bitmap(context,spec.resource)
+  val spec=definition(id)?:error("Unknown sprite $id");val b=GameSkin.bitmap(context,spec.resource)
   val rows=if(spec.arrivalAtlas)familyRows else originalRows
   return (rows[spec.row+1]-rows[spec.row])*b.height/(b.width/8f)
  }
- fun draw(context:Context,c:Canvas,p:Paint,id:String,frame:Int,bounds:RectF,facingRight:Boolean,motion:CharacterAnimation.PoseMotion=CharacterAnimation.PoseMotion()):Boolean {
-  val spec=characters[id]?:return false;val b=GameSkin.bitmap(context,spec.resource)
+ fun draw(context:Context,c:Canvas,p:Paint,id:String,frame:Int,bounds:RectF,facingRight:Boolean,motion:CharacterAnimation.PoseMotion=CharacterAnimation.PoseMotion(),coat:Int=0):Boolean {
+  val spec=definition(id)?:return false;val b=GameSkin.bitmap(context,spec.resource)
   val rows=if(spec.arrivalAtlas)familyRows else originalRows;val width=b.width/8
   val pose=frame.coerceIn(0,7)
   val source=Rect(pose*width,(rows[spec.row]*b.height).toInt(),(pose+1)*width,(rows[spec.row+1]*b.height).toInt())
@@ -54,7 +58,17 @@ object CharacterSprites {
   c.translate(0f,liftPx)
   c.rotate(atlasLean+liveLean,bounds.centerX(),bounds.bottom)
   c.scale((if(facingRight)1f else -1f)*atlasSx*liveSx,atlasSy*liveSy,bounds.centerX(),bounds.bottom)
-  c.drawBitmap(b,grounded,groundedBounds,p);c.restoreToCount(layer)
+  c.drawBitmap(b,grounded,groundedBounds,p)
+  if(coat!=0){
+   // Uniform colour changes only the torso; the face, skin, trousers and shoes retain the original art.
+   val uniform=c.save();c.clipRect(groundedBounds.left,groundedBounds.top+groundedBounds.height()*.37f,groundedBounds.right,groundedBounds.top+groundedBounds.height()*.69f)
+   val red=Color.red(coat)/255f;val green=Color.green(coat)/255f;val blue=Color.blue(coat)/255f
+   p.colorFilter=ColorMatrixColorFilter(ColorMatrix(floatArrayOf(
+    .30f*red,.59f*red,.11f*red,0f,22f,.30f*green,.59f*green,.11f*green,0f,22f,
+    .30f*blue,.59f*blue,.11f*blue,0f,22f,0f,0f,0f,1f,0f)))
+   c.drawBitmap(b,grounded,groundedBounds,p);p.colorFilter=null;c.restoreToCount(uniform)
+  }
+  c.restoreToCount(layer)
   return true
  }
 }

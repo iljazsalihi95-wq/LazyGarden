@@ -27,7 +27,8 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
         val iceBefore:Array<IntArray> = Array(8){IntArray(8)},val iceAfter:Array<IntArray> = Array(8){IntArray(8)},
         val scoreAfter:Int=0,val shuffled:Boolean=false,
         val terrainBefore:Array<IntArray> = Array(8){IntArray(8)},val terrainAfter:Array<IntArray> = Array(8){IntArray(8)},
-        val cargoBefore:Array<IntArray> = Array(8){IntArray(8)},val cargoAfter:Array<IntArray> = Array(8){IntArray(8)})
+        val cargoBefore:Array<IntArray> = Array(8){IntArray(8)},val cargoAfter:Array<IntArray> = Array(8){IntArray(8)},
+        val createdSpecials:Map<Int,Int> = emptyMap())
     init {
         refill()
         val positions = (0..63).shuffled(random)
@@ -205,7 +206,10 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
                 while(write>=0){board[write][c]=random.nextInt(6);origins[write][c]=write-spawned;write--}
             }
             for(c in 0..7){val next=IntArray(8);for(r in 7 downTo 0){val item=cargoBefore[r][c];if(item>0){var to=if(terrain[r][c]>0)r else (r+hits.count{it%8==c&&it/8>r}).coerceAtMost(7);while(to>r&&next[to]>0)to--;if(to==7)rescued++ else next[to]=item}};for(r in 0..7)cargo[r][c]=next[r]}
-            waves.add(Wave(hits.toList(),before,Array(8){board[it].clone()},combo,origins,iceBefore,Array(8){ice[it].clone()},score,terrainBefore=terrainBefore,terrainAfter=Array(8){terrain[it].clone()},cargoBefore=cargoBefore,cargoAfter=Array(8){cargo[it].clone()}))
+            // Report the landing cell after gravity, not the now-empty match origin.
+            val created=mutableMapOf<Int,Int>()
+            for(r in 0..7)for(c in 0..7){val origin=origins[r][c];if(origin>=0&&specials[origin*8+c]==board[r][c])created[r*8+c]=board[r][c]}
+            waves.add(Wave(hits.toList(),before,Array(8){board[it].clone()},combo,origins,iceBefore,Array(8){ice[it].clone()},score,terrainBefore=terrainBefore,terrainAfter=Array(8){terrain[it].clone()},cargoBefore=cargoBefore,cargoAfter=Array(8){cargo[it].clone()},createdSpecials=created))
             hits=matches().toMutableSet()
         }
         if(!won && !failed && !hasMove()) {

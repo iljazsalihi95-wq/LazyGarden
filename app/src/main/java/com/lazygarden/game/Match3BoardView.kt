@@ -108,7 +108,7 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
     }
    }
   }
-  if(active!=null)drawBonusImpact(c,active)
+  if(active!=null){drawBonusImpact(c,active);drawSpecialCreation(c,active)}
   if(active!=null && boostOrigin>=0 && boostEffect!=null && effect<.48f){
    val t=(effect/.48f).coerceIn(0f,1f);val x=left+(boostOrigin%8+.5f)*cell;val y=top+(boostOrigin/8+.5f)*cell
    p.color=0xffffedac.toInt();p.alpha=((1-t)*220).toInt();p.strokeWidth=cell*.08f
@@ -128,6 +128,30 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
   if(active!=null&&effect<.48f){val intensity=(1-effect/.48f).coerceIn(0f,1f);for(index in active.cells){val x=left+(index%8+.5f)*cell;val y=top+(index/8+.5f)*cell;val kind=active.before[index/8][index%8]/6;if(kind>0||boostEffect!=null && index==boostOrigin){p.color=if(kind==3||boostEffect==Match3Engine.Booster.BOMB)0xffffb22e.toInt() else 0xffa6f1ff.toInt();p.alpha=(intensity*210).toInt();p.strokeWidth=cell*.12f*intensity;if(kind==1||boostEffect==Match3Engine.Booster.ROW||boostEffect==Match3Engine.Booster.CROSS)c.drawLine(left,y,left+8*cell,y,p);if(kind==2||boostEffect==Match3Engine.Booster.COLUMN||boostEffect==Match3Engine.Booster.CROSS)c.drawLine(x,top,x,top+8*cell,p);if(kind==4){for(target in active.cells){val tx=left+(target%8+.5f)*cell;val ty=top+(target/8+.5f)*cell;p.color=Color.HSVToColor((intensity*210).toInt(),floatArrayOf(target*47f%360,.65f,1f));c.drawLine(x,y,tx,ty,p)}};if(kind==3||boostEffect==Match3Engine.Booster.BOMB){p.style=Paint.Style.STROKE;for(q in 1..3)c.drawCircle(x,y,cell*(.25f+effect*q),p);p.style=Paint.Style.FILL}}
     for(k in 0..5){val a=k*PI/3+index*.37;val travel=cell*(.12f+effect*2.4f);val sx=x+(cos(a)*travel).toFloat();val sy=y+(sin(a)*travel).toFloat();val sz=cell*(.05f+.08f*intensity);p.color=listOf(0xffffd84e.toInt(),0xff8ee9ff.toInt(),0xffff8ec5.toInt())[k%3];p.alpha=(255*intensity).toInt();c.drawCircle(sx,sy,sz,p)}
    }};p.alpha=255;val caption=targetBooster?.let{"${GameText.booster(save.language,it)}: ${t("choose_piece")}"}?:if(busy&&(active?.combo?:0)>1)"${t("excellent")} ×${active?.combo}" else feedback;if(caption.isNotEmpty())text(c,caption,w/2,top+8*cell+24*d,min(16*d,w/24),0xffffefb5.toInt())
+ }
+ private fun drawSpecialCreation(c:Canvas,active:Match3Engine.Wave){
+  for((index,value)in active.createdSpecials){
+   val col=index%8;val row=index/8;val source=active.origins[row][col]
+   val fall=((effect-.35f)/.65f).coerceIn(0f,1f);val eased=fall*fall*(3-2*fall)
+   val x=left+(col+.5f)*cell;val y=top+(source+.5f+(row-source)*eased)*cell
+   if(effect<.35f){
+    val gather=(effect/.35f).coerceIn(0f,1f)
+    for(hit in active.cells){val sx=left+(hit%8+.5f)*cell;val sy=top+(hit/8+.5f)*cell
+     val px=sx+(x-sx)*gather;val py=sy+(y-sy)*gather
+     p.shader=null;p.color=0xffffe5a2.toInt();p.alpha=(220*(1-gather)).toInt()
+     c.drawCircle(px,py,cell*.05f,p)
+    }
+   }else{
+    val energy=sin(fall*PI.toFloat()).coerceAtLeast(0f)
+    p.shader=RadialGradient(x,y,cell*.85f,intArrayOf(0x99fff3bc.toInt(),0x00fff3bc),null,Shader.TileMode.CLAMP)
+    p.alpha=(energy*255).toInt();c.drawCircle(x,y,cell*.85f,p);p.shader=null;p.alpha=255
+    p.style=Paint.Style.STROKE;p.strokeWidth=cell*.035f;p.color=0xffffdd85.toInt()
+    c.drawCircle(x,y,cell*(.32f+.28f*fall),p);p.style=Paint.Style.FILL
+    val size=cell*(.38f+.05f*energy)
+    image(c,powerArt[(value/6-1).coerceIn(0,3)],RectF(x-size,y-size,x+size,y+size))
+   }
+  }
+  p.alpha=255;p.shader=null;p.style=Paint.Style.FILL
  }
  private fun drawBonusImpact(c:Canvas,active:Match3Engine.Wave){
   if(effect>=.65f)return
@@ -176,7 +200,7 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
   if(save.sfxEnabled)sfx.play(cue)
   visual=waves[i].before;displayedIce=waves[i].iceBefore;effect=0f
   animator=ValueAnimator.ofFloat(0f,1f).apply{
-   duration=620
+   duration=if(waves[i].createdSpecials.isEmpty())620 else 900
    addUpdateListener{
     effect=it.animatedValue as Float
     translationX=if(boostEffect!=null&&effect<.3f)sin(effect*75)*d*2*(1-effect/.3f) else 0f

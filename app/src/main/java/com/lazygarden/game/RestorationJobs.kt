@@ -23,8 +23,14 @@ object RestorationJobs {
   task==0->"rexha"
   task==2->"greku"
   task==1||task==4||step=="DECORATE"->"gezimi"
-  else->"greku"
+  else->when(RestorationWorksites.forTask(task).worker){"nermiri"->"nermir";"mevludini"->"mevludin";else->RestorationWorksites.forTask(task).worker}
  }}
+ /** Last crew change is derived from the durable timeline, never from Activity creation. */
+ fun arrivalAt(plan:RestorationSequence.Plan,index:Int):Long{
+  var start=0L;var changedAt=0L;var previous=""
+  plan.steps.take(index+1).forEach{step->val id=worker(plan.task,step.key).id;if(id!=previous){changedAt=start;previous=id};start+=step.duration}
+  return changedAt
+ }
  fun tool(task:Int,step:String):Material=when(step){
   "PAINT"->Material.PAINT;"PLASTER"->Material.PLASTER;"WINDOWS"->Material.GLASS
   "ROOF"->Material.TILE;"LIGHT"->Material.CABLE

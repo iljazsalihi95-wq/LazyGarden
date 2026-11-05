@@ -46,4 +46,18 @@ class Match3SpecialsTest {
   assertNotEquals(rockets,bombs);assertNotEquals(bombs,mixed)
  }
  @Test fun existingBombSavesKeepTheirMeaning(){val e=board();e.board[2][2]=18;val copy=Match3Engine(30);assertTrue(copy.restore(e.encode()));assertEquals(18,copy.board[2][2])}
+ @Test fun createdBonusesReportTheirRealLandingCellsAfterGravity(){
+  for(length in listOf(4,5)){
+   val wave=createRun(length)
+   assertTrue(wave.createdSpecials.isNotEmpty())
+   for((index,value)in wave.createdSpecials){
+    assertEquals(value,wave.after[index/8][index%8])
+    assertEquals(if(length==4)1 else 4,value/6)
+    val source=wave.origins[index/8][index%8]*8+index%8
+    assertTrue(source in wave.cells)
+    assertTrue(wave.before[source/8][source%8]<6)
+   }
+  }
+ }
+
 }

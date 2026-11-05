@@ -44,8 +44,7 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val art=GameSkin.bitmap(context,R.drawable.restoration_objects)
  private val props=GameSkin.bitmap(context,R.drawable.garden_work_props)
- private val workResidents=GameSkin.bitmap(context,R.drawable.resident_work_atlas)
- private val residents=GameSkin.bitmap(context,R.drawable.resident_atlas)
+ private val actorPlayers=mutableMapOf<String,CharacterAnimation.Player>()
  private val backdrop=GardenBackdrop(context,task)
  private val background=GameSkin.bitmap(context,R.drawable.garden_before)
  private val after=GameSkin.bitmap(context,R.drawable.garden_estate)
@@ -71,7 +70,7 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
    val i=plan.index(ms);val step=plan.steps[i]
    if(i!=lastStep){lastStep=i;selectedTool=null
     val worker=RestorationJobs.worker(task,step.key).id
-    if(worker!=lastWorker){lastWorker=worker;workerArrival=ms}
+    if(worker!=lastWorker){lastWorker=worker;workerArrival=RestorationJobs.arrivalAt(plan,i)}
     if(step.line.isNotBlank())voice.speakLine("restoration_$task",step.key.lowercase(),if(step.speaker==1)RestorationJobs.worker(task,step.key).id else listOf("lazi","greku","meli","rona")[step.speaker],save.language,SceneText.line(step.line,save.language),step.duration);if(save.sfxEnabled)sfx.play(step.sound)}
    if(ms-lastFoley>1100&&step.sound.isNotBlank()){lastFoley=ms;if(save.sfxEnabled&&step.key !in listOf("CELEBRATE","REVEAL","LIGHT"))sfx.play(step.sound)}
    if(ms>=plan.duration&&!completed){completed=true;checkpoint(ms);post{if(isAttachedToWindow)onComplete()}}
@@ -138,8 +137,11 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
  private inline fun reveal(c:Canvas,r:RectF,f:Float,draw:()->Unit){if(f<=0)return;val s=c.save();c.clipRect(r.left,r.top,r.left+r.width()*f,r.bottom);draw();c.restoreToCount(s)}
  private fun tool(c:Canvas,d:RectF,i:Int,x:Float,y:Float,w:Float){val cx=width*x;val bottom=height*y;val ww=width*w;SpriteArt.draw(c,p,props,4,3,i,RectF(cx-ww/2,bottom-ww*.65f,cx+ww/2,bottom))}
  private fun particles(c:Canvas,d:RectF,sound:String,f:Float){for(i in 0..11){val t=((ms%1200)/1200f+i*.083f)%1f;p.color=if(sound=="water")0xff8cdeff.toInt() else 0xffd7bd87.toInt();p.alpha=((1-t)*150).toInt();c.drawCircle(width*.5f+sin(i*4f)*width*.22f*t,height*(.67f-t*.09f),d.width()*.004f*(1-t),p)};p.alpha=255}
- private fun actors(c:Canvas,d:RectF,target:RectF,step:RestorationSequence.Step,work:Boolean){for(id in 0..3){val arrive=CharacterAnimation.ease(plan.progress(ms,"ARRIVAL"));val offsets=floatArrayOf(-.57f,.57f,-.84f,.84f);val tx=if(task==6)width*floatArrayOf(.16f,.40f,.60f,.84f)[id] else (target.centerX()+offsets[id]*target.width()).coerceIn(width*.13f,width*.87f);val move=0f
-   val ground=if(task==6)height*.88f else target.bottom+height*(if(id<2).10f else .19f)
+ private fun actors(c:Canvas,d:RectF,target:RectF,step:RestorationSequence.Step,work:Boolean){for(id in 0..3){
+   val actorId=SceneCast.canonical(if(id==1)RestorationJobs.worker(task,step.key).id else listOf("lazi","lazi","meli","rona")[id])
+   val actor=SceneCast.actor(actorId)
+   val arrive=CharacterAnimation.ease(plan.progress(ms,"ARRIVAL"));val offsets=floatArrayOf(-.57f,.57f,-.84f,.84f);val tx=if(task==6)width*floatArrayOf(.16f,.40f,.60f,.84f)[id] else (if(id==1)target.right+width*.025f else target.centerX()+offsets[id]*target.width()).coerceIn(width*.13f,width*.87f);val move=0f
+   val ground=if(task==6)height*.88f else target.bottom+height*(if(id==1).035f else if(id==0).10f else .19f)
    var x=(if(id%2==0)-width*.12f else width*1.12f)*(1-arrive)+(tx+move)*arrive;var y=height*.98f*(1-arrive)+ground.coerceAtMost(height*.88f)*arrive
    val entering=if(id==1)((ms-workerArrival)/900f).coerceIn(0f,1f) else 1f
    if(id==1&&step.key!="ARRIVAL")x=width*1.15f+(x-width*1.15f)*CharacterAnimation.ease(entering)
@@ -155,10 +157,18 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
     state==ResidentAnimation.State.WORK->ActorGesture.Mood.WORK
     else->ActorGesture.Mood.THINK
    }
-   val w=width*.23f;val frame=ResidentAnimation.frame(state,(ms/130).toInt()+id);val cw=residents.width/8;val ch=residents.height/4;val s=c.save();c.rotate(ActorGesture.lean(mood,ms),x,y);c.scale(if(x<target.centerX())1f else -1f,1f,x,y);// Keep celebration on the same foot anchor as inspection and work.
-
-   val workFrame=when{step.key=="TRY"&&id==3->7;state!=ResidentAnimation.State.WORK->-1;step.key=="PAINT"->4+((ms/320+id)%2).toInt();step.key=="WATER"->6;task==4&&step.key=="PLANT"->2+((ms/340+id)%2).toInt();step.key in listOf("WEED","SOIL","LEVEL","CLEAR","PLASTER")->((ms/300+id)%2).toInt();else->-1}
-   if(workFrame>=0)WorkerArt.draw(c,p,workResidents,id,workFrame,RectF(x-w*.63f,y-w*1.26f,x+w*.63f,y)) else SpriteArt.draw(c,p,residents,8,4,id*8+frame,RectF(x-w/2,y-w*ch/cw,x+w/2,y));c.restoreToCount(s)
+   val liveState=when(state){
+    ResidentAnimation.State.WALK->CharacterAnimation.State.WALK
+    ResidentAnimation.State.WORK->CharacterAnimation.State.WORK
+    ResidentAnimation.State.TALK->if(voice.isTalking)CharacterAnimation.State.TALK else CharacterAnimation.State.IDLE
+    ResidentAnimation.State.CELEBRATE,ResidentAnimation.State.HAPPY->CharacterAnimation.State.HAPPY
+    ResidentAnimation.State.LOOK->CharacterAnimation.State.THINK
+    else->CharacterAnimation.State.IDLE
+   }
+   val player=actorPlayers.getOrPut(actorId){CharacterAnimation.Player()};player.update(liveState,ms)
+   val w=width*(if(actor.child).17f else .23f);val ah=w*CharacterSprites.aspect(context,actor.sprite)
+   val right=if(state==ResidentAnimation.State.WALK&&entering<1f)false else x<target.centerX()
+   SceneActorArt.draw(context,c,p,actorId,player,ms,RectF(x-w/2,y-ah,x+w/2,y),right)
    if(id==1&&state==ResidentAnimation.State.WORK){
     val hx=x+if(x<target.centerX())w*.28f else -w*.28f;val hy=y-w*.55f
     val held=c.save();c.rotate(sin(ms/160f)*18f,hx,hy)
