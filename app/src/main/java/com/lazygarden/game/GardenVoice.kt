@@ -55,6 +55,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   val id="$scene/$line/$speaker/$language"
   if(id==lastId)return true
   val clip=manifest.find(scene,line,speaker,language)
+  if(clip==null&&subtitle.isBlank()&&GardenContent.asset(context,id)==null)return false
   val cue=Line(scene,line,speaker,language,clip?.asset,subtitle,clip?.durationMillis?:durationMillis)
   if(isTalking||player!=null||currentLine!=null){queued=cue;return true}
   return play(cue)
@@ -155,7 +156,9 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   val profile=VoiceProfiles.forActor(line.characterId)
   tts.setPitch(profile.pitch);tts.setSpeechRate(profile.rate)
   currentLine=line;lastId="${line.sceneId}/${line.lineId}/${++generation}"
-  return tts.speak(line.subtitle,TextToSpeech.QUEUE_FLUSH,null,lastId)==TextToSpeech.SUCCESS
+  val accepted=tts.speak(line.subtitle,TextToSpeech.QUEUE_FLUSH,null,lastId)==TextToSpeech.SUCCESS
+  if(!accepted){currentLine=null;talking(false);playQueued()}
+  return accepted
  }
  private fun talking(value:Boolean){if(isTalking!=value){isTalking=value;onTalkingChanged(value)}}
  fun stop(){pending=null;queued=null;lastId="";if(ttsReady)tts.stop();player?.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;currentLine=null;talking(false)}
