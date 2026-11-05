@@ -7,7 +7,7 @@ package com.lazygarden.game
 object FlowerSitePlan {
     data class Point(val x:Float,val y:Float)
     val boundary=listOf(Point(.055f,.655f),Point(.235f,.65f),Point(.285f,.70f),Point(.22f,.765f),Point(.055f,.78f))
-    val plants=(0 until 12).map { i->Point(.083f+(i%6)*.026f,.691f+(i/6)*.044f) }
+    val plants=(0 until 12).map { i->Point(.105f+(i%6)*.023f,.713f+(i/6)*.028f) }
     val gardenerRoute=listOf(Point(.63f,.90f),Point(.46f,.82f),Point(.35f,.77f),Point(.30f,.715f))
     val waiting=linkedMapOf("rona" to Point(.345f,.77f),"meli" to Point(.39f,.705f),"lazi" to Point(.415f,.79f))
     val gardener get()=gardenerRoute.last()

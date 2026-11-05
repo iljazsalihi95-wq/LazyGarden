@@ -80,12 +80,9 @@ class FlowerGardenView(
  private fun drawBed(c:Canvas,dst:RectF){
   val outline=Path().apply{addOval(bed,Path.Direction.CW)}
   val layer=c.save();c.clipPath(outline)
-  p.shader=null;p.alpha=255;p.color=0xff61432a.toInt();c.drawPath(outline,p)
+  p.shader=null;p.alpha=255
   SpriteArt.draw(c,p,props,4,3,3,bed)
-  val prep=FlowerSequence.prepare(ms)
-  // Soil furrows and tools stay inside the surveyed bed. The stone path is never painted over.
-  p.color=0xff3b291d.toInt();p.strokeWidth=dp(2f)
-  for(i in 0..3){val y=bed.top+bed.height()*(.27f+i*.14f);p.alpha=70;c.drawLine(bed.left+bed.width()*.12f,y,bed.right-bed.width()*.12f,y+dp(3f)*prep,p)};p.alpha=255
+  // The alpha-cut soil artwork supplies its own organic stone edge; no opaque backing.
   val count=(FlowerSequence.planting(ms)*12).toInt().coerceIn(0,12)
   val bloom=FlowerSequence.bloom(ms)
   FlowerSitePlan.plants.take(count).forEach { point->plants.draw(c,p,chosen?.id?:"tulip",dst.left+dst.width()*point.x,dst.top+dst.height()*point.y,dst.width()*.055f*(.45f+.55f*bloom)) }
