@@ -1,0 +1,45 @@
+name: Verify deployed garden speech
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/voice-diagnostics.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deployed-speech:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Probe deployed health and exact-language speech from GitHub runner
+        shell: python
+        run: |
+          import json, pathlib, urllib.request, urllib.error
+          target='https://lazygarden-backend.lazisalihi.workers.dev'
+          output=pathlib.Path('voice-diagnostics');output.mkdir()
+          report={'endpoint':target,'health':None,'speech':[]}
+          try:
+              with urllib.request.urlopen(target+'/health', timeout=20) as response:
+                  body=json.load(response)
+                  report['health']={'status':response.status,'success':body.get('success') is True,'configured':body.get('openai_configured') is True}
+              if report['health']['success'] and report['health']['configured']:
+                  for actor,language,text in [('lazi','sq','Mirë se erdhët në kopshtin tonë.'),('meli','it','Benvenuti nel nostro giardino.')]:
+                      result={'actor':actor,'language':language}
+                      try:
+                          request=urllib.request.Request(target+'/api/voice/speech',data=json.dumps({'character_id':actor,'language':language,'text':text}).encode(),headers={'Content-Type':'application/json'})
+                          with urllib.request.urlopen(request,timeout=45) as response:
+                              payload=response.read(4*1024*1024+1)
+                              valid=response.headers.get_content_type().startswith('audio/') and 128<len(payload)<=4*1024*1024
+                              result.update(status=response.status,audio=valid,bytes=len(payload))
+                              if valid:(output/(actor+'-'+language+'.mp3')).write_bytes(payload)
+                      except urllib.error.HTTPError as error:result.update(status=error.code,audio=False)
+                      except Exception as error:result.update(error=type(error).__name__,audio=False)
+                      report['speech'].append(result)
+          except urllib.error.HTTPError as error:report['health']={'status':error.code,'success':False}
+          except Exception as error:report['health']={'error':type(error).__name__,'success':False}
+          (output/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deployed-garden-speech
+          path: voice-diagnostics/
