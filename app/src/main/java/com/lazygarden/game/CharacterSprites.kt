@@ -21,7 +21,7 @@ object CharacterSprites {
  private val originalRows=floatArrayOf(0f,.25f,.5f,.75f,1f)
  fun definition(id:String)=characters[id]?:when(id){
   "bejdi"->Definition(R.drawable.resident_atlas,1,false)
-  "meti"->Definition(R.drawable.resident_atlas,3,false)
+  "meti"->Definition(R.drawable.resident_atlas,1,false)
   else->null
  }
  fun aspect(context:Context,id:String):Float {

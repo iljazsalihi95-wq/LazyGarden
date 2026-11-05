@@ -149,12 +149,11 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   tts.language=locale
   val localVoices=tts.voices?.filter{it.locale.language==locale.language&&!it.isNetworkConnectionRequired}?.sortedWith(compareByDescending<android.speech.tts.Voice>{it.quality}.thenBy{it.latency}).orEmpty()
   if(localVoices.isNotEmpty()){
-   val index=if(line.characterId in femaleIds&&localVoices.size>1)1 else 0
+   val index=VoiceProfiles.localIndex(line.characterId,localVoices.size)
    tts.voice=localVoices[index.coerceAtMost(localVoices.lastIndex)]
   }
-  val pitch=when{line.characterId in femaleIds->1.08f;line.characterId in childIds->1.04f;else->.94f}
-  val rate=if(line.characterId in childIds).91f else .88f
-  tts.setPitch(pitch);tts.setSpeechRate(rate)
+  val profile=VoiceProfiles.forActor(line.characterId)
+  tts.setPitch(profile.pitch);tts.setSpeechRate(profile.rate)
   currentLine=line;lastId="${line.sceneId}/${line.lineId}/${++generation}"
   return tts.speak(line.subtitle,TextToSpeech.QUEUE_FLUSH,null,lastId)==TextToSpeech.SUCCESS
  }

@@ -5,7 +5,7 @@ object SceneCast {
     data class Actor(val id:String,val sprite:String,val child:Boolean=false,val coat:Int=0)
     val actors=listOf(
         Actor("lazi","lazi"),Actor("meli","meli"),
-        Actor("bejdi","bejdi",true),Actor("meti","meti",true),
+        Actor("bejdi","bejdi",true),Actor("meti","bejdi",true,0xff8bb3a4.toInt()),
         Actor("cufi","cufi",true),Actor("rona","rona",true),
         Actor("rejani","bejdi",true,0xff749fb8.toInt()),
         Actor("medina","rona",true,0xffb88cc6.toInt()),
