@@ -21,7 +21,7 @@ class SceneCastTest {
         for(ms in 0L..10000L step 100)assertNotEquals(CharacterAnimation.State.WORK,StoryBlocking.state(ms,true,true))
     }
     @Test fun translatedWordsCannotAccidentallySummonAWorker(){
-        assertEquals(StoryBlocking.Beat.CALL,StoryBlocking.beat(0,1))
+        assertEquals(StoryBlocking.Beat.TALK,StoryBlocking.beat(0,1))
         assertEquals(StoryBlocking.Beat.TALK,StoryBlocking.beat(7,1))
         assertEquals(listOf("lazi","meli"),StoryBlocking.cast("lazi","meli","rexha"))
         assertEquals(listOf("rexha","lazi","meli"),StoryBlocking.cast("rexha","lazi","rexha"))

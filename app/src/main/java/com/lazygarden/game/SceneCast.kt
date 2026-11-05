@@ -34,12 +34,7 @@ object StoryBlocking {
     const val INSPECT_MILLIS=700L
     const val DIALOGUE_AT=WALK_MILLIS+INSPECT_MILLIS
     enum class Beat { TALK,CALL,INSPECT }
-    private val callChapters=setOf(0,1,2,3,5,6,8,9,11,17)
-    fun beat(chapter:Int,line:Int)=when{
-        line==1&&chapter in callChapters->Beat.CALL
-        line==2->Beat.INSPECT
-        else->Beat.TALK
-    }
+    fun beat(chapter:Int,line:Int)=if(line==2)Beat.INSPECT else Beat.TALK
     fun cast(speaker:String,partner:String,worker:String):List<String> =
         (listOf(speaker,partner)+if(beatSpeakerIsWorker(speaker,worker))listOf("lazi","meli") else emptyList())
             .map(SceneCast::canonical).distinct().take(4)
