@@ -46,7 +46,7 @@ object CharacterSprites {
   val atlasSx=1f+abs(poseWave)*.008f*action
   val atlasSy=1f-abs(poseWave)*.006f*action
   val atlasLean=poseWave*.45f*action
-  val liftPx=bounds.height()*motion.lift.coerceIn(-.02f,.02f)
+  val liftPx=0f // Live pose envelopes deform around the feet, never translate the root.
   val liveSx=motion.scaleX.coerceIn(.94f,1.06f)
   val liveSy=motion.scaleY.coerceIn(.94f,1.06f)
   val liveLean=motion.rotation.coerceIn(-4f,4f)

@@ -145,7 +145,7 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
    if(id==1&&step.key!="ARRIVAL")x=width*1.15f+(x-width*1.15f)*CharacterAnimation.ease(entering)
    if(task==6&&id==1){val platform=plan.progress(ms,"SCAFFOLD")*(1-plan.progress(ms,"REVEAL"));val px=d.left+d.width()*(if(id==0).37f else .34f);val py=d.top+d.height()*(if(id==0).42f else .56f);x+=(px-x)*platform;y+=(py-y)*platform}
    if(step.key=="TRY"&&id==3){x=target.centerX()+target.width()*.12f;y=target.top+target.height()*.60f+width*.115f}
-   val state=when{step.key=="ARRIVAL"||entering<1f->ResidentAnimation.State.WALK;step.key=="CELEBRATE"->ResidentAnimation.State.CELEBRATE;step.speaker==id->ResidentAnimation.State.TALK;work&&(id==1||id==0&&step.key in listOf("CLEAR","CLEAN","REMOVE","ASSEMBLE"))->ResidentAnimation.State.WORK;step.key=="REVEAL"->ResidentAnimation.State.HAPPY;else->ResidentAnimation.State.LOOK}
+   val state=when{step.key=="ARRIVAL"||entering<1f->ResidentAnimation.State.WALK;step.key=="CELEBRATE"->ResidentAnimation.State.CELEBRATE;work&&(id==1||id==0&&step.key in listOf("CLEAR","CLEAN","REMOVE","ASSEMBLE"))->ResidentAnimation.State.WORK;step.speaker==id->ResidentAnimation.State.TALK;step.key=="REVEAL"->ResidentAnimation.State.HAPPY;else->ResidentAnimation.State.LOOK}
    p.shader=null;p.alpha=255;p.color=0x44302010
    c.drawOval(RectF(x-width*.065f,y-width*.012f,x+width*.065f,y+width*.012f),p)
    val mood=when{
@@ -155,7 +155,8 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
     state==ResidentAnimation.State.WORK->ActorGesture.Mood.WORK
     else->ActorGesture.Mood.THINK
    }
-   val w=width*.23f;val frame=ResidentAnimation.frame(state,(ms/130).toInt()+id);val cw=residents.width/8;val ch=residents.height/4;val s=c.save();c.rotate(ActorGesture.lean(mood,ms),x,y);c.scale(if(x<target.centerX())1f else -1f,1f,x,y);if(state==ResidentAnimation.State.CELEBRATE)y-=abs(sin(ms/140f+id))*d.height()*.01f
+   val w=width*.23f;val frame=ResidentAnimation.frame(state,(ms/130).toInt()+id);val cw=residents.width/8;val ch=residents.height/4;val s=c.save();c.rotate(ActorGesture.lean(mood,ms),x,y);c.scale(if(x<target.centerX())1f else -1f,1f,x,y);// Keep celebration on the same foot anchor as inspection and work.
+
    val workFrame=when{step.key=="TRY"&&id==3->7;state!=ResidentAnimation.State.WORK->-1;step.key=="PAINT"->4+((ms/320+id)%2).toInt();step.key=="WATER"->6;task==4&&step.key=="PLANT"->2+((ms/340+id)%2).toInt();step.key in listOf("WEED","SOIL","LEVEL","CLEAR","PLASTER")->((ms/300+id)%2).toInt();else->-1}
    if(workFrame>=0)WorkerArt.draw(c,p,workResidents,id,workFrame,RectF(x-w*.63f,y-w*1.26f,x+w*.63f,y)) else SpriteArt.draw(c,p,residents,8,4,id*8+frame,RectF(x-w/2,y-w*ch/cw,x+w/2,y));c.restoreToCount(s)
    if(id==1&&state==ResidentAnimation.State.WORK){

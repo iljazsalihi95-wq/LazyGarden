@@ -125,7 +125,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
     else -> ResidentAnimation.State.IDLE
    }
    val frame=ResidentAnimation.frame(motion,tick+id)
-   val bob=if(celebrating)-abs(sin(life*100+id))*dh*.009f else if(walking)-abs(sin(life*100+id))*dh*.002f else 0f
+   val bob=0f
    val saved=c.save();val breath=1f+sin(life*18+id)*.006f;c.scale(1f,breath,x,y)
    val faceRight=if(visit>0)if(life<.75f)id==3 else id==2 else x<fx
    resident(c,id,x,y+bob,dw*.16f*(1-visit*.12f),frame,faceRight);c.restoreToCount(saved)
@@ -159,9 +159,9 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
    val player=familyPlayers.getOrPut(actor.id){CharacterAnimation.Player()};player.update(state,ambientMs)
    val frame=player.frame(ambientMs,CharacterSprites.definition(actor.id)!!.arrivalAtlas)
    val w=dst.width()*(if(actor.child).105f else .15f);val h=w*CharacterSprites.aspect(context,actor.id)
-   val y=position.y+kotlin.math.sin(player.elapsed(ambientMs)/700f+actor.id.hashCode()%7)*resources.displayMetrics.density
+   val y=position.y
    p.shader=null;p.color=0x44302010;c.drawOval(RectF(position.x-w*.3f,y-w*.06f,position.x+w*.3f,y+w*.025f),p)
-   CharacterSprites.draw(context,c,p,actor.id,frame,RectF(position.x-w/2,y-h,position.x+w/2,y),if(walking)route.facingRight else CharacterAnimation.facesRight(position.x,fountainX))
+   CharacterSprites.draw(context,c,p,actor.id,frame,RectF(position.x-w/2,y-h,position.x+w/2,y),if(walking)route.facingRight else CharacterAnimation.facesRight(position.x,fountainX),player.motion(ambientMs))
   }
  }
  private fun prop(c:Canvas,index:Int,dst:RectF,alpha:Int=255){

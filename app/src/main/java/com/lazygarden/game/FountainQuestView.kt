@@ -187,9 +187,9 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
    val carrying=(a.id=="cufi"&&(save.fountainCleanedMask and 5)!=0)||(a.id=="rona"&&(save.fountainCleanedMask and 2)!=0)
    val state=when{
     a.moving->CharacterAnimation.State.WALK
-    talking->CharacterAnimation.State.TALK
-    work->CharacterAnimation.State.WORK
     collecting->CharacterAnimation.State.COLLECT
+    work->CharacterAnimation.State.WORK
+    talking->CharacterAnimation.State.TALK
     happy->CharacterAnimation.State.HAPPY
     carrying||(a.id=="rexha"&&stage==FountainQuest.Stage.MATERIAL_DELIVERY)->CharacterAnimation.State.CARRY
     stage in listOf(FountainQuest.Stage.INSPECT,FountainQuest.Stage.TEST_WATER,FountainQuest.Stage.REXHA_INSPECT)->CharacterAnimation.State.THINK
@@ -202,7 +202,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
    val facesRight=CharacterAnimation.facesRight(a.x,lookAt);actorFacing[a.id]=facesRight
    val size=w*(if(a.child).15f else .23f);val ah=size*CharacterSprites.aspect(context,a.id)
    val poseTime=player.elapsed(life);val phase=(a.id.hashCode()%7).toFloat()
-   val bob=if(happy)-abs(sin(poseTime/140f+phase))*8*d else if(a.moving)-abs(sin(poseTime*PI.toFloat()/280f))*.7f*d else 0f
+   val bob=0f // The route owns the ground anchor; gestures never lift the entire actor.
    val y=a.y+bob;val rect=RectF(a.x-size/2,y-ah,a.x+size/2,y);actorRects[a.id]=rect
    p.color=0x44302010;c.drawOval(RectF(a.x-size*.3f,a.y-size*.035f,a.x+size*.3f,a.y+size*.025f),p)
    val mood=when{
@@ -215,7 +215,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
     else->null
    }
    val gesture=c.save();if(mood!=null)c.rotate(ActorGesture.lean(mood,poseTime),a.x,y)
-   CharacterSprites.draw(context,c,p,a.id,frame,rect,facesRight);c.restoreToCount(gesture)
+   CharacterSprites.draw(context,c,p,a.id,frame,rect,facesRight,player.motion(life));c.restoreToCount(gesture)
    if(mood!=null)ActorGesture.draw(c,p,mood,a.x,rect.top-size*.12f,size,poseTime)
    onActorRendered?.invoke(a.id,state,frame,facesRight)
    if(carrying&&a.moving){val hx=a.x+if(facesRight)size*.18f else -size*.18f;val hy=y-ah*.36f;c.drawBitmap(leaf,null,RectF(hx-9*d,hy-9*d,hx+9*d,hy+9*d),p)}

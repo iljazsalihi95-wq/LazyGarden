@@ -14,10 +14,18 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
  private val d=resources.displayMetrics.density
  private val materialArt=MaterialArt(c)
  private val pieces=RestorationJobs.palette(GardenSave(c).tasks)
+ // Original HD garden pieces remain the main silhouette. The small material badge
+ // ties each colour to its construction objective without replacing it with a flat card.
+ private val tileArt=intArrayOf(R.drawable.tile_apple,R.drawable.tile_leaf,R.drawable.tile_orange,R.drawable.tile_berry,R.drawable.tile_flower,R.drawable.tile_water).map{GameSkin.bitmap(c,it)}
  private fun piece(c:Canvas,index:Int,r:RectF){
-  p.shader=LinearGradient(r.left,r.top,r.right,r.bottom,intArrayOf(intArrayOf(0xffdff5ff.toInt(),0xffe3f8d1.toInt(),0xffffdfae.toInt(),0xffe5dcff.toInt(),0xffffd9e5.toInt(),0xffe4e9ec.toInt())[index.coerceIn(0,5)],0xff987449.toInt()),null,Shader.TileMode.CLAMP)
-  c.drawRoundRect(r,r.width()*.18f,r.height()*.18f,p);p.shader=null
-  val inset=r.width()*.09f;val inner=RectF(r);inner.inset(inset,inset);materialArt.draw(c,p,pieces[index.coerceIn(0,5)],inner)
+  p.shader=null;p.colorFilter=null;p.alpha=255;p.style=Paint.Style.FILL
+  val color=index.coerceIn(0,5)
+  c.drawBitmap(tileArt[color],null,r,p)
+  val badge=RectF(r.right-r.width()*.42f,r.bottom-r.height()*.42f,r.right,r.bottom)
+  p.color=0xf5fff1ca.toInt()
+  c.drawRoundRect(badge,r.width()*.07f,r.width()*.07f,p)
+  val inner=RectF(badge);inner.inset(r.width()*.025f,r.height()*.025f)
+  materialArt.draw(c,p,pieces[color],inner)
  }
  private val background=GameSkin.bitmap(c,R.drawable.garden_estate)
  private val socket=GameSkin.bitmap(c,R.drawable.hd_socket);private val frame=GameSkin.bitmap(c,R.drawable.hd_board_frame);private val hud=GameSkin.bitmap(c,R.drawable.hd_hud)
