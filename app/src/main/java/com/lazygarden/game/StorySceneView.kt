@@ -26,6 +26,7 @@ class StorySceneView(
     internal val sceneElapsedMillis get()=ms
     internal fun actorState(id:String)=players[SceneCast.canonical(id)]?.state
     internal val actorIds get()=cast
+    internal var onActorRendered:((String,CharacterAnimation.State)->Unit)?=null
     init{contentDescription="Personazhi ${SceneCast.name(speaker)}";importantForAccessibility=IMPORTANT_FOR_ACCESSIBILITY_YES}
     override fun onAttachedToWindow(){super.onAttachedToWindow();startClock()}
     override fun onDetachedFromWindow(){stopClock();super.onDetachedFromWindow()}
@@ -71,6 +72,7 @@ class StorySceneView(
             c.drawOval(RectF(r.centerX()-aw*.29f,r.bottom-aw*.03f,r.centerX()+aw*.29f,r.bottom+aw*.025f),p)
             val right=if(state==CharacterAnimation.State.WALK)route.facingRight else if(id==speaker)r.centerX()<w*.5f else r.centerX()<w*.32f
             SceneActorArt.draw(context,c,p,id,player,ms,r,right)
+            onActorRendered?.invoke(id,state)
             if(id==speaker&&dialogueReady){
                 val label=SceneCast.name(id);p.typeface=Typeface.DEFAULT_BOLD;p.textSize=12*resources.displayMetrics.density;p.textAlign=Paint.Align.CENTER
                 val tw=p.measureText(label)+20*resources.displayMetrics.density
