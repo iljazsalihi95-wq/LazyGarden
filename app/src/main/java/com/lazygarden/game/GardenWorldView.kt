@@ -34,7 +34,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
  private var lifecyclePaused=false
  override fun pauseScene(){lifecyclePaused=true;stopClock()}
  override fun resumeScene(){lifecyclePaused=false;startClock()}
- private val regions=arrayOf(RectF(.32f,.425f,.80f,.635f),RectF(.12f,.63f,.91f,1.04f),RectF(.75f,.60f,1.04f,.99f),RectF(-.04f,.46f,.32f,.65f),RectF(-.04f,.28f,.36f,.48f),RectF(.34f,.36f,.79f,.46f),RectF(.37f,.14f,1.04f,.415f))
+ private val regions=arrayOf(RectF(.32f,.425f,.80f,.635f),RectF(.12f,.63f,.91f,1.04f),RectF(.04f,.64f,.29f,.79f),RectF(-.04f,.46f,.32f,.65f),RectF(-.04f,.28f,.36f,.48f),RectF(.34f,.36f,.79f,.46f),RectF(.37f,.14f,1.04f,.415f))
  override fun onAttachedToWindow(){super.onAttachedToWindow();startClock()}
  private fun startClock(){
   if(lifecyclePaused || windowVisibility!=VISIBLE || !isAttachedToWindow || lifeAnimator!=null)return
@@ -149,8 +149,8 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   val cast=listOf(Resident("meli",.32f,.65f),Resident("lazi",.50f,.67f),Resident("rexha",.70f,.64f),Resident("cufi",.42f,.74f,true),Resident("rona",.59f,.74f,true)).filter{it.id in residentCast}
   for(actor in cast.sortedBy{it.y}){
    val start=CharacterAnimation.Position(dst.left+dst.width()*actor.x,dst.top+dst.height()*actor.y)
-   val visit=if(actor.child)ResidentAnimation.flowerVisit(life) else 0f
-   val destination=CharacterAnimation.Position(dst.left+dst.width()*(if(actor.id=="cufi").25f else .79f),dst.top+dst.height()*.72f)
+   val visit=if(actor.child&&tasks>=2)ResidentAnimation.flowerVisit(life) else 0f
+   val destination=CharacterAnimation.Position(dst.left+dst.width()*(if(actor.id=="cufi").32f else .37f),dst.top+dst.height()*(if(actor.id=="cufi").76f else .79f))
    val returning=life>=.75f
    val route=if(returning)CharacterAnimation.sampleRoute(destination,start,1-visit,fountainX)else CharacterAnimation.sampleRoute(start,destination,visit,fountainX)
    val position=if(actor.child)route.position else start

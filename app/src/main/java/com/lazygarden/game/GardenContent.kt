@@ -76,7 +76,7 @@ object GardenContent {
  fun asset(context:Context,id:String):File?=active?.assets?.firstOrNull{it.id==id}?.let{assetFile(context,it).takeIf{f->f.isFile}}
  fun line(chapter:Int,line:Int,language:String,fallback:String)=active?.lines?.get("${chapter+1}/${line+1}/$language")?:fallback
  fun title(chapter:Int,language:String,fallback:String)=active?.titles?.get("${chapter+1}/$language")?:fallback
- fun event(language:String,now:Long=System.currentTimeMillis()/1000)=active?.events?.firstOrNull{now in it.starts until it.ends}?.titles?.let{it[language]?:it["sq"]}
+ fun event(language:String,now:Long=System.currentTimeMillis()/1000)=active?.events?.firstOrNull{now in it.starts until it.ends}?.titles?.let{it[language]}
  @Synchronized fun load(context:Context){
   active=runCatching{
    val file=AtomicFile(File(root(context),"manifest.json"));val release=parse(file.openRead().bufferedReader().use{it.readText()})
