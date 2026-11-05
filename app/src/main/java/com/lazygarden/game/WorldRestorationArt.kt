@@ -14,7 +14,7 @@ object SpriteArt {
 object WorldRestorationArt {
  fun draw(ctx:Context,c:Canvas,d:RectF,tasks:Int,life:Float){
   val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG);val save=GardenSave(ctx);val art=GameSkin.bitmap(ctx,R.drawable.restoration_objects)
-  if(tasks>=2){val flowers=PlantArt(ctx);for(i in 0..9){val x=d.left+d.width()*(if(i<5).19f+i*.012f else .78f+(i-5)*.012f);val y=d.top+d.height()*(.67f+(i%5)*.034f);flowers.draw(c,p,save.flowerChoice?:"tulip",x,y,d.width()*.075f)}}
+  if(tasks>=2){val flowers=PlantArt(ctx);FlowerSitePlan.plants.forEach{point->flowers.draw(c,p,save.flowerChoice?:"tulip",d.left+d.width()*point.x,d.top+d.height()*point.y,d.width()*.055f)}}
   // The estate after-layer already contains the finished paving, bench, trees and facade.
   // Do not stack duplicate buildings or miniature paving decals over that illustration.
   if(tasks>=5)RestorationObjectArt.draw(c,p,art,5,objectRect(d,4))

@@ -29,7 +29,7 @@ object RestorationWorksites {
 
     private val sites = listOf(
         Site(0,"rexha","fountain_pump",.55f,.70f,.58f,.64f,true,"lazi",listOf("meli")),
-        Site(1,"gezimi","flower_bed",.40f,.73f,.38f,.68f,true,"meli",listOf("lazi","rona")),
+        Site(1,"gezimi","flower_bed",.35f,.77f,.30f,.715f,false,"meli",listOf("lazi","rona")),
         Site(2,"greku","garden_path",.48f,.78f,.50f,.72f,true,"lazi",listOf("meli")),
         Site(3,"luli","garden_bench",.72f,.70f,.75f,.66f,false,"meli",listOf("lazi","meti")),
         Site(4,"gezimi","green_lawn",.30f,.72f,.27f,.67f,true,"lazi",listOf("rona","meti")),

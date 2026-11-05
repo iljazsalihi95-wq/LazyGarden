@@ -53,7 +53,7 @@ class StorySceneView(
         val scale=maxOf(w/background.width,h/background.height)*1.4f
         val dw=background.width*scale;val dh=background.height*scale
         val dst=RectF((w-dw)/2,(h-dh)/2,(w+dw)/2,(h+dh)/2)
-        val focal=when(chapter){0->PointF(.562f,.515f);1->PointF(.50f,.68f);else->PointF(site.workX,site.workY)}
+        val focal=when(chapter){0->PointF(.562f,.515f);1->PointF(.20f,.715f);else->PointF(site.workX,site.workY)}
         dst.offset(w*.50f-(dst.left+dw*focal.x),h*.57f-(dst.top+dh*focal.y))
         dst.offset(dst.left.coerceIn(w-dw,0f)-dst.left,dst.top.coerceIn(h-dh,0f)-dst.top)
         backdrop.draw(c,dst);WorldRestorationArt.draw(context,c,dst,save.tasks,ms/12000f)
