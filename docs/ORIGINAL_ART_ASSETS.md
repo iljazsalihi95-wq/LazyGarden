@@ -82,3 +82,9 @@ for Lazi, Meli, Cufi, Rona and Rexha. That registry owns the resource/row mappin
 and nonuniform row cuts. `CharacterAnimation.Player` owns each actor's state
 clock and route facing; neither renderer substitutes another resident's row.
 The remaining cast still requires its own original production artwork.
+
+## Estate room atlas — 5 November 2026
+
+`drawable-nodpi/estate_room_atlas.webp`: original built-in image-generation output `exec-431d09c3-9059-4671-bdca-949fc3f290e0.png`, compressed to WebP without resizing. Equal 4×4 cells. Row 1: hall, windows, attic/roof, children's room. Row 2: kitchen, kitchen installations, living room, balcony. Row 3: workshop, bicycles, evening lighting, play area. Row 4: celebration, gazebo, pond/bridge, greenhouse. First 13 cells consumed by EstateRoomArt for task IDs 7–19; last three unused. No third-party game artwork copied.
+
+Generation prompt: production original LazyGarden environment atlas; 4 columns × 4 equal rows; independent hand-painted detailed European manor cutaways, warm cream/sage/golden light, wood grain and depth; frontal slightly elevated camera with clear floor for animated characters; restored rooms/areas listed above; no characters, UI, lettering, borders, watermark or proprietary designs. Runtime damage/repair overlays and work-state animations are authored in Kotlin.

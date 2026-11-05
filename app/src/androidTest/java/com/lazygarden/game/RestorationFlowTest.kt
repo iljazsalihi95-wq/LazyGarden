@@ -42,7 +42,7 @@ class RestorationFlowTest {
     val samples=mutableListOf<Int>()
     for(fraction in listOf(0f,.5f,1f)){
      val image=Bitmap.createBitmap(720,480,Bitmap.Config.ARGB_8888)
-     EstateRoomArt.draw(Canvas(image),android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG),android.graphics.RectF(0f,0f,720f,480f),task,fraction,fraction,1200)
+     EstateRoomArt.draw(themed,Canvas(image),android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG),android.graphics.RectF(0f,0f,720f,480f),task,fraction,fraction,1200)
      val pixels=IntArray(720*480);image.getPixels(pixels,0,720,0,0,720,480);samples+=pixels.contentHashCode()
      if(fraction==1f){completed+=samples.last();val dir=File(ctx.getExternalFilesDir(null),"later-restorations").apply{mkdirs()};File(dir,"restoration-${task+1}.png").outputStream().use{image.compress(Bitmap.CompressFormat.PNG,95,it)}}
      image.recycle()

@@ -17,6 +17,13 @@ object GardenContent {
   val titles:Map<String,String>,val assets:List<Asset>,val events:List<Event>)
  data class Event(val id:String,val starts:Long,val ends:Long,val titles:Map<String,String>)
  @Volatile var active:Release?=null;private set
+ private var initialized=false
+ @Synchronized fun initialize(context:Context){
+  if(initialized)return
+  initialized=true;load(context)
+  val app=context.applicationContext
+  Thread({runCatching{refresh(app)}},"garden-content").start()
+ }
  private val languages=setOf("sq","de","it","mk","tr")
  private val characters=GardenCharacter.entries.map{it.name.lowercase()}.toSet()
  private val artIds=setOf("garden_before","garden_estate","garden_map","hd_logo")
