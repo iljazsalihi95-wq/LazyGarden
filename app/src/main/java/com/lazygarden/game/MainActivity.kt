@@ -93,6 +93,15 @@ class MainActivity : AppCompatActivity() {
   if(save.constructing)return
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(18),dp(18),dp(18),dp(18));background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,20f)}
   val dialog=AlertDialog.Builder(this).setTitle(t("rewards")).setView(card).create()
+  val rewardDays=LinearLayout(this)
+  for(day in 1..7){val bonus=BonusSchedule.daily(day);rewardDays.addView(label("$day\n${bonus.coins}\n${if(bonus.keys>0)"🔑 ${bonus.keys}" else "•"}",13f,if(day==save.nextDailyRewardDay)0xff386c39.toInt() else 0xff765530.toInt()).apply{
+   setPadding(dp(8),dp(9),dp(8),dp(9));background=GameSkin.background(this@MainActivity,R.drawable.hd_hud,12f)
+   contentDescription="${t("daily_reward")} $day: ${bonus.coins} ${t("coins")}, ${bonus.keys} ${FountainText.get(save.language,"keys")}"},LinearLayout.LayoutParams(dp(64),dp(85)).apply{marginEnd=dp(4)})}
+  card.addView(HorizontalScrollView(this).apply{addView(rewardDays)},LinearLayout.LayoutParams(-1,dp(90)))
+  val upcoming=BonusSchedule.daily(save.nextDailyRewardDay)
+  card.addView(label("${t("daily_reward")}: +${upcoming.coins} ${t("coins")} · 🔑 ${upcoming.keys}",15f,0xff654123.toInt()))
+  card.addView(ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply{max=BonusSchedule.CHEST_WINS;progress=save.chestProgress},LinearLayout.LayoutParams(-1,dp(12)))
+  card.addView(label("${t("reward_chest")}: ${save.chestProgress}/${BonusSchedule.CHEST_WINS} · +${BonusSchedule.CHEST_COINS} ${t("coins")} · 🔑 ${BonusSchedule.CHEST_KEYS}",14f,0xff654123.toInt()))
   card.addView(premiumButton("${t("daily_reward")} · ${save.dailyStreak}/7"){val reward=save.claimDailyReward();dialog.dismiss();showGarden(true);if(reward!=null)Toast.makeText(this,"+${reward.coins} ${t("coins")} · +${reward.keys} ${FountainText.get(save.language,"keys")}",Toast.LENGTH_LONG).show()}.apply{isEnabled=save.dailyRewardAvailable;contentDescription="claim_daily_reward"})
   card.addView(premiumButton("${t("reward_chest")} · ${save.chestProgress}/5"){val reward=save.openRewardChest();dialog.dismiss();showGarden(true);if(reward!=null)Toast.makeText(this,"+${reward.coins} ${t("coins")} · +${reward.keys} ${FountainText.get(save.language,"keys")}",Toast.LENGTH_LONG).show()}.apply{isEnabled=save.chestProgress>=5;contentDescription="open_reward_chest"})
   card.addView(premiumButton(t("optional_bonus")){dialog.dismiss();showAdOffers()})

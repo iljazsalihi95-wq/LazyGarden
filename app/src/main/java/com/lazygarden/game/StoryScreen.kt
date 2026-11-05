@@ -27,7 +27,7 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
   speakCurrent={if(isAttachedToWindow&&!paused)voice.speakLine("story_${chapter+1}","line_${line+1}",entry.character.name.lowercase(java.util.Locale.ROOT),save.language,entry.text)}
   val column=LinearLayout(context).apply{orientation=LinearLayout.VERTICAL};val replayWord=localized("Rilexim","Kapitulli","Kapitel","Capitolo","Поглавје","Bölüm")
   column.addView(text("${if(replay)replayWord else "$replayWord ${chapter+1}"} · ${story.title}",20f,0xffffe5a1.toInt()).apply{gravity=Gravity.CENTER;setPadding(dp(18),dp(15),dp(18),dp(8));setShadowLayer(3f,0f,2f,Color.BLACK)},LinearLayout.LayoutParams(-1,dp(76)))
-  val stage=StorySceneView(context,save,chapter,line,entry.character.name.lowercase(java.util.Locale.ROOT),partner.name.lowercase(java.util.Locale.ROOT),{voice.isTalking},{speakCurrent?.invoke()})
+  val stage=StorySceneView(context,save,chapter,line,entry.character.name.lowercase(java.util.Locale.ROOT),partner.name.lowercase(java.util.Locale.ROOT),{voice.isTalking},{speakCurrent?.invoke()},continueConversation=line>0,chapterCast=(story.lines.map{it.character.name.lowercase(java.util.Locale.ROOT)}+RestorationWorksites.castForTask(chapter)).distinct().take(4))
   scene=stage
   column.addView(stage,LinearLayout.LayoutParams(-1,0,1f))
   val card=LinearLayout(context).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(19),dp(14),dp(19),dp(14));background=GameSkin.background(context,R.drawable.hd_hud,24f)}

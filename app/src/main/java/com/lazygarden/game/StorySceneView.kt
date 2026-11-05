@@ -10,17 +10,18 @@ import android.view.animation.LinearInterpolator
 class StorySceneView(
     context:Context,private val save:GardenSave,private val chapter:Int,private val line:Int,
     private val speaker:String,partner:String,private val speaking:()->Boolean,
-    private val ready:()->Unit
+    private val ready:()->Unit,
+    continueConversation:Boolean=false, chapterCast:List<String>?=null
 ):View(context),SceneLifecycle {
     private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val site=RestorationWorksites.forTask(chapter)
-    private val cast=StoryBlocking.cast(speaker,partner,site.worker)
+    private val cast=(chapterCast?:StoryBlocking.cast(speaker,partner,site.worker)).map(SceneCast::canonical).distinct().take(4)
     private val backdrop=GardenBackdrop(context,save.tasks)
     private val background=GameSkin.bitmap(context,R.drawable.garden_before)
     private val players=mutableMapOf<String,CharacterAnimation.Player>()
     private var clock:ValueAnimator?=null
     private var paused=false
-    private var ms=0L
+    private var ms=if(continueConversation)StoryBlocking.DIALOGUE_AT else 0L
     private var notified=false
     internal val dialogueReady get()=ms>=StoryBlocking.DIALOGUE_AT
     internal val sceneElapsedMillis get()=ms

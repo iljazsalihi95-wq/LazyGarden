@@ -50,6 +50,26 @@ class StorySceneLifecycleTest {
             scenario.onActivity{assertEquals(1,cues);scene.pauseScene()}
         }
     }
+    @Test fun nextDialogueKeepsTheSameCastOnSiteWithoutRepeatingArrival(){
+        val cast=listOf("meli","lazi","rexha")
+        ActivityScenario.launch(MainActivity::class.java).use{scenario->
+            val ready=AtomicBoolean(false)
+            lateinit var scene:StorySceneView
+            scenario.onActivity{activity->
+                scene=StorySceneView(activity,GardenSave(activity),0,1,"lazi","meli",{true},{},true,cast)
+                scene.onActorRendered={id,state->if(id=="lazi"&&state==CharacterAnimation.State.TALK)ready.set(true)}
+                assertTrue(scene.dialogueReady)
+                assertEquals(cast,scene.actorIds)
+                activity.setContentView(scene)
+            }
+            waitUntil(ready)
+            scenario.onActivity{
+                assertEquals(CharacterAnimation.State.TALK,scene.actorState("lazi"))
+                assertEquals(CharacterAnimation.State.IDLE,scene.actorState("meli"))
+                scene.pauseScene()
+            }
+        }
+    }
     private fun waitUntil(flag:AtomicBoolean){
         val deadline=SystemClock.uptimeMillis()+15000
         while(!flag.get()&&SystemClock.uptimeMillis()<deadline)SystemClock.sleep(50)

@@ -86,12 +86,23 @@ class GardenSave(ctx:Context) {
  private fun dayStamp():Int {val c=Calendar.getInstance();return c.get(Calendar.YEAR)*1000+c.get(Calendar.DAY_OF_YEAR)}
  val dailyRewardAvailable get()=p.getInt("daily_claim_day",-1)!=dayStamp()
  data class DailyReward(val coins:Int,val keys:Int,val tickets:Int,val streak:Int)
- fun claimDailyReward():DailyReward? {if(!dailyRewardAvailable)return null;val previous=p.getInt("daily_claim_day",-10);val today=dayStamp();val yesterday=Calendar.getInstance().apply{add(Calendar.DAY_OF_YEAR,-1)}.let{it.get(Calendar.YEAR)*1000+it.get(Calendar.DAY_OF_YEAR)};val next=if(previous==yesterday)(dailyStreak%7)+1 else 1;val rewardCoins=75+next*25;val rewardKeys=if(next==7)2 else if(next==4)1 else 0;val rewardTickets=if(next>=3)1 else 0;p.edit().putInt("daily_claim_day",today).putInt("daily_streak",next).putInt("coins",coins+rewardCoins).putInt("keys",keys+rewardKeys).putInt("event_tickets",tickets+rewardTickets).commit();return DailyReward(rewardCoins,rewardKeys,rewardTickets,next)}
+ val nextDailyRewardDay:Int get(){
+  if(!dailyRewardAvailable)return dailyStreak.coerceIn(1,7)
+  val yesterday=Calendar.getInstance().apply{add(Calendar.DAY_OF_YEAR,-1)}.let{it.get(Calendar.YEAR)*1000+it.get(Calendar.DAY_OF_YEAR)}
+  return if(p.getInt("daily_claim_day",-10)==yesterday)(dailyStreak%7)+1 else 1
+ }
+ fun claimDailyReward():DailyReward? {
+  if(!dailyRewardAvailable)return null
+  val reward=BonusSchedule.daily(nextDailyRewardDay)
+  if(!p.edit().putInt("daily_claim_day",dayStamp()).putInt("daily_streak",reward.day)
+   .putInt("coins",coins+reward.coins).putInt("keys",keys+reward.keys).putInt("event_tickets",tickets+reward.tickets).commit())return null
+  return DailyReward(reward.coins,reward.keys,reward.tickets,reward.day)
+ }
  fun spendLife():Boolean {if(lives<=0)return false;return p.edit().putInt("lives",lives-1).commit()}
  fun rewardLife(){p.edit().putInt("lives",(lives+1).coerceAtMost(maxLives)).commit()}
  fun grantRewardedCoins(amount:Int=100):Boolean {if(amount<=0)return false;return p.edit().putInt("coins",coins+amount).commit()}
  data class ChestReward(val coins:Int,val keys:Int)
- fun openRewardChest():ChestReward? {if(chestProgress<5)return null;val reward=ChestReward(300,1);p.edit().putInt("chest_progress",0).putInt("coins",coins+reward.coins).putInt("keys",keys+reward.keys).commit();return reward}
+ fun openRewardChest():ChestReward? {if(chestProgress<5)return null;val reward=ChestReward(BonusSchedule.CHEST_COINS,BonusSchedule.CHEST_KEYS);p.edit().putInt("chest_progress",0).putInt("coins",coins+reward.coins).putInt("keys",keys+reward.keys).commit();return reward}
  private fun boosterKey(kind:Match3Engine.Booster)="booster_${kind.name.lowercase()}"
  fun boosterCount(kind:Match3Engine.Booster)=p.getInt(boosterKey(kind),3).coerceAtLeast(0)
  fun grantBooster(kind:Match3Engine.Booster,count:Int=1):Boolean {if(count<=0)return false;return p.edit().putInt(boosterKey(kind),boosterCount(kind)+count).commit()}
