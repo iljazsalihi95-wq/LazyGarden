@@ -68,7 +68,7 @@ class FlowerGardenView(
   else->stage.name.lowercase()
  }
  override fun onDraw(c:Canvas){
-  super.onDraw(c);val s=maxOf(width.toFloat()/garden.width,height.toFloat()/garden.height)*1.75f;val dw=garden.width*s;val dh=garden.height*s
+  super.onDraw(c);val s=FlowerSitePlan.cameraWidth(width,height)/garden.width;val dw=garden.width*s;val dh=garden.height*s
   val left=(width*.44f-dw*.20f).coerceIn(width-dw,0f);val top=(height*.67f-dh*.715f).coerceIn(height-dh,0f)
   val dst=RectF(left,top,left+dw,top+dh);backdrop.draw(c,dst);WorldRestorationArt.water(c,p,dst,life*12000f)
   bed.set(dst.left+dw*.055f,dst.top+dh*.65f,dst.left+dw*.285f,dst.top+dh*.78f);drawBed(c,dst);drawPeople(c,dst,dw)

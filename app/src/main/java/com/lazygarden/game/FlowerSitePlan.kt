@@ -11,6 +11,8 @@ object FlowerSitePlan {
     val gardenerRoute=listOf(Point(.63f,.90f),Point(.46f,.82f),Point(.35f,.77f),Point(.30f,.715f))
     val waiting=linkedMapOf("rona" to Point(.345f,.77f),"meli" to Point(.39f,.705f),"lazi" to Point(.415f,.79f))
     val gardener get()=gardenerRoute.last()
+    /** Width-led framing keeps the rightmost family member visible on tall Samsung displays. */
+    fun cameraWidth(width:Int,height:Int):Float=maxOf(width*2.1f,height*(2f/3f))
     fun contains(point:Point):Boolean {
         var inside=false;var j=boundary.lastIndex
         for(i in boundary.indices){val a=boundary[i];val b=boundary[j]
