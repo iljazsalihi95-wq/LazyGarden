@@ -20,7 +20,7 @@ object WorldRestorationArt {
   if(tasks>=5)RestorationObjectArt.draw(c,p,art,5,objectRect(d,4))
   if(tasks>=6)RestorationObjectArt.draw(c,p,art,8,objectRect(d,5))
  }
- fun objectRect(d:RectF,task:Int)=when(task){3->rect(d,.21f,.64f,.28f,.17f);4->rect(d,.19f,.75f,.27f,.16f);5->rect(d,.50f,.82f,.60f,.30f);6->rect(d,.69f,.29f,.58f,.31f);else->rect(d,.50f,.86f,.40f,.20f)}
+ fun objectRect(d:RectF,task:Int)=if(task>=7)EstateRoomArt.bounds(d) else when(task){3->rect(d,.21f,.64f,.28f,.17f);4->rect(d,.19f,.75f,.27f,.16f);5->rect(d,.50f,.82f,.60f,.30f);6->rect(d,.69f,.29f,.58f,.31f);else->rect(d,.50f,.86f,.40f,.20f)}
  fun water(c:Canvas,p:Paint,d:RectF,ms:Float){
   // Anchors follow the actual illustrated nozzle, bowls and basin in garden_estate.
   val w=d.width();val h=d.height();val x=d.left+w*.562f

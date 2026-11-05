@@ -9,7 +9,7 @@ import android.view.animation.LinearInterpolator
 import kotlin.math.*
 
 /** Interactive native estate: taps are world actions, never a sequence of story cards. */
-class FountainQuestView(context:Context,private val save:GardenSave,private val play:()->Unit,private val inventory:()->Unit,private val close:()->Unit,private val complete:()->Unit):View(context),SceneLifecycle {
+class FountainQuestView(context:Context,private val save:GardenSave,private val play:()->Unit,private val inventory:()->Unit,private val close:()->Unit,private val complete:()->Unit,private val options:()->Unit={}):View(context),SceneLifecycle {
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val before=GardenBackdrop(context,0);private val restored=GardenBackdrop(context,1)
  private val background=GameSkin.bitmap(context,R.drawable.garden_before)
@@ -25,7 +25,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
  private var lastSpoken:FountainText.Cue?=null
  private var lastWork=0L
  private var collectedLeaf=-1;private var collectStarted=-2000L;private var collectionCommitted=false
- private val actionRect=RectF();private val playRect=RectF();private val inventoryRect=RectF();private val closeRect=RectF()
+ private val optionsRect=RectF();private val actionRect=RectF();private val playRect=RectF();private val inventoryRect=RectF();private val closeRect=RectF()
  private val worldTarget=RectF();private val leaves=Array(3){RectF()}
  private val players=mutableMapOf<String,CharacterAnimation.Player>()
  private val actorFacing=mutableMapOf<String,Boolean>()
@@ -235,9 +235,10 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   val objectiveBox=RectF(12*d,65*d,w-12*d,124*d);panel(c,objectiveBox)
   wrap(c,objective,objectiveBox,14f)
   counter("XP ${if(rewardElapsed>=0)rewardXp+(50*reward).toInt() else save.xp}",w*.83f,h-18*d,12f,Color.WHITE)
-  actionRect.set(30*d,h-88*d,w-30*d,h-35*d);playRect.setEmpty()
+  actionRect.set(30*d,h-88*d,w-30*d,h-35*d);playRect.setEmpty();optionsRect.setEmpty()
   when(stage){
    FountainQuest.Stage.COLLECT->{
+    optionsRect.set(18*d,h-276*d,w-18*d,h-245*d);button(c,optionsRect,GameText.get(save.language,"build_options"))
     val needs=save.restorationNeeds(0);val row=RectF(14*d,h-240*d,w-14*d,h-110*d);panel(c,row)
     for((i,need)in needs.withIndex()){val x=row.left+row.width()*(i+.5f)/needs.size;materialArt.draw(c,p,need.material,RectF(x-26*d,row.top+9*d,x+26*d,row.top+62*d));text(c,FountainText.get(save.language,need.material.name),x,row.top+77*d,9.5f);text(c,"${save.materialCount(need.material)}/${need.count}",x,row.top+98*d,15f,if(save.materialCount(need.material)>=need.count)0xff267539.toInt() else 0xff985029.toInt())}
     text(c,if(save.restorationMaterialsReady())FountainText.get(save.language,"ready") else GameText.get(save.language,"materials"),row.centerX(),row.bottom-15*d,13f)
@@ -261,6 +262,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   if(closeRect.contains(e.x,e.y)){save.checkpointFountain(stage,elapsed);close();return true}
   if(inventoryRect.contains(e.x,e.y)){save.checkpointFountain(stage,elapsed);inventory();return true}
   if(isCollecting)return true
+  if(stage==FountainQuest.Stage.COLLECT&&optionsRect.contains(e.x,e.y)){options();return true}
   if(stage==FountainQuest.Stage.COLLECT&&playRect.contains(e.x,e.y)){save.checkpointFountain(stage,elapsed);play();return true}
   if(stage==FountainQuest.Stage.CLEAN){
    val i=leaves.indexOfFirst{it.contains(e.x,e.y)}

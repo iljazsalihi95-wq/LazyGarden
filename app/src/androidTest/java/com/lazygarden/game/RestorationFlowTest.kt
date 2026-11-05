@@ -33,6 +33,30 @@ class RestorationFlowTest {
   assertTrue(latch.await(90,TimeUnit.SECONDS));error.get()?.let{throw it}
   export(File(ctx.getExternalFilesDir(null),"native-stages"))
  }
+ @Test fun laterRestorationsRenderDistinctObjectsBeforeDuringAndAfterWork(){
+  val done=CountDownLatch(1);val error=java.util.concurrent.atomic.AtomicReference<Throwable?>()
+  android.os.Handler(android.os.Looper.getMainLooper()).post{try{
+   val themed=android.view.ContextThemeWrapper(ctx,R.style.Theme_LazyGarden)
+   val completed=mutableSetOf<Int>()
+   for(task in 7..19){
+    val samples=mutableListOf<Int>()
+    for(fraction in listOf(0f,.5f,1f)){
+     val image=Bitmap.createBitmap(720,480,Bitmap.Config.ARGB_8888)
+     EstateRoomArt.draw(Canvas(image),android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG),android.graphics.RectF(0f,0f,720f,480f),task,fraction,fraction,1200)
+     val pixels=IntArray(720*480);image.getPixels(pixels,0,720,0,0,720,480);samples+=pixels.contentHashCode()
+     if(fraction==1f){completed+=samples.last();val dir=File(ctx.getExternalFilesDir(null),"later-restorations").apply{mkdirs()};File(dir,"restoration-${task+1}.png").outputStream().use{image.compress(Bitmap.CompressFormat.PNG,95,it)}}
+     image.recycle()
+    }
+    assertEquals("Before/work/after must visibly differ for task $task",3,samples.toSet().size)
+    val view=RestorationGardenView(themed,task,RestorationSequence.plan(task).duration/2)
+    view.measure(View.MeasureSpec.makeMeasureSpec(720,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(1280,View.MeasureSpec.EXACTLY));view.layout(0,0,720,1280)
+    val image=Bitmap.createBitmap(720,1280,Bitmap.Config.ARGB_8888);view.draw(Canvas(image));image.recycle();view.dispose()
+   }
+   assertEquals("Each completed site has its own objects",13,completed.size)
+  }catch(t:Throwable){error.set(t)}finally{done.countDown()}}
+  assertTrue(done.await(60,TimeUnit.SECONDS));error.get()?.let{throw it}
+  export(File(ctx.getExternalFilesDir(null),"later-restorations"))
+ }
  @Test fun flowerPickerAndPlantingRenderTexturedArtwork(){val done=CountDownLatch(1);val error=java.util.concurrent.atomic.AtomicReference<Throwable?>();val instrument=InstrumentationRegistry.getInstrumentation()
   android.os.Handler(android.os.Looper.getMainLooper()).post{try{val themed=android.view.ContextThemeWrapper(ctx,R.style.Theme_LazyGarden);for(ms in listOf(8000L,18000L,27000L)){val v=FlowerGardenView(themed,initialChoice=if(ms==8000L)null else "lavender",initialElapsed=ms);v.measure(View.MeasureSpec.makeMeasureSpec(720,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(1280,View.MeasureSpec.EXACTLY));v.layout(0,0,720,1280);val b=Bitmap.createBitmap(720,1280,Bitmap.Config.ARGB_8888);v.draw(Canvas(b));File(ctx.getExternalFilesDir(null),"flowers-$ms.png").outputStream().use{b.compress(Bitmap.CompressFormat.PNG,95,it)};v.dispose();b.recycle()}}catch(t:Throwable){error.set(t)}finally{done.countDown()}}
   assertTrue(done.await(45,TimeUnit.SECONDS));error.get()?.let{throw it};export(ctx.getExternalFilesDir(null)!!,"flowers-")

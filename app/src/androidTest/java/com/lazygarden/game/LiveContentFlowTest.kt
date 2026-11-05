@@ -15,6 +15,7 @@ class LiveContentFlowTest {
  private val context get()=ApplicationProvider.getApplicationContext<Context>()
  private fun manifest(version:Int)=JSONObject().put("schemaVersion",1).put("minAppContentApi",1).put("version",version)
   .put("levels",org.json.JSONArray()).put("chapters",org.json.JSONArray()).put("assets",org.json.JSONArray()).put("events",org.json.JSONArray())
+ @org.junit.After fun clean(){reset()}
  @Before fun reset(){File(context.filesDir,"live_content").deleteRecursively();GardenContent.load(context)}
  @Test fun activationWaitsForNextLaunchAndRejectsDowngrades(){
   assertTrue(GardenContent.stage(context,manifest(2).toString()));assertNull(GardenContent.active)

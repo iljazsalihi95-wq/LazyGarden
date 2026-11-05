@@ -7,6 +7,11 @@ object GameText {
 
     private val text = mapOf(
         "sq" to mapOf(
+            "rewards" to "Shpërblimet",
+            "daily_reward" to "Shpërblimi ditor",
+            "reward_chest" to "Arka e niveleve",
+            "build_options" to "Materiale · Çelës · Bli",
+
             "home_tagline" to "Ndërto · Luaj · Dekoro\nKopshti i ëndrrave",
             "estate_progress" to "Prona jonë · {count}/20 restaurime",
             "view_estate" to "Shiko pronën",
@@ -37,6 +42,11 @@ object GameText {
             "level_complete" to "Niveli i përfunduar!", "try_again" to "Provo përsëri", "moves" to "Lëvizje"
         ),
         "de" to mapOf(
+            "rewards" to "Belohnungen",
+            "daily_reward" to "Tägliche Belohnung",
+            "reward_chest" to "Leveltruhe",
+            "build_options" to "Material · Schlüssel · Kaufen",
+
             "home_tagline" to "Baue · Spiele · Gestalte\nDein Traumgarten",
             "estate_progress" to "Unser Anwesen · {count}/20 Restaurierungen",
             "view_estate" to "Anwesen ansehen",
@@ -67,6 +77,11 @@ object GameText {
             "level_complete" to "Level geschafft!", "try_again" to "Nochmal versuchen", "moves" to "Züge"
         ),
         "it" to mapOf(
+            "rewards" to "Premi",
+            "daily_reward" to "Premio giornaliero",
+            "reward_chest" to "Forziere livelli",
+            "build_options" to "Materiali · Chiave · Acquista",
+
             "home_tagline" to "Costruisci · Gioca · Decora\nIl giardino dei sogni",
             "estate_progress" to "La nostra proprietà · {count}/20 restauri",
             "view_estate" to "Esplora la proprietà",
@@ -97,6 +112,11 @@ object GameText {
             "level_complete" to "Livello completato!", "try_again" to "Riprova", "moves" to "Mosse"
         ),
         "mk" to mapOf(
+            "rewards" to "Награди",
+            "daily_reward" to "Дневна награда",
+            "reward_chest" to "Ковчег од нивоа",
+            "build_options" to "Материјали · Клуч · Купи",
+
             "home_tagline" to "Изгради · Играј · Украси\nГрадина од соништата",
             "estate_progress" to "Нашиот имот · {count}/20 обнови",
             "view_estate" to "Погледни го имотот",
@@ -127,6 +147,11 @@ object GameText {
             "level_complete" to "Нивото е завршено!", "try_again" to "Обиди се повторно", "moves" to "Потези"
         ),
         "tr" to mapOf(
+            "rewards" to "Ödüller",
+            "daily_reward" to "Günlük ödül",
+            "reward_chest" to "Seviye sandığı",
+            "build_options" to "Malzeme · Anahtar · Satın al",
+
             "home_tagline" to "İnşa et · Oyna · Süsle\nHayalindeki bahçe",
             "estate_progress" to "Mülkümüz · {count}/20 onarım",
             "view_estate" to "Mülkü görüntüle",

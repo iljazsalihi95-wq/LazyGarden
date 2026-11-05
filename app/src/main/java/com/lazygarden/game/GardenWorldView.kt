@@ -12,8 +12,8 @@ import kotlin.math.sin
 class GardenWorldView(context:Context,private val tasks:Int,private val constructing:Boolean=false,private val decorations:List<DecorItem> = emptyList(),private val focus:DecorItem?=null,private val onRestorationComplete:()->Unit={},initialElapsed:Long=0L,private val checkpoint:(Long)->Unit={}):View(context),SceneLifecycle{
  private val decorationArt=mutableMapOf<Int,Bitmap>()
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
- private val after=BitmapFactory.decodeResource(resources,R.drawable.garden_estate)
- private val before=BitmapFactory.decodeResource(resources,R.drawable.garden_before)
+ private val after=GameSkin.bitmap(context,R.drawable.garden_estate)
+ private val before=GameSkin.bitmap(context,R.drawable.garden_before)
  private val mask=Bitmap.createBitmap(256,384,Bitmap.Config.ARGB_8888)
  private val worksite by lazy { GameSkin.bitmap(context,R.drawable.fountain_worksite) }
  private val leafArt by lazy { GameSkin.bitmap(context,R.drawable.tile_leaf) }

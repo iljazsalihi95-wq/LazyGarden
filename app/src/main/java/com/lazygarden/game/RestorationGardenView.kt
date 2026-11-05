@@ -85,7 +85,12 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
   backdrop.draw(c,d);WorldRestorationArt.water(c,p,d,ms.toFloat())
   WorldRestorationArt.draw(context,c,d,task,ms/12000f)
   val step=plan.steps[plan.index(ms)];val f=plan.fraction(ms)
-  if(task==2){WorldRestorationArt.path(context,c,p,d,plan.progress(ms,"REMOVE"),plan.progress(ms,"PLACE"));WorldRestorationArt.draw(context,c,d,task,ms/12000f);tool(c,d,8,.73f,.83f,.18f)}else{
+  if(task>=7){
+   val repairKeys=listOf("REPAIR","WINDOWS","ROOF","ASSEMBLE","LIGHT")
+   val repair=repairKeys.maxOf{plan.progress(ms,it)}
+   val final=plan.progress(ms,"REVEAL")
+   EstateRoomArt.draw(c,p,EstateRoomArt.bounds(d),task,repair,final,ms)
+  }else if(task==2){WorldRestorationArt.path(context,c,p,d,plan.progress(ms,"REMOVE"),plan.progress(ms,"PLACE"));WorldRestorationArt.draw(context,c,d,task,ms/12000f);tool(c,d,8,.73f,.83f,.18f)}else{
    val row=task-3;val r=WorldRestorationArt.objectRect(d,task)
    if(task==3&&plan.progress(ms,"REMOVE")>0){val clean=c.save();c.clipRect(d.left,d.top+d.height()*.44f,d.left+d.width()*.34f,d.top+d.height()*.68f);p.alpha=(255*plan.progress(ms,"REMOVE")).toInt();c.drawBitmap(after,null,d,p);p.alpha=255;c.restoreToCount(clean)}
    val repaired=if(task==4)plan.progress(ms,"PLANT") else plan.progress(ms,"REPAIR")

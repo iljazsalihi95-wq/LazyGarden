@@ -47,10 +47,11 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
  private val manifest by lazy { VoiceManifest(context) }
  fun speakLine(scene:String,line:String,character:String,language:String,subtitle:String="",durationMillis:Long=0L):Boolean {
   if(released||!enabled())return false
-  val id="$scene/$line/$character/$language"
+  val speaker=when(character){"nermir"->"nermiri";"mevludin"->"mevludini";else->character}
+  val id="$scene/$line/$speaker/$language"
   if(id==lastId)return true
-  val clip=manifest.find(scene,line,character,language)
-  val cue=Line(scene,line,character,language,clip?.asset,subtitle,clip?.durationMillis?:durationMillis)
+  val clip=manifest.find(scene,line,speaker,language)
+  val cue=Line(scene,line,speaker,language,clip?.asset,subtitle,clip?.durationMillis?:durationMillis)
   if(isTalking||player!=null||currentLine!=null){queued=cue;return true}
   return play(cue)
  }
