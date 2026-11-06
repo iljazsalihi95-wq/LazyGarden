@@ -13,6 +13,7 @@ class ConstructionPieceArt(context:Context){
   p.shader=null;p.colorFilter=null;p.alpha=255;p.style=Paint.Style.FILL
   p.color=0x55332312;c.drawRoundRect(RectF(r.left,r.top+r.height()*.06f,r.right,r.bottom),radius,radius,p)
   val face=RectF(r.left,r.top,r.right,r.bottom-r.height()*.06f)
+  p.alpha=255
   p.shader=LinearGradient(face.left,face.top,face.right,face.bottom,intArrayOf(Color.WHITE,colors[i],colors[i]),floatArrayOf(0f,.28f,1f),Shader.TileMode.CLAMP)
   val shape=Path()
   if(i%3==0)shape.addRoundRect(face,radius*1.8f,radius*1.8f,Path.Direction.CW)
