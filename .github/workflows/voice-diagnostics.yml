@@ -46,6 +46,7 @@ jobs:
           output = pathlib.Path('voice-diagnostics')
           output.mkdir()
           report = {'endpoint': target, 'health': None, 'speech': []}
+          headers = {'User-Agent': 'LazyGarden-Speech-Verification/1.0'}
 
           def error_details(error):
               if not isinstance(error, urllib.error.HTTPError):
@@ -65,7 +66,8 @@ jobs:
               return result
 
           try:
-              with urllib.request.urlopen(target + '/health', timeout=20) as response:
+              request = urllib.request.Request(target + '/health', headers=headers)
+              with urllib.request.urlopen(request, timeout=20) as response:
                   body = json.load(response)
                   report['health'] = {'status': response.status,
                                       'success': body.get('success') is True,
@@ -81,7 +83,7 @@ jobs:
                   request = urllib.request.Request(
                       target + '/api/voice/speech',
                       data=json.dumps({'character_id': actor, 'language': language, 'text': text}).encode(),
-                      headers={'Content-Type': 'application/json'})
+                      headers={**headers, 'Content-Type': 'application/json'})
                   with urllib.request.urlopen(request, timeout=25) as response:
                       payload = response.read(4 * 1024 * 1024 + 1)
                       result.update(status=response.status, bytes=len(payload))

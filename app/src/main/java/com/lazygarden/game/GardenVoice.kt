@@ -69,6 +69,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
     connection=(URL(SPEECH_BACKEND).openConnection() as HttpURLConnection).apply{
      requestMethod="POST";connectTimeout=5000;readTimeout=18000
      doOutput=true;setRequestProperty("Content-Type","application/json")
+     setRequestProperty("User-Agent","LazyGarden/"+BuildConfig.VERSION_NAME)
     }
     val payload=JSONObject().put("character_id",cue.characterId.lowercase(Locale.ROOT))
      .put("language",cue.language).put("text",cue.subtitle).toString()
