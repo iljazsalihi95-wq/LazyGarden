@@ -1,44 +1,110 @@
-name: Verify deployed garden speech
+name: Deploy and verify garden speech
 on:
   push:
     branches: [main]
-    paths: ['.github/workflows/voice-diagnostics.yml']
+    paths:
+      - 'cloudflare-worker/**'
+      - 'wrangler.toml'
+      - '.github/workflows/voice-diagnostics.yml'
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: lazygarden-production-speech
 jobs:
   deployed-speech:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
-      - name: Probe deployed health and exact-language speech from GitHub runner
+      - uses: actions/checkout@v4
+      - name: Deploy the existing Worker
+        if: env.CLOUDFLARE_ACCOUNT_ID != '' && env.CLOUDFLARE_API_TOKEN != ''
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Report unavailable deployment credentials
+        if: env.CLOUDFLARE_ACCOUNT_ID == '' || env.CLOUDFLARE_API_TOKEN == ''
+        run: echo '::warning::Cloudflare deployment credentials are missing. Checking the existing endpoint.'
+      - name: Install audio verification tools if needed
+        if: always()
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+      - name: Verify that both deployed voices return decodable audio
+        if: always()
         shell: python
         run: |
-          import json, pathlib, urllib.request, urllib.error
-          target='https://lazygarden-backend.lazisalihi.workers.dev'
-          output=pathlib.Path('voice-diagnostics');output.mkdir()
-          report={'endpoint':target,'health':None,'speech':[]}
-          try:
-              with urllib.request.urlopen(target+'/health', timeout=20) as response:
-                  body=json.load(response)
-                  report['health']={'status':response.status,'success':body.get('success') is True,'configured':body.get('openai_configured') is True}
-          except urllib.error.HTTPError as error:report['health']={'status':error.code,'success':False}
-          except Exception as error:report['health']={'error':type(error).__name__,'success':False}
-          for actor,language,text in [('lazi','sq','Mirë se erdhët në kopshtin tonë.'),('meli','it','Benvenuti nel nostro giardino.')]:
-              result={'actor':actor,'language':language}
+          import json, pathlib, re, subprocess, urllib.request, urllib.error
+
+          target = 'https://lazygarden-backend.lazisalihi.workers.dev'
+          output = pathlib.Path('voice-diagnostics')
+          output.mkdir()
+          report = {'endpoint': target, 'health': None, 'speech': []}
+
+          def error_details(error):
+              if not isinstance(error, urllib.error.HTTPError):
+                  return {'error': type(error).__name__}
+              body = error.read(4096).decode('utf-8', errors='replace')
+              match = re.search(r'error code:\s*(\d+)', body, re.I)
+              result = {'status': error.code, 'edge_error': match[1] if match else None}
+              for name in ('cf-ray', 'cf-mitigated', 'content-type'):
+                  if error.headers.get(name):
+                      result[name] = error.headers[name]
               try:
-                  request=urllib.request.Request(target+'/api/voice/speech',data=json.dumps({'character_id':actor,'language':language,'text':text}).encode(),headers={'Content-Type':'application/json'})
-                  with urllib.request.urlopen(request,timeout=45) as response:
-                      payload=response.read(4*1024*1024+1)
-                      valid=response.headers.get_content_type().startswith('audio/') and 128<len(payload)<=4*1024*1024
-                      result.update(status=response.status,audio=valid,bytes=len(payload))
-                      if valid:(output/(actor+'-'+language+'.mp3')).write_bytes(payload)
-              except urllib.error.HTTPError as error:result.update(status=error.code,audio=False)
-              except Exception as error:result.update(error=type(error).__name__,audio=False)
+                  worker_error = json.loads(body).get('error')
+                  if isinstance(worker_error, str) and re.fullmatch(r'[A-Z_]{1,60}', worker_error):
+                      result['worker_error'] = worker_error
+              except (ValueError, AttributeError):
+                  pass
+              return result
+
+          try:
+              with urllib.request.urlopen(target + '/health', timeout=20) as response:
+                  body = json.load(response)
+                  report['health'] = {'status': response.status,
+                                      'success': body.get('success') is True,
+                                      'configured': body.get('openai_configured') is True}
+          except Exception as error:
+              report['health'] = error_details(error)
+
+          for actor, language, text in [('lazi', 'sq', 'Mirë se erdhët në kopshtin tonë.'),
+                                        ('meli', 'it', 'Benvenuti nel nostro giardino.')]:
+              result = {'actor': actor, 'language': language, 'audio': False}
+              clip = output / (actor + '-' + language + '.mp3')
+              try:
+                  request = urllib.request.Request(
+                      target + '/api/voice/speech',
+                      data=json.dumps({'character_id': actor, 'language': language, 'text': text}).encode(),
+                      headers={'Content-Type': 'application/json'})
+                  with urllib.request.urlopen(request, timeout=25) as response:
+                      payload = response.read(4 * 1024 * 1024 + 1)
+                      result.update(status=response.status, bytes=len(payload))
+                      if response.headers.get_content_type() == 'audio/mpeg' and 128 < len(payload) <= 4 * 1024 * 1024:
+                          clip.write_bytes(payload)
+                          decoded = subprocess.run(['ffmpeg', '-v', 'error', '-xerror', '-i', str(clip),
+                                                    '-map', '0:a:0', '-f', 's16le', 'pipe:1'],
+                                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15)
+                          result['audio'] = decoded.returncode == 0 and len(decoded.stdout) > 8192
+              except Exception as error:
+                  result.update(error_details(error))
+              if not result['audio']:
+                  clip.unlink(missing_ok=True)
               report['speech'].append(result)
-          (output/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
-          print(json.dumps(report,ensure_ascii=False,indent=2))
+
+          evidence = json.dumps(report, ensure_ascii=False, indent=2)
+          (output / 'report.json').write_text(evidence)
+          print(evidence)
+          if not all(result['audio'] for result in report['speech']):
+              raise SystemExit('Production speech failed to return decodable audio in both languages')
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: deployed-garden-speech
           path: voice-diagnostics/
+          if-no-files-found: ignore

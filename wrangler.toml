@@ -1,5 +1,7 @@
 name = "lazygarden-backend"
 main = "cloudflare-worker/src/index.js"
+workers_dev = true
+keep_vars = true
 compatibility_date = "2026-11-02"
 
 [vars]
