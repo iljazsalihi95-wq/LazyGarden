@@ -4,6 +4,12 @@ package com.lazygarden.game
 object UiText {
  private val languages=listOf("sq","de","it","mk","tr")
  private val rows="""
+ hear_again|Dëgjo përsëri|Erneut anhören|Ascolta di nuovo|Слушај повторно|Tekrar dinle
+ audio_loading|Po ngarkohet zëri…|Audio wird geladen…|Caricamento della voce…|Се вчитува гласот…|Ses yükleniyor…
+ audio_playing|Personazhi po flet|Die Figur spricht|Il personaggio sta parlando|Ликот зборува|Karakter konuşuyor
+ audio_unavailable|Audio nuk u mor. Mund ta provosh përsëri.|Audio nicht verfügbar. Versuche es erneut.|Audio non disponibile. Puoi riprovare.|Аудиото не е достапно. Обиди се повторно.|Ses alınamadı. Tekrar deneyebilirsin.
+ audio_offline|Pa internet: kërkohet audio e ruajtur.|Offline: gespeicherte Aufnahme erforderlich.|Offline: serve una registrazione salvata.|Без интернет: потребна е зачувана снимка.|İnternet yok: kayıtlı ses gerekli.
+ audio_disabled|Zërat janë çaktivizuar te cilësimet.|Stimmen sind in den Einstellungen ausgeschaltet.|Le voci sono disattivate nelle impostazioni.|Гласовите се исклучени во поставките.|Sesler ayarlardan kapatılmış.
  local_profile|Profili lokal|Lokales Profil|Profilo locale|Локален профил|Yerel profil
  saved_device|Progresi ruhet në këtë pajisje.|Der Fortschritt wird auf diesem Gerät gespeichert.|I progressi sono salvati su questo dispositivo.|Напредокот се чува на овој уред.|İlerleme bu cihazda saklanır.
  restorations|Restaurime|Restaurierungen|Restauri|Обнови|Restorasyonlar

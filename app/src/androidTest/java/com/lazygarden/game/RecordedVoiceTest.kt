@@ -20,6 +20,8 @@ class RecordedVoiceTest {
   assertEquals(0,json.getJSONArray("clips").length())
   InstrumentationRegistry.getInstrumentation().runOnMainSync{
    val voice=GardenVoice(context)
+   assertFalse(voice.retryLastLine())
+   assertEquals(GardenVoice.Status.IDLE,voice.status)
    var talkingEvents=0
    voice.onTalkingChanged={talkingEvents++}
    // An unknown clip without subtitle text cannot produce speech and must not
@@ -39,6 +41,7 @@ class RecordedVoiceTest {
    if(!accepted)assertNull(voice.currentLine)
    voice.stop()
    assertNull(voice.currentLine)
+   assertEquals(GardenVoice.Status.IDLE,voice.status)
    voice.release();assertFalse(voice.speakLine("fountain","talk","meli","sq"))
   }
  }

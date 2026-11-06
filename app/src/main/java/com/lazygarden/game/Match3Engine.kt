@@ -33,7 +33,7 @@ class Match3Engine(val level: Int, private val random: Random = Random.Default) 
         refill()
         val positions = (0..63).shuffled(random)
         positions.take(spec.ice).forEach { ice[it / 8][it % 8] = 1 }
-        positions.reversed().take(spec.terrainCount).forEach{terrain[it/8][it%8]=spec.terrainKind}
+        BoardBlueprint.cells(level,spec.terrainCount).forEachIndexed{index,cell->terrain[cell/8][cell%8]=BoardBlueprint.obstacle(spec.terrainKind,index,level)}
         for(i in 0 until spec.rescue){
             val column=1+i*3
             cargo[0][column]=if(level>=126)2 else 1
@@ -254,8 +254,8 @@ object Campaign {
             if(chapter==0 && stage<5)0 else (4+chapter*4+pattern*2).coerceAtMost(48),
             (chapter+stage)%6,
             if(chapter==0 && stage<3)0 else 8+chapter*3+pattern*3,
-            when {number<8->0;number<26->1;number<51->3;number<76->4;else->5},
-            if(number<8)1 else (3+chapter+pattern).coerceAtMost(14),
+            when {number==1->0;number<26->1;number<51->3;number<76->4;else->5},
+            if(number==1)1 else if(number<8)(2+pattern).coerceAtMost(5) else (3+chapter+pattern).coerceAtMost(14),
             if(number>=176)2 else 1)
     }
 }

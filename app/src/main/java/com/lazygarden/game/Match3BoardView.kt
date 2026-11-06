@@ -14,18 +14,10 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
  private val d=resources.displayMetrics.density
  private val materialArt=MaterialArt(c)
  private val pieces=RestorationJobs.palette(GardenSave(c).tasks)
- // Original HD garden pieces remain the main silhouette. The small material badge
- // ties each colour to its construction objective without replacing it with a flat card.
- private val tileArt=intArrayOf(R.drawable.tile_apple,R.drawable.tile_leaf,R.drawable.tile_orange,R.drawable.tile_berry,R.drawable.tile_flower,R.drawable.tile_water).map{GameSkin.bitmap(c,it)}
+ private val constructionPieces=ConstructionPieceArt(c)
  private fun piece(c:Canvas,index:Int,r:RectF){
-  p.shader=null;p.colorFilter=null;p.alpha=255;p.style=Paint.Style.FILL
   val color=index.coerceIn(0,5)
-  c.drawBitmap(tileArt[color],null,r,p)
-  val badge=RectF(r.right-r.width()*.42f,r.bottom-r.height()*.42f,r.right,r.bottom)
-  p.color=0xf5fff1ca.toInt()
-  c.drawRoundRect(badge,r.width()*.07f,r.width()*.07f,p)
-  val inner=RectF(badge);inner.inset(r.width()*.025f,r.height()*.025f)
-  materialArt.draw(c,p,pieces[color],inner)
+  constructionPieces.draw(c,p,color,pieces[color],r,water=color==3&&engine.spec.terrainKind==5)
  }
  private val background=GameSkin.bitmap(c,R.drawable.garden_estate)
  private val socket=GameSkin.bitmap(c,R.drawable.hd_socket);private val frame=GameSkin.bitmap(c,R.drawable.hd_board_frame);private val hud=GameSkin.bitmap(c,R.drawable.hd_hud)
@@ -78,6 +70,11 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
   for(r in 0..7)for(col in 0..7)if(displayedIce[r][col]>0){val x=left+col*cell;val y=top+r*cell;image(c,iceArt,RectF(x,y,x+cell,y+cell));p.color=0x66ffffff;p.strokeWidth=1.5f*d;c.drawLine(x+cell*.2f,y+cell*.25f,x+cell*.72f,y+cell*.68f,p)};GameSkin.nine(c,frame,bounds,24*d,p,.18f,false)
   for(r in 0..7)for(col in 0..7){val terrain=(if(active!=null)if(effect<.35f)active.terrainBefore else active.terrainAfter else engine.terrain)[r][col];val cargo=(if(active!=null)if(effect<.35f)active.cargoBefore else active.cargoAfter else engine.cargo)[r][col];val x=left+col*cell;val y=top+r*cell
    if(terrain>0)SpriteArt.draw(c,p,obstacleArt,3,2,when(terrain){1->0;2,3->1;4->2;else->3},RectF(x+cell*.03f,y+cell*.03f,x+cell*.97f,y+cell*.97f),if(terrain==4)170 else 235)
+   if(terrain>0){
+    val hint=RectF(x+cell*.67f,y+cell*.03f,x+cell*.97f,y+cell*.33f)
+    piece(c,visual[r][col]%6,hint)
+    if(terrain==2){p.color=0xff53666b.toInt();p.strokeWidth=cell*.035f;c.drawPath(Path().apply{moveTo(x+cell*.22f,y+cell*.2f);lineTo(x+cell*.48f,y+cell*.49f);lineTo(x+cell*.36f,y+cell*.73f)},p)}
+   }
    if(cargo>0){
     val material=RestorationInventory.rewardForLevel(engine.level,save.tasks)?.first?:Material.TOOL
     var cy=y
@@ -89,6 +86,19 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
     materialArt.draw(c,p,material,RectF(x+cell*.12f,cy+cell*.12f,x+cell*.88f,cy+cell*.88f))
     if(terrain>0)SpriteArt.draw(c,p,obstacleArt,3,2,0,RectF(x,y,x+cell,y+cell),255)
    }
+  }
+  if(active!=null&&!active.shuffled&&effect<.50f){
+   val u=(effect/.50f).coerceIn(0f,1f)
+   for(index in 0..63){val old=active.terrainBefore[index/8][index%8];val next=active.terrainAfter[index/8][index%8]
+    if(old>0&&old!=next){val x=left+(index%8+.5f)*cell;val y=top+(index/8+.5f)*cell
+     val count=if(next==0)9 else 4
+     for(k in 0 until count){val angle=k*2*PI/count+index*.13;val distance=cell*(.1f+.7f*u)
+      val sx=x+cos(angle).toFloat()*distance;val sy=y+sin(angle).toFloat()*distance+cell*.45f*u*u
+      p.color=when(old){1->0xffcb9454.toInt();2,3->0xffa6b4b8.toInt();4->0xffa47b50.toInt();else->0xff8bbf68.toInt()};p.alpha=((1-u)*255).toInt()
+      val shard=cell*(.09f-.05f*u);val turn=c.save();c.rotate(k*37f+u*140f,sx,sy);c.drawRoundRect(RectF(sx-shard,sy-shard*.5f,sx+shard,sy+shard*.5f),shard*.2f,shard*.2f,p);c.restoreToCount(turn)
+     }
+    }
+   };p.alpha=255
   }
   // Released parts leaving the bottom of the board remain visible until collected.
   if(active!=null&&!active.shuffled&&effect>=.35f){

@@ -13,6 +13,7 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
  private fun text(value:String,size:Float,color:Int=0xff5d3c24.toInt())=TextView(context).apply{text=value;textSize=size;setTextColor(color);typeface=Typeface.DEFAULT_BOLD}
  private fun button(value:String,primary:Boolean,action:()->Unit)=GameButton(context,primary).apply{text=value;isAllCaps=false;textSize=if(primary)20f else 14f;setTextColor(Color.WHITE);minHeight=dp(48);setOnClickListener{isEnabled=false;action()}}
  private val sfx=GardenSfx(context);private val voice=GardenVoice(context){save.voiceEnabled};private var paused=false
+ private var voiceButton:Button?=null
  private var scene:StorySceneView?=null
  private var speakCurrent:(()->Unit)?=null
  private fun ui(key:String)=GameText.get(save.language,key)
@@ -27,11 +28,23 @@ class StoryScreen(context:Context,private val save:GardenSave,chapter:Int,line:I
   speakCurrent={if(isAttachedToWindow&&!paused)voice.speakLine("story_${chapter+1}","line_${line+1}",entry.character.name.lowercase(java.util.Locale.ROOT),save.language,entry.text)}
   val column=LinearLayout(context).apply{orientation=LinearLayout.VERTICAL};val replayWord=localized("Rilexim","Kapitulli","Kapitel","Capitolo","Поглавје","Bölüm")
   column.addView(text("${if(replay)replayWord else "$replayWord ${chapter+1}"} · ${RestorationCatalog.title(chapter,save.language)}",20f,0xffffe5a1.toInt()).apply{gravity=Gravity.CENTER;setPadding(dp(18),dp(15),dp(18),dp(8));setShadowLayer(3f,0f,2f,Color.BLACK)},LinearLayout.LayoutParams(-1,dp(76)))
-  val stage=StorySceneView(context,save,chapter,line,entry.character.name.lowercase(java.util.Locale.ROOT),partner.name.lowercase(java.util.Locale.ROOT),{voice.isTalking},{speakCurrent?.invoke()},continueConversation=line>0,chapterCast=(story.lines.map{it.character.name.lowercase(java.util.Locale.ROOT)}+RestorationWorksites.castForTask(chapter)).distinct().take(4))
+  val stage=StorySceneView(context,save,chapter,line,entry.character.name.lowercase(java.util.Locale.ROOT),partner.name.lowercase(java.util.Locale.ROOT),{voice.isTalking},{voiceButton?.isEnabled=save.voiceEnabled;speakCurrent?.invoke()},continueConversation=line>0,chapterCast=(story.lines.map{it.character.name.lowercase(java.util.Locale.ROOT)}+RestorationWorksites.castForTask(chapter)).distinct().take(4))
   scene=stage
   column.addView(stage,LinearLayout.LayoutParams(-1,0,1f))
   val card=LinearLayout(context).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(19),dp(14),dp(19),dp(14));background=GameSkin.background(context,R.drawable.hd_hud,24f)}
   card.addView(text(entry.character.displayName,24f));card.addView(ScrollView(context).apply{addView(text(entry.text,17f).apply{setPadding(0,dp(8),0,dp(12));setLineSpacing(dp(2).toFloat(),1f)})},LinearLayout.LayoutParams(-1,dp(140)))
+  val audioStatus=text(if(save.voiceEnabled)"" else UiText.get(save.language,"audio_disabled"),12f)
+  card.addView(audioStatus)
+  val listen=button("🔊 "+UiText.get(save.language,"hear_again"),false){
+   if(!voice.retryLastLine())speakCurrent?.invoke()
+  }.apply{contentDescription="story_audio_retry";isEnabled=save.voiceEnabled&&line>0}
+  voiceButton=listen
+  voice.onStatusChanged={status->
+   val key=when(status){GardenVoice.Status.LOADING->"audio_loading";GardenVoice.Status.PLAYING->"audio_playing";GardenVoice.Status.UNAVAILABLE->"audio_unavailable";GardenVoice.Status.OFFLINE->"audio_offline";else->null}
+   audioStatus.text=key?.let{UiText.get(save.language,it)}?:""
+   listen.isEnabled=save.voiceEnabled&&scene?.dialogueReady==true&&status!=GardenVoice.Status.LOADING
+  }
+  card.addView(listen,LinearLayout.LayoutParams(-1,dp(42)))
   card.addView(text("${line+1}/${GardenStory.LINES_PER_CHAPTER} · ${if(replay)ui("story") else ui("progress_saved")}",12f));card.addView(button(continueStoryText(),true,next),LinearLayout.LayoutParams(-1,dp(53)).apply{topMargin=dp(10)});card.addView(button(if(replay)ui("story") else laterText(),false,later),LinearLayout.LayoutParams(-1,dp(44)).apply{topMargin=dp(7)})
   column.addView(card,LinearLayout.LayoutParams(-1,-2).apply{setMargins(dp(14),0,dp(14),dp(12))});addView(column,LayoutParams(-1,-1))
 

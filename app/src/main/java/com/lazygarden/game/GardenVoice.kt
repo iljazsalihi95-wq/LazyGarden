@@ -29,6 +29,17 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
  private val main=Handler(Looper.getMainLooper())
  private val network=Executors.newSingleThreadExecutor()
  data class Line(val sceneId:String,val lineId:String,val characterId:String,val language:String,val asset:String?,val subtitle:String,val durationMillis:Long)
+ enum class Status { IDLE, LOADING, PLAYING, UNAVAILABLE, OFFLINE }
+ var status=Status.IDLE;private set
+ var onStatusChanged:(Status)->Unit={}
+ private fun report(value:Status){status=value;onStatusChanged(value)}
+ private var lastRequested:Line?=null
+ fun retryLastLine():Boolean {
+  if(released||!enabled())return false
+  val cue=lastRequested?.copy()?:return false
+  stop();workerRetryAt=0;scriptRetryAt=0
+  return play(cue)
+ }
  var currentLine:Line?=null;private set
  private var queued:Line?=null
  var isTalking=false;private set
@@ -46,7 +57,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   return play(cue)
  }
  private fun play(cue:Line):Boolean{
-  currentLine=cue
+  currentLine=cue;lastRequested=cue;report(Status.LOADING)
   GardenContent.asset(context,"${cue.sceneId}/${cue.lineId}/${cue.characterId}/${cue.language}")?.let{playRemote(cue,it.absolutePath);return true}
   cue.asset?.let{return playAsset(cue,it)}
   speechCache.find(cue.characterId,cue.language,cue.subtitle)?.let{playRemote(cue,it.absolutePath);return true}
@@ -122,7 +133,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
  }
  private fun prepare(media:MediaPlayer,cue:Line){
   media.setOnPreparedListener{if(player===it&&!released&&enabled()){it.start();talking(true)}else if(player===it)stop()}
-  media.setOnCompletionListener{if(player===it){it.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;talking(false);currentLine=null;playQueued()}}
+  media.setOnCompletionListener{if(player===it){it.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;talking(false);report(Status.IDLE);currentLine=null;playQueued()}}
   media.setOnErrorListener{it,_,_->if(player===it){it.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;talking(false);fallback(cue)};true}
   media.prepareAsync()
  }
@@ -130,10 +141,10 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
  /** No device TTS: a missing AI clip keeps the localized subtitle without a foreign-accent voice. */
  private fun fallback(line:Line):Boolean {
   if(currentLine===line)currentLine=null
-  talking(false);playQueued();return false
+  talking(false);report(if(online())Status.UNAVAILABLE else Status.OFFLINE);playQueued();return false
  }
- private fun talking(value:Boolean){if(isTalking!=value){isTalking=value;onTalkingChanged(value)}}
- fun stop(){queued=null;lastId="";player?.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;currentLine=null;talking(false)}
+ private fun talking(value:Boolean){if(value)report(Status.PLAYING);if(isTalking!=value){isTalking=value;onTalkingChanged(value)}}
+ fun stop(){queued=null;lastId="";player?.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;currentLine=null;talking(false);report(Status.IDLE)}
  fun release(){stop();released=true;network.shutdownNow();main.removeCallbacksAndMessages(null)}
 }
 
