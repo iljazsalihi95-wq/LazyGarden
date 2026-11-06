@@ -161,15 +161,19 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
    val ground=if(task==6)sceneHeight*.88f else target.bottom+sceneHeight*(if(id==1).035f else if(id==0).10f else .19f)
    val changedAt=if(id==1)RestorationJobs.arrivalAt(plan,plan.index(ms)) else 0L
    val crewProgress=if(id==1&&changedAt>0L)WorkApproach.progress(ms-changedAt) else arrival
-   val route=WorkApproach.position(tx/width,ground.coerceAtMost(sceneHeight*.88f)/sceneHeight,crewProgress,id%2!=0)
+   val scaffold=if(task==6&&id==1)plan.progress(ms,"SCAFFOLD")*(1-plan.progress(ms,"REVEAL")) else 0f
+   val station=WorkApproach.platformStation(
+    CharacterAnimation.Position(tx/width,ground.coerceAtMost(sceneHeight*.88f)/sceneHeight),
+    CharacterAnimation.Position((d.left+d.width()*.34f)/width,(d.top+d.height()*.56f)/sceneHeight),scaffold)
+   val route=WorkApproach.position(station.x,station.y,crewProgress,id%2!=0)
    var x=route.x*width;var y=route.y*sceneHeight
    if(task==2){
     val station=EstatePathPlan.crewPosition(id,arrival)
     x=d.left+d.width()*station.x
     y=d.top+d.height()*station.y
    }
-   if(task==6&&id==1){val platform=plan.progress(ms,"SCAFFOLD")*(1-plan.progress(ms,"REVEAL"));val px=d.left+d.width()*(if(id==0).37f else .34f);val py=d.top+d.height()*(if(id==0).42f else .56f);x+=(px-x)*platform;y+=(py-y)*platform}
-   val state=when{crewProgress<1f->ResidentAnimation.State.WALK;step.key=="CELEBRATE"->ResidentAnimation.State.CELEBRATE;work&&(id==1||id==0&&step.key in listOf("CLEAR","CLEAN","REMOVE","ASSEMBLE"))->ResidentAnimation.State.WORK;step.speaker==id->ResidentAnimation.State.TALK;step.key=="REVEAL"->ResidentAnimation.State.HAPPY;else->ResidentAnimation.State.LOOK}
+
+   val state=when{crewProgress<1f||scaffold in .001f.. .999f->ResidentAnimation.State.WALK;step.key=="CELEBRATE"->ResidentAnimation.State.CELEBRATE;work&&(id==1||id==0&&step.key in listOf("CLEAR","CLEAN","REMOVE","ASSEMBLE"))->ResidentAnimation.State.WORK;step.speaker==id->ResidentAnimation.State.TALK;step.key=="REVEAL"->ResidentAnimation.State.HAPPY;else->ResidentAnimation.State.LOOK}
    p.shader=null;p.alpha=255;p.color=0x44302010
    c.drawOval(RectF(x-width*.065f,y-width*.012f,x+width*.065f,y+width*.012f),p)
    val mood=when{
@@ -190,11 +194,11 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
    val player=actorPlayers.getOrPut(actorId){CharacterAnimation.Player()};player.update(liveState,ms)
    val w=width*(if(actor.child).17f else .23f);val ah=w*CharacterSprites.aspect(context,actor.sprite)
    val right=x<target.centerX()
-   SceneActorArt.draw(context,c,p,actorId,player,ms,RectF(x-w/2,y-ah,x+w/2,y),right)
-   if(id==1&&state==ResidentAnimation.State.WORK){
+   SceneActorArt.draw(context,c,p,actorId,player,ms+id*130L,RectF(x-w/2,y-ah,x+w/2,y),right)
+   if(id in 0..1&&state==ResidentAnimation.State.WORK){
     val hx=x+if(x<target.centerX())w*.28f else -w*.28f;val hy=y-w*.55f
-    val held=c.save();c.rotate(sin(ms/230f)*14f,hx,hy)
-    materialArt.draw(c,p,selectedTool?:RestorationJobs.tool(task,step.key),RectF(hx-w*.16f,hy-w*.20f,hx+w*.16f,hy+w*.12f));c.restoreToCount(held)
+    val held=c.save();c.rotate(sin(ms/230f+id*.8f)*14f,hx,hy)
+    materialArt.draw(c,p,if(id==0)Material.TOOL else selectedTool?:RestorationJobs.tool(task,step.key),RectF(hx-w*.16f,hy-w*.20f,hx+w*.16f,hy+w*.12f));c.restoreToCount(held)
    }
    if(step.key in listOf("INSPECT","CELEBRATE","REVEAL")||ms-wrongToolAt in 0..1400)ActorGesture.draw(c,p,mood,x,y-w*1.38f,w,ms)
    if(id==1){p.color=0xffffe3a7.toInt();p.textSize=dp(11f);p.textAlign=Paint.Align.CENTER;p.typeface=Typeface.DEFAULT_BOLD

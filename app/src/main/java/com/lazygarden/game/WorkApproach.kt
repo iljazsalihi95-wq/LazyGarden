@@ -3,6 +3,7 @@ package com.lazygarden.game
 /** A crew member enters on the lower service path, turns at the object's edge, then stops. */
 object WorkApproach {
  const val ARRIVAL_MILLIS=2200L
+ fun platformStation(base:CharacterAnimation.Position,platform:CharacterAnimation.Position,progress:Float)=CharacterAnimation.move(base,platform,progress)
  fun progress(elapsed:Long)= (elapsed/ARRIVAL_MILLIS.toFloat()).coerceIn(0f,1f)
  fun position(targetX:Float,targetY:Float,progress:Float,fromRight:Boolean):CharacterAnimation.Position {
   val t=progress.coerceIn(0f,1f)
