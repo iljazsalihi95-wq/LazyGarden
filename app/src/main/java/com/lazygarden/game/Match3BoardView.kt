@@ -26,14 +26,14 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
  private val obstacleArt=GameSkin.bitmap(c,R.drawable.match_obstacles)
  private val sfx=GardenSfx(c)
  private val save=GardenSave(c)
- private fun t(key:String)=GameText.get(save.language,key)
+ private fun t(key:String)=UiText.get(save.language,key)
  private val hammerArt=GameSkin.bitmap(c,R.drawable.boost_hammer)
  private val darkSocket=ColorMatrixColorFilter(ColorMatrix(floatArrayOf(.86f,0f,0f,0f,0f,0f,.89f,0f,0f,0f,0f,0f,.93f,0f,0f,0f,0f,0f,1f,0f)))
  private var selected=-1;private var down=-1;private var downX=0f;private var downY=0f;private var busy=false
  private var wave:Match3Engine.Wave?=null;private var effect=1f;private var life=0f
  private var visual=Array(8){engine.board[it].clone()};private var displayedIce=Array(8){engine.ice[it].clone()};private var displayedScore=engine.score.toFloat()
  private var cell=0f;private var left=0f;private var top=0f;private var swapA=-1;private var swapB=-1;private var swapProgress=0f
- private var animator:ValueAnimator?=null;private var ambient:ValueAnimator?=null;private var boostEffect:Match3Engine.Booster?=null;private var feedback=when(engine.spec.terrainKind){1->t("hint_crates");2,3->t("hint_stone");4->t("hint_soil");5->t("hint_water");else->t("hint_match")}
+ private var animator:ValueAnimator?=null;private var ambient:ValueAnimator?=null;private var boostEffect:Match3Engine.Booster?=null;private var feedback=if(engine.level==1)t("hint_delivery") else when(engine.spec.terrainKind){1->t("hint_crates");2,3->t("hint_stone");4->t("hint_soil");5->t("hint_water");else->t("hint_match")}
  var targetBooster:Match3Engine.Booster?=null;var onBoosterTarget:((Match3Engine.Booster,Int)->List<Match3Engine.Wave>)?=null;val isBusy get()=busy
  private var boostOrigin=-1
  private var scenePaused=false
@@ -73,7 +73,7 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
    if(terrain>0){
     val hint=RectF(x+cell*.67f,y+cell*.03f,x+cell*.97f,y+cell*.33f)
     piece(c,visual[r][col]%6,hint)
-    if(terrain==2){p.color=0xff53666b.toInt();p.strokeWidth=cell*.035f;c.drawPath(Path().apply{moveTo(x+cell*.22f,y+cell*.2f);lineTo(x+cell*.48f,y+cell*.49f);lineTo(x+cell*.36f,y+cell*.73f)},p)}
+    if(terrain==2){p.style=Paint.Style.STROKE;p.color=0xff53666b.toInt();p.strokeWidth=cell*.035f;c.drawPath(Path().apply{moveTo(x+cell*.22f,y+cell*.2f);lineTo(x+cell*.48f,y+cell*.49f);lineTo(x+cell*.36f,y+cell*.73f)},p);p.style=Paint.Style.FILL}
    }
    if(cargo>0){
     val material=RestorationInventory.rewardForLevel(engine.level,save.tasks)?.first?:Material.TOOL
@@ -119,6 +119,12 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
    }
   }
   if(active!=null){drawBonusImpact(c,active);drawSpecialCreation(c,active)}
+  // Each covered delivery has a visible exit at the bottom of its column.
+  for(col in 0..7)if((0..7).any{engine.cargo[it][col]>0}){
+   val x=left+(col+.5f)*cell;val y=top+8*cell+4*d
+   p.shader=null;p.alpha=255;p.color=0xff91dfad.toInt();p.style=Paint.Style.FILL
+   c.drawPath(Path().apply{moveTo(x-cell*.12f,y);lineTo(x+cell*.12f,y);lineTo(x,y+cell*.16f);close()},p)
+  }
   if(active!=null && boostOrigin>=0 && boostEffect!=null && effect<.48f){
    val t=(effect/.48f).coerceIn(0f,1f);val x=left+(boostOrigin%8+.5f)*cell;val y=top+(boostOrigin/8+.5f)*cell
    p.color=0xffffedac.toInt();p.alpha=((1-t)*220).toInt();p.strokeWidth=cell*.08f
@@ -196,13 +202,16 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
   }
   val startScore=displayedScore;val endScore=waves[i].scoreAfter.toFloat();wave=waves[i]
   val powers=waves[i].cells.map{waves[i].before[it/8][it%8]/6}.toSet()
+  val brokenKinds=(0..63).filter{waves[i].terrainBefore[it/8][it%8]!=waves[i].terrainAfter[it/8][it%8]}.map{waves[i].terrainBefore[it/8][it%8]}.toSet()
   val cue=when(boostEffect){
    Match3Engine.Booster.HAMMER->"hammer";Match3Engine.Booster.BOMB->"bomb"
    Match3Engine.Booster.ROW->"row";Match3Engine.Booster.COLUMN->"column";Match3Engine.Booster.CROSS->"rocket"
    null->when {
     4 in powers->"booster";3 in powers->"bomb"
     1 in powers&&2 in powers->"rocket";1 in powers->"row";2 in powers->"column"
-    waves[i].combo>1->"star";else->"coin"
+    3 in brokenKinds||2 in brokenKinds->"stone";1 in brokenKinds->"hammer"
+    4 in brokenKinds->"shovel";5 in brokenKinds->"water"
+    waves[i].combo>1->"cascade";waves[i].cells.size>=5->"match5";waves[i].cells.size==4->"match4";else->"match3"
    }
    else->"booster"
   }

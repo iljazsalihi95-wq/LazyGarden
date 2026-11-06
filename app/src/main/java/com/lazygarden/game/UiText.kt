@@ -4,6 +4,7 @@ package com.lazygarden.game
 object UiText {
  private val languages=listOf("sq","de","it","mk","tr")
  private val rows="""
+ hint_delivery|Çliro pakon dhe zbrite te shigjeta ↓|Paket befreien und nach unten bringen ↓|Libera il pacco e portalo alla freccia ↓|Ослободи го пакетот и спушти го долу ↓|Paketi kurtar ve oka kadar indir ↓
  hear_again|Dëgjo përsëri|Erneut anhören|Ascolta di nuovo|Слушај повторно|Tekrar dinle
  audio_loading|Po ngarkohet zëri…|Audio wird geladen…|Caricamento della voce…|Се вчитува гласот…|Ses yükleniyor…
  audio_playing|Personazhi po flet|Die Figur spricht|Il personaggio sta parlando|Ликот зборува|Karakter konuşuyor
