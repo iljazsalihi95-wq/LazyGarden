@@ -29,14 +29,8 @@ jobs:
       - name: Report unavailable deployment credentials
         if: env.CLOUDFLARE_ACCOUNT_ID == '' || env.CLOUDFLARE_API_TOKEN == ''
         run: echo '::warning::Cloudflare deployment credentials are missing. Checking the existing endpoint.'
-      - name: Install audio verification tools if needed
-        if: always()
-        run: |
-          if ! command -v ffmpeg >/dev/null; then
-            sudo apt-get update
-            sudo apt-get install -y ffmpeg
-          fi
-      - name: Verify that both deployed voices return decodable audio
+      - name: Retrieve exact-language audio before installing a decoder
+        id: fetch-audio
         if: always()
         shell: python
         run: |
@@ -77,7 +71,7 @@ jobs:
 
           for actor, language, text in [('lazi', 'sq', 'Mirë se erdhët në kopshtin tonë.'),
                                         ('meli', 'it', 'Benvenuti nel nostro giardino.')]:
-              result = {'actor': actor, 'language': language, 'audio': False}
+              result = {'actor': actor, 'language': language, 'audio': False, 'downloaded': False}
               clip = output / (actor + '-' + language + '.mp3')
               try:
                   request = urllib.request.Request(
@@ -89,21 +83,47 @@ jobs:
                       result.update(status=response.status, bytes=len(payload))
                       if response.headers.get_content_type() == 'audio/mpeg' and 128 < len(payload) <= 4 * 1024 * 1024:
                           clip.write_bytes(payload)
-                          decoded = subprocess.run(['ffmpeg', '-v', 'error', '-xerror', '-i', str(clip),
-                                                    '-map', '0:a:0', '-f', 's16le', 'pipe:1'],
-                                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15)
-                          result['audio'] = decoded.returncode == 0 and len(decoded.stdout) > 8192
+                          result['downloaded'] = True
               except Exception as error:
                   result.update(error_details(error))
-              if not result['audio']:
+              if not result['downloaded']:
                   clip.unlink(missing_ok=True)
               report['speech'].append(result)
 
           evidence = json.dumps(report, ensure_ascii=False, indent=2)
           (output / 'report.json').write_text(evidence)
           print(evidence)
+          if not all(result['downloaded'] for result in report['speech']):
+              raise SystemExit('Production speech did not return MPEG audio in both languages')
+      - name: Install decoder only after receiving real audio
+        if: success()
+        timeout-minutes: 2
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=20 update
+            sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=20 install -y ffmpeg
+          fi
+      - name: Decode both received character voices
+        if: success()
+        shell: python
+        run: |
+          import json, pathlib, subprocess
+          output = pathlib.Path('voice-diagnostics')
+          report = json.loads((output / 'report.json').read_text())
+          for result in report['speech']:
+              clip = output / (result['actor'] + '-' + result['language'] + '.mp3')
+              try:
+                  decoded = subprocess.run(['ffmpeg', '-v', 'error', '-xerror', '-i', str(clip),
+                                            '-map', '0:a:0', '-f', 's16le', 'pipe:1'],
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15)
+                  result['audio'] = decoded.returncode == 0 and len(decoded.stdout) > 8192
+              except Exception as error:
+                  result['audio'] = False
+                  result['decoder_error'] = type(error).__name__
+          (output / 'report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2))
+          print(json.dumps(report, ensure_ascii=False, indent=2))
           if not all(result['audio'] for result in report['speech']):
-              raise SystemExit('Production speech failed to return decodable audio in both languages')
+              raise SystemExit('Production speech failed to decode in both languages')
       - uses: actions/upload-artifact@v4
         if: always()
         with:
