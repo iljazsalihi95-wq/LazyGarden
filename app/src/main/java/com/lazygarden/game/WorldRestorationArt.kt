@@ -20,7 +20,7 @@ object WorldRestorationArt {
   if(tasks>=5)RestorationObjectArt.draw(c,p,art,5,objectRect(d,4))
   if(tasks>=6)RestorationObjectArt.draw(c,p,art,8,objectRect(d,5))
  }
- fun objectRect(d:RectF,task:Int)=if(task>=7)EstateRoomArt.bounds(d) else when(task){3->rect(d,.21f,.64f,.28f,.17f);4->rect(d,.19f,.75f,.27f,.16f);5->rect(d,.50f,.82f,.60f,.30f);6->rect(d,.69f,.29f,.58f,.31f);else->rect(d,.50f,.86f,.40f,.20f)}
+ fun objectRect(d:RectF,task:Int)=if(task>=7)EstateRoomArt.bounds(d) else when(task){2->EstatePathPlan.workBounds(d);3->rect(d,.21f,.64f,.28f,.17f);4->rect(d,.19f,.75f,.27f,.16f);5->rect(d,.50f,.82f,.60f,.30f);6->rect(d,.69f,.29f,.58f,.31f);else->rect(d,.50f,.86f,.40f,.20f)}
  fun water(c:Canvas,p:Paint,d:RectF,ms:Float){
   // Anchors follow the actual illustrated nozzle, bowls and basin in garden_estate.
   val w=d.width();val h=d.height();val x=d.left+w*.562f
@@ -51,15 +51,13 @@ object WorldRestorationArt {
  fun rect(d:RectF,x:Float,y:Float,w:Float,h:Float)=RectF(d.left+(x-w/2)*d.width(),d.top+(y-h)*d.height(),d.left+(x+w/2)*d.width(),d.top+y*d.height())
  fun path(ctx:Context,c:Canvas,p:Paint,d:RectF,removed:Float,laid:Float){
   val b=GameSkin.bitmap(ctx,R.drawable.garden_work_props);val after=GameSkin.bitmap(ctx,R.drawable.garden_estate)
-  val top=d.top+d.height()*.63f;val bottom=d.top+d.height()*1.04f
-  val outline=Path().apply{moveTo(d.left+d.width()*.36f,top);lineTo(d.left+d.width()*.65f,top);lineTo(d.left+d.width()*.97f,bottom);lineTo(d.left+d.width()*.03f,bottom);close()}
-  val clip=c.save();c.clipPath(outline)
+  val top=d.top+d.height()*EstatePathPlan.top;val bottom=d.bottom
+  val clip=c.save();c.clipPath(EstatePathPlan.outline(d))
   if(removed>0){val soil=c.save();c.clipRect(d.left,top,d.right,top+(bottom-top)*removed);SpriteArt.draw(c,p,b,4,3,3,RectF(d.left,top,d.right,bottom));c.restoreToCount(soil)}
   if(laid>0){val clean=c.save();c.clipRect(d.left,top,d.right,top+(bottom-top)*laid);c.drawBitmap(after,null,d,p);c.restoreToCount(clean)}
-  c.restoreToCount(clip)
   // Only the currently landing stone is overlaid. Settled stones blend into the restored paving illustration.
   if(laid>0&&laid<1){val i=(laid*24).toInt().coerceIn(0,23);val t=(i/3)/7f;val w=d.width()*(.06f+.095f*t);val x=d.centerX()+(i%3-1)*w;val y=top+(bottom-top)*t;val land=(laid*24-i).coerceIn(0f,1f);val save=c.save();c.translate(0f,-d.height()*.025f*(1-land));SpriteArt.draw(c,p,b,4,3,5,RectF(x-w/2,y-w*.27f,x+w/2,y+w*.27f),(255*land).toInt());c.restoreToCount(save)}
-
+  c.restoreToCount(clip)
  }
 }
 

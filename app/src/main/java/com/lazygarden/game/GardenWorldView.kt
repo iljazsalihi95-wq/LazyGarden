@@ -14,7 +14,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
  private val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
  private val after=GameSkin.bitmap(context,R.drawable.garden_estate)
  private val before=GameSkin.bitmap(context,R.drawable.garden_before)
- private val mask=Bitmap.createBitmap(256,384,Bitmap.Config.ARGB_8888)
+ private val mask=Bitmap.createBitmap(256,384,Bitmap.Config.ARGB_8888).apply{if(!constructing)GardenBackdrop.paintRestorationMask(this,tasks)}
  private val worksite by lazy { GameSkin.bitmap(context,R.drawable.fountain_worksite) }
  private val leafArt by lazy { GameSkin.bitmap(context,R.drawable.tile_leaf) }
  private val settings=GardenSave(context)
@@ -34,7 +34,6 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
  private var lifecyclePaused=false
  override fun pauseScene(){lifecyclePaused=true;stopClock()}
  override fun resumeScene(){lifecyclePaused=false;startClock()}
- private val regions=arrayOf(RectF(.32f,.425f,.80f,.635f),RectF(.12f,.63f,.91f,1.04f),RectF(.04f,.64f,.29f,.79f),RectF(-.04f,.46f,.32f,.65f),RectF(-.04f,.28f,.36f,.48f),RectF(.34f,.36f,.79f,.46f),RectF(.37f,.14f,1.04f,.415f))
  override fun onAttachedToWindow(){super.onAttachedToWindow();startClock()}
  private fun startClock(){
   if(lifecyclePaused || windowVisibility!=VISIBLE || !isAttachedToWindow || lifeAnimator!=null)return
@@ -60,7 +59,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
   p.color=0xff4c3927.toInt();p.typeface=Typeface.DEFAULT;p.textSize=dp(11).toFloat();c.drawText(text.take(34),left+dp(12),top+dp(42),p)
  }
  override fun onDraw(c:Canvas){super.onDraw(c);val camera=if(constructing && tasks==0)FountainSequence.camera(sceneMs) else 0f;val scale=maxOf(width.toFloat()/after.width,height.toFloat()/after.height)*(1+camera*.28f);val dw=after.width*scale;val dh=after.height*scale;val dst=RectF((width-dw)/2,(height-dh)/2,(width+dw)/2,(height+dh)/2);if(camera>0)dst.offset(0f,(height*.46f-(dst.top+dh*.515f))*camera);focus?.let{dst.offset(0f,height*.39f-(dst.top+it.y*dh))};p.alpha=255;p.xfermode=null;p.shader=null;c.drawBitmap(before,null,dst,p)
-  if(tasks>=7)c.drawBitmap(after,null,dst,p) else if(tasks>0||constructing){mask.eraseColor(Color.TRANSPARENT);val mc=Canvas(mask);val mp=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.WHITE;maskFilter=BlurMaskFilter(3f,BlurMaskFilter.Blur.NORMAL)};for(i in regions.indices)if(i<tasks||(i==tasks&&constructing)){mp.alpha=if(i<tasks)255 else (255*if(tasks==0)FountainSequence.water(sceneMs) else progress).toInt();val r=regions[if(i==1)2 else if(i==2)1 else i];mc.drawRoundRect(RectF(r.left*256,r.top*384,r.right*256,r.bottom*384),5f,5f,mp)};val layer=c.saveLayer(dst,null);c.drawBitmap(after,null,dst,p);p.xfermode=PorterDuffXfermode(PorterDuff.Mode.DST_IN);c.drawBitmap(mask,null,dst,p);p.xfermode=null;c.restoreToCount(layer)}
+  if(tasks>=7)c.drawBitmap(after,null,dst,p) else if(tasks>0||constructing){if(constructing)GardenBackdrop.paintRestorationMask(mask,tasks,(255*if(tasks==0)FountainSequence.water(sceneMs) else progress).toInt());val layer=c.saveLayer(dst,null);c.drawBitmap(after,null,dst,p);p.xfermode=PorterDuffXfermode(PorterDuff.Mode.DST_IN);c.drawBitmap(mask,null,dst,p);p.xfermode=null;c.restoreToCount(layer)}
   for(item in decorations){val bitmap=decorationArt.getOrPut(item.art){BitmapFactory.decodeResource(resources,item.art)};val w=dw*item.width;val h=w*bitmap.height/bitmap.width;val x=dst.left+item.x*dw;val y=dst.top+item.y*dh;p.alpha=255;p.shader=null;c.drawBitmap(bitmap,null,RectF(x-w/2,y-h,x+w/2,y),p)}
   WorldRestorationArt.draw(context,c,dst,tasks,life)
   drawResidentsAndWater(c,dst,dw,dh)

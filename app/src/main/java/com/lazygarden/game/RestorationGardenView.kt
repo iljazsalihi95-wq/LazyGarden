@@ -12,12 +12,11 @@ import kotlin.math.*
 open class RestorationGardenView(context:Context,private val task:Int,initialElapsed:Long=0,private val checkpoint:(Long)->Unit={},private val onComplete:()->Unit={}):View(context),SceneLifecycle {
  private val plan=RestorationSequence.plan(task)
  private val workTarget=RectF()
+ protected val pathWorkPoint=PointF()
  private val toolSlots=Array(3){RectF()}
  private val materialArt=MaterialArt(context)
  private var selectedTool:Material?=null
  private var wrongToolAt=-3000L
- private var lastWorker=""
- private var workerArrival=0L
  private var contactX=0f;private var contactY=0f;private var contactAt=-2000L
  init {isClickable=true;contentDescription=plan.title}
  override fun performClick():Boolean {super.performClick();return true}
@@ -69,8 +68,6 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
    last=now
    val i=plan.index(ms);val step=plan.steps[i]
    if(i!=lastStep){lastStep=i;selectedTool=null
-    val worker=RestorationJobs.worker(task,step.key).id
-    if(worker!=lastWorker){lastWorker=worker;workerArrival=RestorationJobs.arrivalAt(plan,i)}
     if(step.line.isNotBlank())voice.speakLine("restoration_$task",step.key.lowercase(),if(step.speaker==1)RestorationJobs.worker(task,step.key).id else listOf("lazi","greku","meli","rona")[step.speaker],save.language,SceneText.line(step.line,save.language),step.duration);if(save.sfxEnabled)sfx.play(step.sound)}
    if(ms-lastFoley>1100&&step.sound.isNotBlank()){lastFoley=ms;if(save.sfxEnabled&&step.key !in listOf("CELEBRATE","REVEAL","LIGHT"))sfx.play(step.sound)}
    if(ms>=plan.duration&&!completed){completed=true;checkpoint(ms);post{if(isAttachedToWindow)onComplete()}}
@@ -81,6 +78,7 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
   val camera=(ms/4000f).coerceIn(0f,1f)*(1-((ms-plan.duration+3000)/3000f).coerceIn(0f,1f));val maxZoom=when(task){3->2f;4->1.5f;5->1.35f;6->1.15f;else->1.25f};val zoom=1+camera*(maxZoom-1);val d=RectF((width-w*zoom)/2,(height-h*zoom)/2,(width+w*zoom)/2,(height+h*zoom)/2)
   val anchor=WorldRestorationArt.objectRect(d,task);d.offset((width*.5f-anchor.centerX())*camera,(height*.64f-anchor.bottom)*camera)
   d.offset(d.left.coerceIn((width-d.width()).coerceAtMost(0f),0f)-d.left,d.top.coerceIn((height-d.height()).coerceAtMost(0f),0f)-d.top)
+  if(task==2)pathWorkPoint.set(d.left+d.width()*EstatePathPlan.workX,d.top+d.height()*EstatePathPlan.workY)
   backdrop.draw(c,d);WorldRestorationArt.water(c,p,d,ms.toFloat())
   WorldRestorationArt.draw(context,c,d,task,ms/12000f)
   val step=plan.steps[plan.index(ms)];val f=plan.fraction(ms)
@@ -89,7 +87,7 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
    val repair=repairKeys.maxOf{plan.progress(ms,it)}
    val final=plan.progress(ms,"REVEAL")
    EstateRoomArt.draw(context,c,p,EstateRoomArt.bounds(d),task,repair,final,ms)
-  }else if(task==2){WorldRestorationArt.path(context,c,p,d,plan.progress(ms,"REMOVE"),plan.progress(ms,"PLACE"));WorldRestorationArt.draw(context,c,d,task,ms/12000f);tool(c,d,8,.73f,.83f,.18f)}else{
+  }else if(task==2){WorldRestorationArt.path(context,c,p,d,plan.progress(ms,"REMOVE"),plan.progress(ms,"PLACE"));tool(c,d,8,.73f,.83f,.18f)}else{
    val row=task-3;val r=WorldRestorationArt.objectRect(d,task)
    if(task==3&&plan.progress(ms,"REMOVE")>0){val clean=c.save();c.clipRect(d.left,d.top+d.height()*.44f,d.left+d.width()*.34f,d.top+d.height()*.68f);p.alpha=(255*plan.progress(ms,"REMOVE")).toInt();c.drawBitmap(after,null,d,p);p.alpha=255;c.restoreToCount(clean)}
    val repaired=if(task==4)plan.progress(ms,"PLANT") else plan.progress(ms,"REPAIR")
@@ -136,18 +134,24 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
  }
  private inline fun reveal(c:Canvas,r:RectF,f:Float,draw:()->Unit){if(f<=0)return;val s=c.save();c.clipRect(r.left,r.top,r.left+r.width()*f,r.bottom);draw();c.restoreToCount(s)}
  private fun tool(c:Canvas,d:RectF,i:Int,x:Float,y:Float,w:Float){val cx=width*x;val bottom=height*y;val ww=width*w;SpriteArt.draw(c,p,props,4,3,i,RectF(cx-ww/2,bottom-ww*.65f,cx+ww/2,bottom))}
- private fun particles(c:Canvas,d:RectF,sound:String,f:Float){for(i in 0..11){val t=((ms%1200)/1200f+i*.083f)%1f;p.color=if(sound=="water")0xff8cdeff.toInt() else 0xffd7bd87.toInt();p.alpha=((1-t)*150).toInt();c.drawCircle(width*.5f+sin(i*4f)*width*.22f*t,height*(.67f-t*.09f),d.width()*.004f*(1-t),p)};p.alpha=255}
- private fun actors(c:Canvas,d:RectF,target:RectF,step:RestorationSequence.Step,work:Boolean){for(id in 0..3){
-   val actorId=SceneCast.canonical(if(id==1)RestorationJobs.worker(task,step.key).id else listOf("lazi","lazi","meli","rona")[id])
+ private fun particles(c:Canvas,d:RectF,sound:String,f:Float){for(i in 0..11){val t=((ms%1200)/1200f+i*.083f)%1f;p.color=if(sound=="water")0xff8cdeff.toInt() else 0xffd7bd87.toInt();p.alpha=((1-t)*150).toInt();c.drawCircle((if(task==2)pathWorkPoint.x else width*.5f)+sin(i*4f)*width*.22f*t,(if(task==2)pathWorkPoint.y else height*.67f)-height*.09f*t,d.width()*.004f*(1-t),p)};p.alpha=255}
+ private fun actors(c:Canvas,d:RectF,target:RectF,step:RestorationSequence.Step,work:Boolean){
+  val arrival=plan.progress(ms,"ARRIVAL")
+  val drawOrder=if(task==2)(0..4).sortedBy{EstatePathPlan.crewPosition(it,arrival).y} else (0..3).toList()
+  for(id in drawOrder){
+   val actorId=SceneCast.canonical(if(id==1)RestorationJobs.worker(task,step.key).id else listOf("lazi","lazi","meli","rona","cufi")[id])
    val actor=SceneCast.actor(actorId)
-   val arrive=CharacterAnimation.ease(plan.progress(ms,"ARRIVAL"));val offsets=floatArrayOf(-.57f,.57f,-.84f,.84f);val tx=if(task==6)width*floatArrayOf(.16f,.40f,.60f,.84f)[id] else (if(id==1)target.right+width*.025f else target.centerX()+offsets[id]*target.width()).coerceIn(width*.13f,width*.87f);val move=0f
+   val arrive=CharacterAnimation.ease(arrival);val offsets=floatArrayOf(-.57f,.57f,-.84f,.84f,0f);val tx=if(task==6)width*floatArrayOf(.16f,.40f,.60f,.84f)[id] else (if(id==1)target.right+width*.025f else target.centerX()+offsets[id]*target.width()).coerceIn(width*.13f,width*.87f)
    val ground=if(task==6)height*.88f else target.bottom+height*(if(id==1).035f else if(id==0).10f else .19f)
-   var x=(if(id%2==0)-width*.12f else width*1.12f)*(1-arrive)+(tx+move)*arrive;var y=height*.98f*(1-arrive)+ground.coerceAtMost(height*.88f)*arrive
-   val entering=if(id==1)((ms-workerArrival)/900f).coerceIn(0f,1f) else 1f
-   if(id==1&&step.key!="ARRIVAL")x=width*1.15f+(x-width*1.15f)*CharacterAnimation.ease(entering)
+   var x=(if(id%2==0)-width*.12f else width*1.12f)*(1-arrive)+tx*arrive;var y=height*.98f*(1-arrive)+ground.coerceAtMost(height*.88f)*arrive
+   if(task==2){
+    val station=EstatePathPlan.crewPosition(id,arrival)
+    x=d.left+d.width()*station.x
+    y=d.top+d.height()*station.y
+   }
    if(task==6&&id==1){val platform=plan.progress(ms,"SCAFFOLD")*(1-plan.progress(ms,"REVEAL"));val px=d.left+d.width()*(if(id==0).37f else .34f);val py=d.top+d.height()*(if(id==0).42f else .56f);x+=(px-x)*platform;y+=(py-y)*platform}
    if(step.key=="TRY"&&id==3){x=target.centerX()+target.width()*.12f;y=target.top+target.height()*.60f+width*.115f}
-   val state=when{step.key=="ARRIVAL"||entering<1f->ResidentAnimation.State.WALK;step.key=="CELEBRATE"->ResidentAnimation.State.CELEBRATE;work&&(id==1||id==0&&step.key in listOf("CLEAR","CLEAN","REMOVE","ASSEMBLE"))->ResidentAnimation.State.WORK;step.speaker==id->ResidentAnimation.State.TALK;step.key=="REVEAL"->ResidentAnimation.State.HAPPY;else->ResidentAnimation.State.LOOK}
+   val state=when{step.key=="ARRIVAL"&&arrival<1f->ResidentAnimation.State.WALK;step.key=="CELEBRATE"->ResidentAnimation.State.CELEBRATE;work&&(id==1||id==0&&step.key in listOf("CLEAR","CLEAN","REMOVE","ASSEMBLE"))->ResidentAnimation.State.WORK;step.speaker==id->ResidentAnimation.State.TALK;step.key=="REVEAL"->ResidentAnimation.State.HAPPY;else->ResidentAnimation.State.LOOK}
    p.shader=null;p.alpha=255;p.color=0x44302010
    c.drawOval(RectF(x-width*.065f,y-width*.012f,x+width*.065f,y+width*.012f),p)
    val mood=when{
@@ -167,7 +171,7 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
    }
    val player=actorPlayers.getOrPut(actorId){CharacterAnimation.Player()};player.update(liveState,ms)
    val w=width*(if(actor.child).17f else .23f);val ah=w*CharacterSprites.aspect(context,actor.sprite)
-   val right=if(state==ResidentAnimation.State.WALK&&entering<1f)false else x<target.centerX()
+   val right=x<target.centerX()
    SceneActorArt.draw(context,c,p,actorId,player,ms,RectF(x-w/2,y-ah,x+w/2,y),right)
    if(id==1&&state==ResidentAnimation.State.WORK){
     val hx=x+if(x<target.centerX())w*.28f else -w*.28f;val hy=y-w*.55f
