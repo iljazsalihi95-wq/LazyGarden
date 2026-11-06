@@ -18,6 +18,8 @@ class PathGardenView(
 
  override fun onDraw(canvas:Canvas) {
   super.onDraw(canvas)
+  val clip=canvas.save()
+  canvas.clipRect(0,0,width,sceneHeight)
   val ms=sceneElapsedMillis
   // CLEAR/REMOVE/LEVEL/PLACE: stone dust follows the active path work instead of a static overlay.
   if(ms in 7_000L..27_000L) {
@@ -48,12 +50,13 @@ class PathGardenView(
    val pulse=.5f+.5f*sin(ms/220f)
    for(i in 0 until 7) {
     val x=pathWorkPoint.x+width*((i-3)*.05f)
-    val y=pathWorkPoint.y+height*sin(i*1.7f)*.025f
+    val y=pathWorkPoint.y+sceneHeight*sin(i*1.7f)*.025f
     fx.color=0xffffe9a6.toInt()
     fx.alpha=(70+80*pulse).toInt()
     canvas.drawCircle(x,y,width*(.003f+.002f*pulse),fx)
    }
   }
   fx.alpha=255
+  canvas.restoreToCount(clip)
  }
 }

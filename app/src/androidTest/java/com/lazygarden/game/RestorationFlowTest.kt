@@ -29,6 +29,23 @@ class RestorationFlowTest {
  @Test fun texturedScenesRenderTheirDistinctNativeStages(){val instrument=InstrumentationRegistry.getInstrumentation();val error=java.util.concurrent.atomic.AtomicReference<Throwable?>();val latch=CountDownLatch(1)
   android.os.Handler(android.os.Looper.getMainLooper()).post{try{val themed=android.view.ContextThemeWrapper(ctx,R.style.Theme_LazyGarden)
    for(task in 2..6){val plan=RestorationSequence.plan(task);for(ms in listOf(0L,plan.duration/2,plan.duration-1500)){val view=RestorationGardenView(themed,task,ms);view.measure(View.MeasureSpec.makeMeasureSpec(720,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(1280,View.MeasureSpec.EXACTLY));view.layout(0,0,720,1280);val b=Bitmap.createBitmap(720,1280,Bitmap.Config.ARGB_8888);view.draw(Canvas(b));assertEquals("Camera must cover the viewport",255,android.graphics.Color.alpha(b.getPixel(360,8)));val dir=File(ctx.getExternalFilesDir(null),"native-stages").apply{mkdirs()};File(dir,"scene-${task+1}-$ms.png").outputStream().use{b.compress(Bitmap.CompressFormat.PNG,95,it)};b.recycle();view.dispose()}}
+   val tallWidth=480
+   val tallHeight=1040
+   val path=PathGardenView(themed,24_000L)
+   path.measure(View.MeasureSpec.makeMeasureSpec(tallWidth,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(tallHeight,View.MeasureSpec.EXACTLY))
+   path.layout(0,0,tallWidth,tallHeight)
+   val image=Bitmap.createBitmap(tallWidth,tallHeight,Bitmap.Config.ARGB_8888)
+   try {
+    path.draw(Canvas(image))
+    val dockTop=tallHeight-(88*themed.resources.displayMetrics.density).toInt()
+    assertEquals(0xff1b3b37.toInt(),image.getPixel(2,dockTop+1))
+    assertNotEquals(0xff1b3b37.toInt(),image.getPixel(2,dockTop-1))
+    val dir=File(ctx.getExternalFilesDir(null),"native-stages")
+    File(dir,"path-tools-tall.png").outputStream().use{image.compress(Bitmap.CompressFormat.PNG,100,it)}
+   } finally {
+    image.recycle()
+    path.dispose()
+   }
   }catch(t:Throwable){error.set(t)}finally{latch.countDown()}}
   assertTrue(latch.await(90,TimeUnit.SECONDS));error.get()?.let{throw it}
   export(File(ctx.getExternalFilesDir(null),"native-stages"))

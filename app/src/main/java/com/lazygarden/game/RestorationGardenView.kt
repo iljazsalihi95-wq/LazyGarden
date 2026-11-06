@@ -13,6 +13,8 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
  private val plan=RestorationSequence.plan(task)
  private val workTarget=RectF()
  protected val pathWorkPoint=PointF()
+ // Reserve the same space throughout the scene so dialogue and the camera stay steady.
+ protected val sceneHeight get()=(height-dp(88f).toInt()).coerceAtLeast(1)
  private val toolSlots=Array(3){RectF()}
  private val materialArt=MaterialArt(context)
  private var selectedTool:Material?=null
@@ -30,7 +32,7 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
   if(choice>=0){selectedTool=RestorationJobs.choices(task,step.key).getOrNull(choice)
    if(selectedTool!=RestorationJobs.tool(task,step.key))wrongToolAt=ms
    invalidate();return true}
-  if(!workTarget.contains(event.x,event.y))return true
+  if(event.y>=sceneHeight||!workTarget.contains(event.x,event.y))return true
   if(selectedTool!=null&&selectedTool!=RestorationJobs.tool(task,step.key)){wrongToolAt=ms;invalidate();return true}
   if(step.key in listOf("ARRIVAL","INSPECT","TRY","REVEAL","CELEBRATE"))return true
   contactX=event.x;contactY=event.y;contactAt=ms
@@ -74,10 +76,10 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
    invalidate()
   };start()}
  }
- override fun onDraw(c:Canvas){super.onDraw(c);val scale=max(width.toFloat()/background.width,height.toFloat()/background.height);val w=background.width*scale;val h=background.height*scale
-  val camera=(ms/4000f).coerceIn(0f,1f)*(1-((ms-plan.duration+3000)/3000f).coerceIn(0f,1f));val maxZoom=when(task){3->2f;4->1.5f;5->1.35f;6->1.15f;else->1.25f};val zoom=1+camera*(maxZoom-1);val d=RectF((width-w*zoom)/2,(height-h*zoom)/2,(width+w*zoom)/2,(height+h*zoom)/2)
-  val anchor=WorldRestorationArt.objectRect(d,task);d.offset((width*.5f-anchor.centerX())*camera,(height*.64f-anchor.bottom)*camera)
-  d.offset(d.left.coerceIn((width-d.width()).coerceAtMost(0f),0f)-d.left,d.top.coerceIn((height-d.height()).coerceAtMost(0f),0f)-d.top)
+ override fun onDraw(c:Canvas){super.onDraw(c);val scene=c.save();c.clipRect(0,0,width,sceneHeight);val scale=max(width.toFloat()/background.width,sceneHeight.toFloat()/background.height);val w=background.width*scale;val h=background.height*scale
+  val camera=(ms/4000f).coerceIn(0f,1f)*(1-((ms-plan.duration+3000)/3000f).coerceIn(0f,1f));val maxZoom=when(task){3->2f;4->1.5f;5->1.35f;6->1.15f;else->1.25f};val zoom=1+camera*(maxZoom-1);val d=RectF((width-w*zoom)/2,(sceneHeight-h*zoom)/2,(width+w*zoom)/2,(sceneHeight+h*zoom)/2)
+  val anchor=WorldRestorationArt.objectRect(d,task);d.offset((width*.5f-anchor.centerX())*camera,(sceneHeight*.64f-anchor.bottom)*camera)
+  d.offset(d.left.coerceIn((width-d.width()).coerceAtMost(0f),0f)-d.left,d.top.coerceIn((sceneHeight-d.height()).coerceAtMost(0f),0f)-d.top)
   if(task==2)pathWorkPoint.set(d.left+d.width()*EstatePathPlan.workX,d.top+d.height()*EstatePathPlan.workY)
   backdrop.draw(c,d);WorldRestorationArt.water(c,p,d,ms.toFloat())
   WorldRestorationArt.draw(context,c,d,task,ms/12000f)
@@ -105,9 +107,8 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
   workTarget.set(WorldRestorationArt.objectRect(d,task));workTarget.inset(-dp(24f),-dp(24f))
   val work=step.key !in listOf("ARRIVAL","INSPECT","TRY","REVEAL","CELEBRATE")
   if(work){tool(c,d,if(task==2)7 else 9,.27f,.80f,.19f);particles(c,d,step.sound,f)}
-  if(step.key in listOf("WATER","GROW")){tool(c,d,6,.69f,.65f,.16f);for(i in 0..15){val t=((ms%1100)/1100f+i*.07f)%1f;p.color=0xbb9ce9ff.toInt();c.drawCircle(width*(.59f-t*.22f),height*(.53f+t*.19f),d.width()*.0025f,p)}}
+  if(step.key in listOf("WATER","GROW")){tool(c,d,6,.69f,.65f,.16f);for(i in 0..15){val t=((ms%1100)/1100f+i*.07f)%1f;p.color=0xbb9ce9ff.toInt();c.drawCircle(width*(.59f-t*.22f),sceneHeight*(.53f+t*.19f),d.width()*.0025f,p)}}
   actors(c,d,WorldRestorationArt.objectRect(d,task),step,work)
-  drawWorkTools(c,step,work)
   val contact=(ms-contactAt)/650f
   if(contact in 0f..1f){
    p.style=Paint.Style.STROKE;p.strokeWidth=dp(2f);p.color=0xffffd47a.toInt();p.alpha=((1-contact)*230).toInt()
@@ -115,26 +116,40 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
    for(i in 0..9){val angle=i*PI.toFloat()/5;val radius=contact*dp(42f);c.drawCircle(contactX+cos(angle)*radius,contactY+sin(angle)*radius-contact*dp(18f),dp(3f)*(1-contact),p)}
    p.alpha=255
   }
-  if(step.key=="CELEBRATE"){for(i in 0..27){val t=((ms%2300)/2300f+i*.037f)%1f;p.color=if(i%2==0)0xffffd86b.toInt() else 0xffb1efc6.toInt();p.alpha=((1-t)*210).toInt();c.drawCircle(width*(i*0.173f%1),height*(.25f+t*.60f),dp(2f),p)};p.alpha=255}
-  if(step.line.isNotBlank())SceneBubble.draw(c,p,width,height,if(step.speaker==1)RestorationJobs.worker(task,step.key).name else listOf("Lazi","Greku","Meli","Rona").getOrElse(step.speaker){"Lazi"},SceneText.line(step.line,save.language),dp(1f),width*(if(step.speaker%2==0).26f else .74f))
-  val bar=RectF(width*.23f,height*.91f,width*.77f,height*.925f);p.color=0xcc184736.toInt();c.drawRoundRect(bar,dp(6f),dp(6f),p);p.color=0xffa8df61.toInt();c.drawRoundRect(RectF(bar.left,bar.top,bar.left+bar.width()*ms/plan.duration,bar.bottom),dp(6f),dp(6f),p)
+  if(step.key=="CELEBRATE"){for(i in 0..27){val t=((ms%2300)/2300f+i*.037f)%1f;p.color=if(i%2==0)0xffffd86b.toInt() else 0xffb1efc6.toInt();p.alpha=((1-t)*210).toInt();c.drawCircle(width*(i*0.173f%1),sceneHeight*(.25f+t*.60f),dp(2f),p)};p.alpha=255}
+  if(step.line.isNotBlank())SceneBubble.draw(c,p,width,sceneHeight,if(step.speaker==1)RestorationJobs.worker(task,step.key).name else listOf("Lazi","Greku","Meli","Rona").getOrElse(step.speaker){"Lazi"},SceneText.line(step.line,save.language),dp(1f),width*(if(step.speaker%2==0).26f else .74f))
+  c.restoreToCount(scene)
+  drawWorkTools(c,step,work)
  }
  private fun drawWorkTools(c:Canvas,step:RestorationSequence.Step,work:Boolean){
-  toolSlots.forEach{it.setEmpty()};if(!work)return
-  val y=height*.79f;val size=min(width*.14f,dp(58f));val gap=dp(12f)
-  val choices=RestorationJobs.choices(task,step.key);val cx=width*.5f
-  p.shader=null;p.style=Paint.Style.FILL;p.color=0xe51b3b37.toInt()
-  c.drawRoundRect(RectF(dp(14f),y-dp(34f),width-dp(14f),y+size+dp(10f)),dp(16f),dp(16f),p)
+  toolSlots.forEach{it.setEmpty()}
+  val cx=width*.5f
+  p.shader=null;p.style=Paint.Style.FILL;p.color=0xff1b3b37.toInt()
+  c.drawRect(0f,sceneHeight.toFloat(),width.toFloat(),height.toFloat(),p)
+  val bar=RectF(width*.14f,height-dp(11f),width*.86f,height-dp(7f))
+  p.color=0xff44675e.toInt()
+  c.drawRoundRect(bar,dp(2f),dp(2f),p)
+  p.color=0xffa8df61.toInt()
+  c.drawRoundRect(bar.left,bar.top,bar.left+bar.width()*ms/plan.duration,bar.bottom,dp(2f),dp(2f),p)
+  if(!work)return
+
+  val choices=RestorationJobs.choices(task,step.key)
+  val gap=dp(10f)
+  val size=min(dp(48f),(width-dp(32f)-2*gap)/3f)
+  val y=sceneHeight+dp(23f)
   p.color=0xffffe3a7.toInt();p.textSize=dp(12f);p.textAlign=Paint.Align.CENTER;p.typeface=Typeface.DEFAULT_BOLD
-  c.drawText(RestorationJobs.title(task,step.key,save.language),cx,y-dp(13f),p)
+  val title=RestorationJobs.title(task,step.key,save.language)
+  val titleWidth=(width-dp(24f)).coerceAtLeast(1f)
+  p.textSize*=min(1f,titleWidth/p.measureText(title))
+  c.drawText(title,cx,sceneHeight+dp(16f),p)
   choices.forEachIndexed{i,m->val x=cx+(i-1)*(size+gap);val r=toolSlots[i];r.set(x-size/2,y,x+size/2,y+size)
    p.color=if((selectedTool?:RestorationJobs.tool(task,step.key))==m)0xffd9bd72.toInt() else 0xff698d81.toInt()
    c.drawRoundRect(r,dp(10f),dp(10f),p);val inner=RectF(r);inner.inset(dp(7f),dp(7f));materialArt.draw(c,p,m,inner)
   }
  }
  private inline fun reveal(c:Canvas,r:RectF,f:Float,draw:()->Unit){if(f<=0)return;val s=c.save();c.clipRect(r.left,r.top,r.left+r.width()*f,r.bottom);draw();c.restoreToCount(s)}
- private fun tool(c:Canvas,d:RectF,i:Int,x:Float,y:Float,w:Float){val cx=width*x;val bottom=height*y;val ww=width*w;SpriteArt.draw(c,p,props,4,3,i,RectF(cx-ww/2,bottom-ww*.65f,cx+ww/2,bottom))}
- private fun particles(c:Canvas,d:RectF,sound:String,f:Float){for(i in 0..11){val t=((ms%1200)/1200f+i*.083f)%1f;p.color=if(sound=="water")0xff8cdeff.toInt() else 0xffd7bd87.toInt();p.alpha=((1-t)*150).toInt();c.drawCircle((if(task==2)pathWorkPoint.x else width*.5f)+sin(i*4f)*width*.22f*t,(if(task==2)pathWorkPoint.y else height*.67f)-height*.09f*t,d.width()*.004f*(1-t),p)};p.alpha=255}
+ private fun tool(c:Canvas,d:RectF,i:Int,x:Float,y:Float,w:Float){val cx=width*x;val bottom=sceneHeight*y;val ww=width*w;SpriteArt.draw(c,p,props,4,3,i,RectF(cx-ww/2,bottom-ww*.65f,cx+ww/2,bottom))}
+ private fun particles(c:Canvas,d:RectF,sound:String,f:Float){for(i in 0..11){val t=((ms%1200)/1200f+i*.083f)%1f;p.color=if(sound=="water")0xff8cdeff.toInt() else 0xffd7bd87.toInt();p.alpha=((1-t)*150).toInt();c.drawCircle((if(task==2)pathWorkPoint.x else width*.5f)+sin(i*4f)*width*.22f*t,(if(task==2)pathWorkPoint.y else sceneHeight*.67f)-sceneHeight*.09f*t,d.width()*.004f*(1-t),p)};p.alpha=255}
  private fun actors(c:Canvas,d:RectF,target:RectF,step:RestorationSequence.Step,work:Boolean){
   val arrival=plan.progress(ms,"ARRIVAL")
   val drawOrder=if(task==2)(0..4).sortedBy{EstatePathPlan.crewPosition(it,arrival).y} else (0..3).toList()
@@ -142,8 +157,8 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
    val actorId=SceneCast.canonical(if(id==1)RestorationJobs.worker(task,step.key).id else listOf("lazi","lazi","meli","rona","cufi")[id])
    val actor=SceneCast.actor(actorId)
    val arrive=CharacterAnimation.ease(arrival);val offsets=floatArrayOf(-.57f,.57f,-.84f,.84f,0f);val tx=if(task==6)width*floatArrayOf(.16f,.40f,.60f,.84f)[id] else (if(id==1)target.right+width*.025f else target.centerX()+offsets[id]*target.width()).coerceIn(width*.13f,width*.87f)
-   val ground=if(task==6)height*.88f else target.bottom+height*(if(id==1).035f else if(id==0).10f else .19f)
-   var x=(if(id%2==0)-width*.12f else width*1.12f)*(1-arrive)+tx*arrive;var y=height*.98f*(1-arrive)+ground.coerceAtMost(height*.88f)*arrive
+   val ground=if(task==6)sceneHeight*.88f else target.bottom+sceneHeight*(if(id==1).035f else if(id==0).10f else .19f)
+   var x=(if(id%2==0)-width*.12f else width*1.12f)*(1-arrive)+tx*arrive;var y=sceneHeight*.98f*(1-arrive)+ground.coerceAtMost(sceneHeight*.88f)*arrive
    if(task==2){
     val station=EstatePathPlan.crewPosition(id,arrival)
     x=d.left+d.width()*station.x
