@@ -58,7 +58,7 @@ object GardenContent {
   for(i in 0 until items.length()){
    val a=items.getJSONObject(i);val id=a.getString("id");val kind=a.getString("kind");val url=URL(a.getString("url"));val sha=a.getString("sha256")
    require(assets.none{it.id==id}&&sha.matches(Regex("[a-f0-9]{64}")))
-   require(url.protocol=="https"&&url.userInfo==null&&url.host in setOf("raw.githubusercontent.com","lazygarden-backend.lazisalihi.workers.dev"))
+   require(url.protocol=="https"&&url.userInfo==null&&url.host in setOf("raw.githubusercontent.com","lazygarden-backend.lazisalihi.workers.dev","lazygarden.lazisalihi.workers.dev"))
    require((kind=="image"&&id in artIds)||(kind=="audio"&&id.matches(Regex("story_[1-9][0-9]?/line_[1-3]/[a-z]+/(sq|de|it|mk|tr)"))))
    assets+=Asset(id,url.toString(),sha,kind)
   }

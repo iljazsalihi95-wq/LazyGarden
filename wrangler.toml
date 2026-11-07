@@ -1,4 +1,4 @@
-name = "lazygarden-backend"
+name = "lazygarden"
 main = "cloudflare-worker/src/index.js"
 workers_dev = true
 keep_vars = true

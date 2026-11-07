@@ -18,7 +18,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   @Volatile private var workerRetryAt=0L
   @Volatile private var scriptRetryAt=0L
   private const val VOICE_BACKEND="https://script.google.com/macros/s/AKfycby5NE2pnupggwtbbSn07lBSIUKns1rhO6kFkvKI4RzzzzDN0sE7XKD1TFTQy2UM68lv/exec"
-  private const val SPEECH_BACKEND="https://lazygarden-backend.lazisalihi.workers.dev/api/voice/speech"
+  private const val SPEECH_BACKEND="https://lazygarden.lazisalihi.workers.dev/api/voice/speech"
  }
  private val speechCache=SpeechCache(java.io.File(context.filesDir,"voice_cache"))
  private fun online():Boolean=runCatching{val cm=context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager;cm.getNetworkCapabilities(cm.activeNetwork)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)==true}.getOrDefault(false)

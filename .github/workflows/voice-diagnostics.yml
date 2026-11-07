@@ -36,7 +36,7 @@ jobs:
         run: |
           import json, pathlib, re, subprocess, urllib.request, urllib.error
 
-          target = 'https://lazygarden-backend.lazisalihi.workers.dev'
+          target = 'https://lazygarden.lazisalihi.workers.dev'
           output = pathlib.Path('voice-diagnostics')
           output.mkdir()
           report = {'endpoint': target, 'health': None, 'speech': []}
