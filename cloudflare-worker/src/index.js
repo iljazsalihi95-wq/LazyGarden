@@ -44,6 +44,8 @@ async function gardenSpeech(request,env){
   const instructions="Speak only the supplied text in "+speechLanguages[language]+
     ". Do not translate, paraphrase, add words, or read these instructions. "+
     "Use a warm, clear storytelling delivery as "+character+".";
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),12000);
   let upstream;
   try {
     upstream=await fetch("https://api.openai.com/v1/audio/speech",{
@@ -56,10 +58,12 @@ async function gardenSpeech(request,env){
         instructions,
         response_format:"mp3"
       }),
-      signal:AbortSignal.timeout(12000)
+      signal:controller.signal
     });
   }catch{
     return reply({success:false,error:"SPEECH_PROVIDER_UNREACHABLE"},502);
+  }finally{
+    clearTimeout(timeout);
   }
   if(!upstream.ok)return reply({success:false,error:"SPEECH_PROVIDER_ERROR",status:upstream.status},502);
   if(!upstream.body||!/^audio\/mpeg(?:;|$)/i.test(upstream.headers.get("content-type")||"")){
