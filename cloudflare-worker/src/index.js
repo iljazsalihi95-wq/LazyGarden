@@ -39,7 +39,11 @@ async function gardenSpeech(request,env){
   if(!Object.hasOwn(speechLanguages,language)){
     return reply({success:false,error:"UNSUPPORTED_SPEECH_LANGUAGE"},400);
   }
-  if(!env.OPENAI_API_KEY)return reply({success:false,error:"OPENAI_NOT_CONFIGURED"},503);
+  const apiKey=env.OPENAI_API_KEY?.trim();
+  if(!apiKey)return reply({success:false,error:"OPENAI_NOT_CONFIGURED"},503);
+  if(!/^sk-[A-Za-z0-9_-]+$/.test(apiKey)){
+    return reply({success:false,error:"INVALID_OPENAI_KEY_FORMAT"},503);
+  }
 
   const instructions="Speak only the supplied text in "+speechLanguages[language]+
     ". Do not translate, paraphrase, add words, or read these instructions. "+
@@ -50,7 +54,7 @@ async function gardenSpeech(request,env){
   try {
     upstream=await fetch("https://api.openai.com/v1/audio/speech",{
       method:"POST",
-      headers:{"authorization":"Bearer "+env.OPENAI_API_KEY,"content-type":"application/json"},
+      headers:{"authorization":"Bearer "+apiKey,"content-type":"application/json"},
       body:JSON.stringify({
         model:env.OPENAI_TTS_MODEL||"gpt-4o-mini-tts",
         voice:speakerVoices[character],
@@ -61,7 +65,7 @@ async function gardenSpeech(request,env){
       signal:controller.signal
     });
   }catch{
-    return reply({success:false,error:"SPEECH_PROVIDER_UNREACHABLE"},502);
+    return reply({success:false,error:controller.signal.aborted?"SPEECH_PROVIDER_TIMEOUT":"SPEECH_PROVIDER_UNREACHABLE"},502);
   }finally{
     clearTimeout(timeout);
   }
@@ -75,7 +79,7 @@ async function gardenSpeech(request,env){
 export default{async fetch(request,env){
   const u=new URL(request.url);
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:H});
-  if(request.method==="GET"&&(u.pathname==="/"||u.pathname==="/health"))return reply({success:true,service:"lazygarden-backend",openai_configured:Boolean(env.OPENAI_API_KEY)});
+  if(request.method==="GET"&&(u.pathname==="/"||u.pathname==="/health"))return reply({success:true,service:"lazygarden-backend",openai_configured:Boolean(env.OPENAI_API_KEY?.trim()),speech_diagnostics:2});
   if(request.method==="POST"&&u.pathname==="/api/voice/speech")return gardenSpeech(request,env);
   if(request.method==="POST"&&(u.pathname==="/api/ai/respond"||u.pathname==="/api/garden/ai"))return gardenAI(request,env);
   return reply({success:false,error:"NOT_FOUND"},404);
