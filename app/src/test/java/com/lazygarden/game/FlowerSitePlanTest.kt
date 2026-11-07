@@ -33,4 +33,35 @@ class FlowerSitePlanTest {
         }
     }
 
+    @Test fun wateringWalksAlongTheBedAndReturnsHomeWithoutTeleporting(){
+        val home=FlowerSitePlan.waiting.getValue("rona")
+        assertEquals(home,FlowerSitePlan.wateringPosition(0f))
+        assertEquals(home,FlowerSitePlan.wateringPosition(1f))
+        var previous=home
+        for(i in 0..1000){
+            val point=FlowerSitePlan.wateringPosition(i/1000f)
+            assertFalse("Feet entered the planted bed: $point",FlowerSitePlan.contains(point))
+            assertTrue(kotlin.math.hypot(point.x-previous.x,point.y-previous.y)<.003f)
+            previous=point
+        }
+        assertFalse(FlowerSitePlan.isPouring(.1f))
+        assertTrue(FlowerSitePlan.isPouring(.5f))
+        assertFalse(FlowerSitePlan.isPouring(.9f))
+    }
+    @Test fun waterStartsAtTheNozzleAndEndsAtTheRoots(){
+        val source=FlowerSitePlan.Point(.22f,.68f)
+        val root=FlowerSitePlan.Point(.18f,.74f)
+        assertEquals(source,FlowerSitePlan.waterDrop(source,root,0f))
+        val end=FlowerSitePlan.waterDrop(source,root,1f)
+        assertEquals(root.x,end.x,.00001f);assertEquals(root.y,end.y,.00001f)
+        var previous=source.y
+        for(i in 1..100){
+            val drop=FlowerSitePlan.waterDrop(source,root,i/100f)
+            assertTrue(drop.y>=previous)
+            assertTrue(drop.x in root.x..source.x)
+            previous=drop.y
+        }
+        for(i in 0..100)assertTrue(FlowerSitePlan.contains(FlowerSitePlan.wateringTarget(i/100f)))
+    }
+
 }

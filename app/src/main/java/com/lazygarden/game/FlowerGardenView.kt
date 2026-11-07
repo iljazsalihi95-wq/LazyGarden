@@ -71,7 +71,7 @@ class FlowerGardenView(
   super.onDraw(c);val s=FlowerSitePlan.cameraWidth(width,height)/garden.width;val dw=garden.width*s;val dh=garden.height*s
   val left=(width*.44f-dw*.20f).coerceIn(width-dw,0f);val top=(height*.67f-dh*.715f).coerceIn(height-dh,0f)
   val dst=RectF(left,top,left+dw,top+dh);backdrop.draw(c,dst);WorldRestorationArt.water(c,p,dst,life*12000f)
-  bed.set(dst.left+dw*.055f,dst.top+dh*.65f,dst.left+dw*.285f,dst.top+dh*.78f);drawBed(c,dst);drawPeople(c,dst,dw)
+  bed.set(dst.left+dw*.055f,dst.top+dh*.65f,dst.left+dw*.285f,dst.top+dh*.78f);drawBed(c,dst);drawPeople(c,dst,dw);drawWatering(c,dst)
   val st=FlowerSequence.stage(ms)
   if(st in listOf(FlowerSequence.Stage.PREPARE,FlowerSequence.Stage.PLANT)){for(i in 0..10){val t=(life*8+i*.09f)%1f;p.color=0xffc8a471.toInt();p.alpha=((1-t)*150).toInt();c.drawCircle(bed.left+bed.width()*(.1f+i*.075f),bed.top+bed.height()*(.4f-t*.45f),dp(2f)*(1-t),p)};p.alpha=255}
   if(st in listOf(FlowerSequence.Stage.BLOOM,FlowerSequence.Stage.CELEBRATE)){for(i in 0..2){val x=bed.centerX()+kotlin.math.sin(life*12+i*2f)*bed.width()*.4f;val y=bed.top-dp(30f)-kotlin.math.sin(life*18+i)*dp(15f);val saved=c.save();c.scale(.65f+kotlin.math.abs(kotlin.math.sin(life*30+i))*.35f,1f,x,y);SpriteArt.draw(c,p,props,4,3,11,RectF(x-dp(12f),y-dp(12f),x+dp(12f),y+dp(12f)));c.restoreToCount(saved)}}
@@ -97,31 +97,53 @@ class FlowerGardenView(
    p.color=0xffbac5c3.toInt();c.drawOval(RectF(x-dp(5f),y-dp(3f),x+dp(5f),y+dp(6f)),p)
   }
   if(stage==FlowerSequence.Stage.PLANT&&count<12){
-   val target=FlowerSitePlan.plants[count];val progress=(FlowerSequence.planting(ms)*12-count).coerceIn(0f,1f)
-   val x=wx+(dst.left+dst.width()*target.x-wx)*progress
-   val y=wy-dp(35f)+(dst.top+dst.height()*target.y-wy+dp(35f))*progress
-   plants.draw(c,p,chosen?.id?:"tulip",x,y,dst.width()*.027f)
-  }
-  if(stage==FlowerSequence.Stage.WATER){
-   val target=FlowerSitePlan.plants[((FlowerSequence.watering(ms)*12).toInt()).coerceIn(0,11)]
-   val x=dst.left+dst.width()*target.x;val y=dst.top+dst.height()*target.y
-   val sourceX=dst.left+dst.width()*.32f;val sourceY=dst.top+dst.height()*.75f-dp(20f)
-   val can=c.save();c.scale(-1f,1f,sourceX,sourceY)
-   SpriteArt.draw(c,p,props,4,3,6,RectF(sourceX-dp(14f),sourceY-dp(23f),sourceX+dp(24f),sourceY+dp(14f)));c.restoreToCount(can)
-   p.color=0xaa8be9ff.toInt()
-   for(i in 0..12){val t=(ms/650f+i*.077f)%1f;c.drawCircle(sourceX+(x-sourceX)*t,sourceY+(y-sourceY)*t,dp(1.6f),p)}
+   val target=FlowerSitePlan.plants[count]
+   val progress=(FlowerSequence.planting(ms)*12-count).coerceIn(0f,1f)
+   // Place at the root socket instead of flying the seedling across the scene.
+   if(progress>.5f)plants.draw(c,p,chosen?.id?:"tulip",dst.left+dst.width()*target.x,
+    dst.top+dst.height()*target.y,dst.width()*.027f*((progress-.5f)*2f))
   }
  }
+ private fun drawWatering(c:Canvas,dst:RectF){
+  if(FlowerSequence.stage(ms)!=FlowerSequence.Stage.WATER)return
+  val progress=FlowerSequence.watering(ms)
+  val foot=FlowerSitePlan.wateringPosition(progress)
+  val actor=SceneCast.actor("rona")
+  val aw=dst.width()*.075f;val ah=aw*CharacterSprites.aspect(context,actor.sprite)
+  val fx=dst.left+dst.width()*foot.x;val fy=dst.top+dst.height()*foot.y
+  // Can, hand and body share the same world scale and foot anchor.
+  val handX=fx-aw*.22f;val handY=fy-ah*.52f
+  val canWidth=aw*.55f;val canHeight=aw*.43f
+  val can=c.save();c.scale(-1f,1f,handX,handY)
+  SpriteArt.draw(c,p,props,4,3,6,RectF(handX-canWidth*.45f,handY-canHeight*.25f,
+   handX+canWidth*.55f,handY+canHeight*.75f));c.restoreToCount(can)
+  if(!FlowerSitePlan.isPouring(progress))return
+  val nozzle=FlowerSitePlan.Point((handX-canWidth*.55f-dst.left)/dst.width(),
+   (handY+canHeight*.15f-dst.top)/dst.height())
+  val root=FlowerSitePlan.wateringTarget(progress)
+  p.shader=null;p.style=Paint.Style.FILL;p.color=0xaa8be9ff.toInt()
+  for(i in 0..12){
+   val t=(ms/650f+i/13f)%1f
+   val drop=FlowerSitePlan.waterDrop(nozzle,root,t)
+   c.drawCircle(dst.left+dst.width()*drop.x,dst.top+dst.height()*drop.y,dst.width()*.0015f,p)
+  }
+  p.color=0x553a6551
+  val x=dst.left+dst.width()*root.x;val y=dst.top+dst.height()*root.y
+  c.drawOval(RectF(x-aw*.1f,y-aw*.035f,x+aw*.1f,y+aw*.035f),p)
+  p.alpha=255
+ }
+
  private fun drawPeople(c:Canvas,dst:RectF,dw:Float){
   val ids=listOf("rona","meli","lazi","gezimi")
   val visible=ids.filter{it!="gezimi"||ms>=9500L}
-  val positions=visible.associateWith{id->if(id=="gezimi")FlowerSitePlan.arrival(FlowerSequence.approach(ms)) else FlowerSitePlan.waiting.getValue(id)}
+  val positions=visible.associateWith{id->if(id=="gezimi")FlowerSitePlan.arrival(FlowerSequence.approach(ms)) else if(id=="rona"&&FlowerSequence.stage(ms)==FlowerSequence.Stage.WATER)FlowerSitePlan.wateringPosition(FlowerSequence.watering(ms)) else FlowerSitePlan.waiting.getValue(id)}
   // Farther feet first: people standing behind the bed cannot paint over people in front.
   visible.sortedBy{positions.getValue(it).y}.forEach{id->
    val point=positions.getValue(id);val x=dst.left+dw*point.x;val y=dst.top+dst.height()*point.y
    val planned=FlowerSequence.actorState(ms,id)
    val state=when{
     FlowerSequence.stage(ms)==FlowerSequence.Stage.CHOOSE->CharacterAnimation.State.IDLE
+    id=="rona"&&FlowerSequence.stage(ms)==FlowerSequence.Stage.WATER->if(FlowerSitePlan.isPouring(FlowerSequence.watering(ms)))CharacterAnimation.State.WORK else CharacterAnimation.State.WALK
     planned==CharacterAnimation.State.TALK&&!voice.isTalking->CharacterAnimation.State.IDLE
     planned==CharacterAnimation.State.WORK&&id!="gezimi"&&!(id=="rona"&&FlowerSequence.stage(ms)==FlowerSequence.Stage.WATER)->CharacterAnimation.State.IDLE
     else->planned
