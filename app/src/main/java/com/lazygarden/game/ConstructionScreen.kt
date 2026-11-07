@@ -32,7 +32,7 @@ class ConstructionScreen(
         orientation=VERTICAL;setBackgroundColor(0xff153f35.toInt());setPadding(dp(8),dp(4),dp(8),dp(8))
         addView(button(words("‹ Kopshti","‹ Garten","‹ Giardino","‹ Градина","‹ Bahçe"),back))
         addView(text(words("PLANI I PRONËS","BAUPLAN DES ANWESENS","PROGETTO DELLA TENUTA","ПЛАН НА ИМОТОТ","MÜLK PLANI"),22f,0xffffdf83.toInt()))
-        addView(text("${RestorationUiModel.progress(save.tasks)}  •  ${save.coins} Game Coins  •  ★ ${save.stars}  •  🔑 ${save.keys}",14f))
+        addView(text("${RestorationUiModel.progress(save.tasks)}  •  ${save.coins} ${GameText.get(save.language,"coins")}  •  ★ ${save.stars}  •  🔑 ${save.keys}",14f))
         addView(map,LayoutParams(-1,0,0.9f))
         addView(HorizontalScrollView(context).apply{isHorizontalScrollBarEnabled=true;addView(choices)},LayoutParams(-1,dp(55)))
         details.orientation=VERTICAL
@@ -56,7 +56,7 @@ class ConstructionScreen(
         val site=RestorationWorksites.forTask(selected)
         details.addView(text(words("Mjeshtri","Fachkraft","Specialista","Мајстор","Usta")+": "+SceneCast.name(site.worker)+"  •  "+site.cast.joinToString(" · "){SceneCast.name(it)},14f))
         if(!done){
-            details.addView(text("120 Game Coins"+if(selected>0)" + ★ 1" else "",18f))
+            details.addView(text("120 ${GameText.get(save.language,"coins")}"+if(selected>0)" + ★ 1" else "",18f))
             RestorationInventory.forTask(selected).forEach { need ->
                 val have=save.materialCount(need.material)
                 val row=LinearLayout(context).apply{orientation=VERTICAL}

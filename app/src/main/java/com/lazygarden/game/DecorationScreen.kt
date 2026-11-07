@@ -27,7 +27,7 @@ class DecorationScreen(
   val top=LinearLayout(context).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(10),dp(12),0)}
   val bar=LinearLayout(context)
   bar.addView(button("‹ ${t("garden")}",close),LinearLayout.LayoutParams(dp(110),dp(44)))
-  bar.addView(text("${save.coins} Game Coins",17f,Color.WHITE),LinearLayout.LayoutParams(0,dp(44),1f));top.addView(bar)
+  bar.addView(text("${save.coins} ${GameText.get(save.language,"coins")}",17f,Color.WHITE),LinearLayout.LayoutParams(0,dp(44),1f));top.addView(bar)
   top.addView(text(t("decorate_estate"),26f,0xffffdf83.toInt()).apply{setPadding(0,dp(8),0,0)})
   if(preview!=null)top.addView(text(t("preview"),14f,Color.WHITE))
   addView(top,LayoutParams(-1,-2,Gravity.TOP))

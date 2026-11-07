@@ -25,7 +25,7 @@ class InventoryScreen(context:Context,save:GardenSave,category:Int,close:()->Uni
    val ready=materialReady&&coinReady&&starReady
    val summary=LinearLayout(context).apply{orientation=VERTICAL;setPadding(dp(12),dp(8),dp(12),dp(8));background=statusBg(ready)}
    summary.addView(text(FountainText.get(save.language,if(ready)"restoration_ready" else "restoration_missing"),15f))
-   summary.addView(text("${if(coinReady)"✓" else "✕"} ${save.coins}/120 Game Coins   •   ${if(starReady)"✓" else "✕"} ${if(save.tasks==0)"0" else "${save.stars}/1"} ★",12f).apply{setTextColor(if(coinReady&&starReady)0xff35653b.toInt() else 0xff8a3f2c.toInt())})
+   summary.addView(text("${if(coinReady)"✓" else "✕"} ${save.coins}/120 ${GameText.get(save.language,"coins")}   •   ${if(starReady)"✓" else "✕"} ${if(save.tasks==0)"0" else "${save.stars}/1"} ★",12f).apply{setTextColor(if(coinReady&&starReady)0xff35653b.toInt() else 0xff8a3f2c.toInt())})
    needs.forEach{n->
     val have=save.materialCount(n.material);val left=(n.count-have).coerceAtLeast(0);val ok=left==0
     val row=LinearLayout(context).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(2),0,dp(2))}

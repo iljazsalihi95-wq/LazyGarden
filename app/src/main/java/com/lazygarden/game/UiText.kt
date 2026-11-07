@@ -16,6 +16,7 @@ object UiText {
  restorations|Restaurime|Restaurierungen|Restauri|Обнови|Restorasyonlar
  work_complete|Detyra e përfunduar!|Auftrag abgeschlossen!|Lavoro completato!|Задачата е завршена!|İş tamamlandı!
  continue_story|Vazhdo tregimin|Geschichte fortsetzen|Continua la storia|Продолжи ја приказната|Hikâyeye devam et
+ estate_plan|Plani i pronës|Anwesenplan|Mappa della tenuta|План на имотот|Mülk planı
  estate_story|Historia e pronës|Geschichte des Anwesens|Storia della tenuta|Приказна за имотот|Mülkün hikâyesi
  replay_fountain|Riluaj shatërvanin|Brunnen erneut ansehen|Rivedi la fontana|Повтори ја фонтаната|Çeşmeyi tekrar izle
  replay|Riluaj|Erneut ansehen|Rivedi|Повтори|Tekrar izle
@@ -28,7 +29,7 @@ object UiText {
  use_key|Përdor 1 çelës — pa materiale|1 Schlüssel verwenden — ohne Material|Usa 1 chiave — senza materiali|Користи 1 клуч — без материјали|1 anahtar kullan — malzeme gerekmez
  buy_missing|Bli materialet që mungojnë|Fehlendes Material kaufen|Compra i materiali mancanti|Купи ги материјалите што недостигаат|Eksik malzemeyi satın al
  materials_bought|Materialet u blenë. Tani mund të restaurosh.|Material gekauft. Du kannst jetzt restaurieren.|Materiali acquistati. Ora puoi restaurare.|Материјалите се купени. Сега можеш да обновуваш.|Malzemeler alındı. Şimdi restore edebilirsin.
- base_cost|Kostoja bazë: 120 Game Coins dhe 1 yll, përveç restaurimit të parë. Çelësi zëvendëson materialet.|Grundpreis: 120 Game Coins und 1 Stern, außer beim ersten Auftrag. Ein Schlüssel ersetzt das Material.|Costo base: 120 Game Coins e 1 stella, tranne il primo restauro. La chiave sostituisce i materiali.|Основна цена: 120 Game Coins и 1 ѕвезда, освен за првата обнова. Клучот ги заменува материјалите.|Temel ücret: ilk restorasyon dışında 120 Game Coins ve 1 yıldız. Anahtar malzemenin yerine geçer.
+ base_cost|Kostoja bazë: 120 monedha dhe 1 yll, përveç restaurimit të parë. Çelësi zëvendëson materialet.|Grundpreis: 120 Spielmünzen und 1 Stern, außer beim ersten Auftrag. Ein Schlüssel ersetzt das Material.|Costo base: 120 monete e 1 stella, tranne il primo restauro. La chiave sostituisce i materiali.|Основна цена: 120 монети и 1 ѕвезда, освен за првата обнова. Клучот ги заменува материјалите.|Temel ücret: ilk restorasyon dışında 120 oyun parası ve 1 yıldız. Anahtar malzemenin yerine geçer.
  video_loading|Po kërkohet video…|Video wird geladen…|Caricamento del video…|Се вчитува видео…|Video yükleniyor…
  cancel|Anulo|Abbrechen|Annulla|Откажи|İptal
  voluntary_video|Shiko një video të plotë për bonus. Mund të vazhdosh edhe pa reklamë.|Sieh ein vollständiges Video für einen Bonus. Du kannst auch ohne Werbung weiterspielen.|Guarda un video completo per un bonus. Puoi continuare anche senza pubblicità.|Гледај цело видео за бонус. Можеш да продолжиш и без реклама.|Bonus için videoyu tamamla. Reklam olmadan da devam edebilirsin.

@@ -28,7 +28,7 @@ class GardenSave(ctx:Context) {
  fun missingRestorationMaterials(task:Int=tasks)=restorationNeeds(task).filter{materialCount(it.material)<it.count}
  fun restorationMaterialsReady(task:Int=tasks)=restorationNeeds(task).isNotEmpty()&&missingRestorationMaterials(task).isEmpty()
  fun materialStatus(task:Int=tasks)=restorationNeeds(task).joinToString("\n"){"${it.material.label}: ${materialCount(it.material)}/${it.count}"}
- fun restorationBlockers(task:Int=tasks):List<String>{val out=mutableListOf<String>();if(coins<120)out+="Game Coins ${coins}/120 (−${120-coins})";if(task>0&&stars<1)out+="★ ${stars}/1";missingRestorationMaterials(task).forEach{out+="${it.material.label}: ${materialCount(it.material)}/${it.count} (−${it.count-materialCount(it.material)})"};return out}
+ fun restorationBlockers(task:Int=tasks):List<String>{val out=mutableListOf<String>();if(coins<120)out+="${GameText.get(language,"coins")} ${coins}/120 (−${120-coins})";if(task>0&&stars<1)out+="★ ${stars}/1";missingRestorationMaterials(task).forEach{out+="${it.material.label}: ${materialCount(it.material)}/${it.count} (−${it.count-materialCount(it.material)})"};return out}
  fun restorationReady(task:Int=tasks)=!constructing&&task<RestorationInventory.TASK_COUNT&&restorationBlockers(task).isEmpty()
 
  /** A key replaces missing construction materials, never the story star or basic labour cost. */
