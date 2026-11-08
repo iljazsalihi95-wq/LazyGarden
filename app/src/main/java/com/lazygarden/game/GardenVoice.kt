@@ -18,7 +18,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   @Volatile private var workerRetryAt=0L
   @Volatile private var scriptRetryAt=0L
   private const val VOICE_BACKEND="https://script.google.com/macros/s/AKfycby5NE2pnupggwtbbSn07lBSIUKns1rhO6kFkvKI4RzzzzDN0sE7XKD1TFTQy2UM68lv/exec"
-  private const val SPEECH_BACKEND="https://lazygarden.lazisalihi.workers.dev/api/voice/speech"
+  private const val SPEECH_BACKEND="https://lazy-ai-creator-studio.lazisalihi.workers.dev/api/game/voice"
  }
  private val speechCache=SpeechCache(java.io.File(context.filesDir,"voice_cache"))
  private fun online():Boolean=runCatching{val cm=context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager;cm.getNetworkCapabilities(cm.activeNetwork)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)==true}.getOrDefault(false)
@@ -62,7 +62,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   cue.asset?.let{return playAsset(cue,it)}
   speechCache.find(cue.characterId,cue.language,cue.subtitle)?.let{playRemote(cue,it.absolutePath);return true}
   if(!online())return fallback(cue)
-  // Use Cloudflare AI speech directly; the API key stays in Worker secrets.
+  // Fetch only already-produced exact-language clips from the Studio D1/R2 library.
   fetchWorkerSpeech(cue)
   return true
  }
@@ -83,7 +83,8 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
      setRequestProperty("User-Agent","LazyGarden/"+BuildConfig.VERSION_NAME)
     }
     val payload=JSONObject().put("character_id",cue.characterId.lowercase(Locale.ROOT))
-     .put("language",cue.language).put("text",cue.subtitle).toString()
+     .put("language",cue.language).put("text",cue.subtitle)
+     .put("scene_id",cue.sceneId).put("line_id",cue.lineId).toString()
     connection.outputStream.use{it.write(payload.toByteArray(Charsets.UTF_8))}
     if(connection.responseCode !in 200..299||!connection.contentType.orEmpty().startsWith("audio/"))throw IllegalStateException("Speech backend unavailable")
     require(connection.contentLengthLong<=SpeechCache.MAX_CLIP_BYTES)
