@@ -1,10 +1,10 @@
-name: Deploy and verify garden speech
+name: Verify AI Studio game recordings
 on:
   push:
     branches: [main]
     paths:
       - 'cloudflare-worker/**'
-      - 'wrangler.toml'
+      - 'app/src/main/java/com/lazygarden/game/GardenVoice.kt'
       - '.github/workflows/voice-diagnostics.yml'
   workflow_dispatch:
 permissions:
@@ -15,22 +15,8 @@ jobs:
   deployed-speech:
     runs-on: ubuntu-latest
     timeout-minutes: 8
-    env:
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: Check speech request and credential handling
-        run: node --test cloudflare-worker/test/*.test.mjs
-      - name: Deploy the existing Worker
-        if: env.CLOUDFLARE_ACCOUNT_ID != '' && env.CLOUDFLARE_API_TOKEN != ''
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      - name: Report unavailable deployment credentials
-        if: env.CLOUDFLARE_ACCOUNT_ID == '' || env.CLOUDFLARE_API_TOKEN == ''
-        run: echo '::warning::Cloudflare deployment credentials are missing. Checking the existing endpoint.'
       - name: Retrieve exact-language audio before installing a decoder
         id: fetch-audio
         if: always()
@@ -38,7 +24,7 @@ jobs:
         run: |
           import json, pathlib, re, subprocess, urllib.request, urllib.error
 
-          target = 'https://lazygarden.lazisalihi.workers.dev'
+          target = 'https://lazy-ai-creator-studio.lazisalihi.workers.dev'
           output = pathlib.Path('voice-diagnostics')
           output.mkdir()
           report = {'endpoint': target, 'health': None, 'speech': []}
@@ -61,24 +47,14 @@ jobs:
                   pass
               return result
 
-          try:
-              request = urllib.request.Request(target + '/health', headers=headers)
-              with urllib.request.urlopen(request, timeout=20) as response:
-                  body = json.load(response)
-                  report['health'] = {'status': response.status,
-                                      'success': body.get('success') is True,
-                                      'configured': body.get('openai_configured') is True}
-          except Exception as error:
-              report['health'] = error_details(error)
-
-          for actor, language, text in [('lazi', 'sq', 'Mirë se erdhët në kopshtin tonë.'),
-                                        ('meli', 'it', 'Benvenuti nel nostro giardino.')]:
+          for actor, language, text in [('meli', 'sq', 'Dëgjojeni shatërvanin! Rona dhe Cufi pastruan gjethet, dhe oborri ynë mori përsëri jetë.'),
+                                        ('meli', 'it', 'Ascoltate la fontana! Rona e Cufi hanno tolto le foglie e il cortile è tornato a vivere.')]:
               result = {'actor': actor, 'language': language, 'audio': False, 'downloaded': False}
               clip = output / (actor + '-' + language + '.mp3')
               try:
                   request = urllib.request.Request(
-                      target + '/api/voice/speech',
-                      data=json.dumps({'character_id': actor, 'language': language, 'text': text}).encode(),
+                      target + '/api/game/voice',
+                      data=json.dumps({'scene_id': 'story_1', 'line_id': 'line_1', 'character_id': actor, 'language': language, 'text': text}).encode(),
                       headers={**headers, 'Content-Type': 'application/json'})
                   with urllib.request.urlopen(request, timeout=25) as response:
                       payload = response.read(4 * 1024 * 1024 + 1)
