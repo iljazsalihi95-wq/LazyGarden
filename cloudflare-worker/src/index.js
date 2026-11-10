@@ -1,3 +1,4 @@
+import {gameHandler} from "./game.js";
 const H={"content-type":"application/json; charset=utf-8","cache-control":"no-store","access-control-allow-origin":"*","access-control-allow-headers":"content-type","access-control-allow-methods":"GET, POST, OPTIONS"};
 const reply=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:H});
 const clean=(v,max=6000)=>String(v??"").replace(/\s+/g," ").trim().slice(0,max);
@@ -91,6 +92,7 @@ async function gardenSpeech(request,env){
 
 export default{async fetch(request,env){
   const u=new URL(request.url);
+  if(u.pathname.startsWith("/api/game/"))return gameHandler(request,env);
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:H});
   if(request.method==="GET"&&(u.pathname==="/"||u.pathname==="/health"))return reply({success:true,service:"lazygarden-backend",openai_configured:Boolean(env.OPENAI_API_KEY?.trim()),speech_diagnostics:2});
   if(request.method==="POST"&&u.pathname==="/api/voice/speech")return gardenSpeech(request,env);
