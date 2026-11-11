@@ -240,7 +240,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   voiceRect.setEmpty()
   if(save.voiceEnabled&&FountainText.cue(stage)!=null){
    val statusKey=when(voice.status){GardenVoice.Status.LOADING->"audio_loading";GardenVoice.Status.PLAYING->"audio_playing";GardenVoice.Status.UNAVAILABLE->"audio_unavailable";GardenVoice.Status.OFFLINE->"audio_offline";else->"hear_again"}
-   voiceRect.set(18*d,130*d,w-18*d,163*d)
+   voiceRect.set(18*d,h-33*d,w*.69f,h-3*d)
    p.color=0xd9234636.toInt();c.drawRoundRect(voiceRect,12*d,12*d,p)
    p.textSize=11*d;p.typeface=Typeface.DEFAULT_BOLD
    val label=UiText.get(save.language,statusKey)
