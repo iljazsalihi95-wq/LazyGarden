@@ -26,6 +26,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
  private var lastWork=0L
  private var collectedLeaf=-1;private var collectStarted=-2000L;private var collectionCommitted=false
  private val optionsRect=RectF();private val actionRect=RectF();private val playRect=RectF();private val inventoryRect=RectF();private val closeRect=RectF()
+ private val voiceRect=RectF()
  private val worldTarget=RectF();private val leaves=Array(3){RectF()}
  private val players=mutableMapOf<String,CharacterAnimation.Player>()
  private val actorFacing=mutableMapOf<String,Boolean>()
@@ -42,7 +43,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
  var onStageChanged:((FountainQuest.Stage)->Unit)?=null
  internal val currentStage get()=stage
  internal fun actionCenter()=PointF(actionRect.centerX(),actionRect.centerY())
- init {voice.onTalkingChanged={invalidate()};isClickable=true;contentDescription=FountainText.objective(save.language,stage)}
+ init {voice.onTalkingChanged={invalidate()};voice.onStatusChanged={invalidate()};isClickable=true;contentDescription=FountainText.objective(save.language,stage)}
  override fun onAttachedToWindow(){super.onAttachedToWindow();startClock()}
  override fun onDetachedFromWindow(){stopClock();voice.release();sfx.release();super.onDetachedFromWindow()}
  override fun onWindowVisibilityChanged(v:Int){super.onWindowVisibilityChanged(v);if(v==VISIBLE&&!paused)startClock() else stopClock()}
@@ -53,9 +54,11 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   var last=android.os.SystemClock.uptimeMillis()
   clock=ValueAnimator.ofFloat(0f,1f).apply{duration=12000;repeatCount=ValueAnimator.INFINITE;interpolator=LinearInterpolator();addUpdateListener{
    val now=android.os.SystemClock.uptimeMillis();val dt=(now-last).coerceIn(0L,1000L);last=now;life+=dt
-   if(rewardElapsed>=0){val beforeReward=rewardElapsed;rewardElapsed+=dt;if(beforeReward<1100&&rewardElapsed>=1100)sound("coin");if(beforeReward<1350&&rewardElapsed>=1350)sound("star");if(rewardElapsed>=1800){rewardElapsed=-1;complete();return@addUpdateListener}}
-   else if(stage.duration>0){elapsed+=dt;if(FountainQuest.canAdvance(stage,elapsed,voice.isTalking)&&save.advanceFountainTimed(stage,elapsed))refreshStage() else if(elapsed-checkpoint>=1000){save.checkpointFountain(stage,elapsed);checkpoint=elapsed}}
+   // Start the cue before evaluating an elapsed/resumed timed stage. LOADING
+   // must hold the same dialogue beat as actual playback.
    val cue=FountainText.cue(stage);if(cue!=lastSpoken){lastSpoken=cue;if(cue!=null)voice.speakLine("fountain_quest",stage.name.lowercase(),cue.character,save.language,FountainText.get(save.language,cue.textKey),stage.duration)}
+   if(rewardElapsed>=0){val beforeReward=rewardElapsed;rewardElapsed+=dt;if(beforeReward<1100&&rewardElapsed>=1100)sound("coin");if(beforeReward<1350&&rewardElapsed>=1350)sound("star");if(rewardElapsed>=1800){rewardElapsed=-1;complete();return@addUpdateListener}}
+   else if(stage.duration>0){elapsed+=dt;if(FountainQuest.canAdvance(stage,elapsed,voice.isTalking,voice.status==GardenVoice.Status.LOADING)&&save.advanceFountainTimed(stage,elapsed))refreshStage() else if(elapsed-checkpoint>=1000){save.checkpointFountain(stage,elapsed);checkpoint=elapsed}}
    if(collectedLeaf>=0&&!collectionCommitted&&life-collectStarted>=800){
     collectionCommitted=true
     if(save.actFountain(FountainQuest.Action.CLEAN_LEAF,collectedLeaf)){sound("brush");refreshStage()}
@@ -234,6 +237,16 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   val objective=FountainText.objective(save.language,stage)
   val objectiveBox=RectF(12*d,65*d,w-12*d,124*d);panel(c,objectiveBox)
   wrap(c,objective,objectiveBox,14f)
+  voiceRect.setEmpty()
+  if(save.voiceEnabled&&FountainText.cue(stage)!=null){
+   val statusKey=when(voice.status){GardenVoice.Status.LOADING->"audio_loading";GardenVoice.Status.PLAYING->"audio_playing";GardenVoice.Status.UNAVAILABLE->"audio_unavailable";GardenVoice.Status.OFFLINE->"audio_offline";else->"hear_again"}
+   voiceRect.set(18*d,130*d,w-18*d,163*d)
+   p.color=0xd9234636.toInt();c.drawRoundRect(voiceRect,12*d,12*d,p)
+   p.textSize=11*d;p.typeface=Typeface.DEFAULT_BOLD
+   val label=UiText.get(save.language,statusKey)
+   val size=(11f*(voiceRect.width()-24*d)/p.measureText(label).coerceAtLeast(1f)).coerceIn(8f,11f)
+   text(c,label,voiceRect.centerX(),voiceRect.centerY()+4*d,size,Color.WHITE)
+  }
   counter("XP ${if(rewardElapsed>=0)rewardXp+(50*reward).toInt() else save.xp}",w*.83f,h-18*d,12f,Color.WHITE)
   actionRect.set(30*d,h-88*d,w-30*d,h-35*d);playRect.setEmpty();optionsRect.setEmpty()
   when(stage){
@@ -261,6 +274,7 @@ class FountainQuestView(context:Context,private val save:GardenSave,private val 
   if(rewardElapsed>=0)return true
   if(closeRect.contains(e.x,e.y)){save.checkpointFountain(stage,elapsed);close();return true}
   if(inventoryRect.contains(e.x,e.y)){save.checkpointFountain(stage,elapsed);inventory();return true}
+  if(voiceRect.contains(e.x,e.y)){if(!voice.isBusy)voice.retryLastLine();return true}
   if(isCollecting)return true
   if(stage==FountainQuest.Stage.COLLECT&&optionsRect.contains(e.x,e.y)){options();return true}
   if(stage==FountainQuest.Stage.COLLECT&&playRect.contains(e.x,e.y)){save.checkpointFountain(stage,elapsed);play();return true}

@@ -40,6 +40,66 @@ const speechLanguages = {
   tr: "Turkish (Türkçe), with native Turkish pronunciation"
 };
 
+// The game has both archive chapters and interactive restoration dialogue.
+// Studio serves produced chapter clips only; a missing clip must reach the
+// existing speech provider instead of leaving every interactive scene silent.
+const pendingVoices=new Map();
+async function gameVoice(request,env,ctx){
+  let data;try{data=await request.json();}catch{return reply({success:false,error:"INVALID_JSON"},400);}
+  const character=clean(data?.character_id,32).toLowerCase();
+  const language=clean(data?.language,8).toLowerCase();
+  const text=typeof data?.text==="string"?data.text.trim():"";
+  if(!Object.hasOwn(speakerVoices,character)||!Object.hasOwn(speechLanguages,language)||!text||text.length>1200)
+    return reply({success:false,error:"INVALID_SPEECH_REQUEST"},400);
+  const payload={...data,character_id:character,language,text};
+  const fingerprint=JSON.stringify([data.scene_id,data.line_id,character,language,text,env.OPENAI_TTS_MODEL||"gpt-4o-mini-tts",env.VOICE_CACHE_VERSION||"1"]);
+  const digest=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(fingerprint))),b=>b.toString(16).padStart(2,"0")).join("");
+  const cacheKey=new Request(new URL("/__voice_cache/"+digest,request.url));
+  const cache=globalThis.caches?.default;
+  const cached=await cache?.match(cacheKey).catch(()=>null);
+  if(cached)return playback(cached,"cache");
+  if(pendingVoices.has(digest))return (await pendingVoices.get(digest)).clone();
+  const task=(async()=>{
+    // A Studio miss is specific to a line, never a reason to disable all voices.
+    let stored;
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),5000);
+    try{
+      stored=await fetch("https://lazy-ai-creator-studio.lazisalihi.workers.dev/api/game/voice",{
+        method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload),signal:controller.signal
+      });
+      if(stored.ok&&/^audio\/mpeg(?:;|$)/i.test(stored.headers.get("content-type")||"")){
+        const bytes=await boundedAudio(stored);
+        return await remember(bytes,"studio-r2");
+      }
+      await stored.body?.cancel();
+    }catch{}finally{clearTimeout(timeout);}
+    const generated=await gardenSpeech(new Request(request.url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}),env);
+    if(!generated.ok)return generated;
+    try{return await remember(await boundedAudio(generated),"speech");}
+    catch{return reply({success:false,error:"INVALID_SPEECH_PROVIDER_AUDIO"},502);}
+  })();
+  pendingVoices.set(digest,task);
+  try{return (await task).clone();}finally{pendingVoices.delete(digest);}
+  async function remember(bytes,source){
+    const result=new Response(bytes,{headers:{"Content-Type":"audio/mpeg","Cache-Control":"public, max-age=31536000","X-Garden-Voice-Source":source}});
+    if(cache){const saving=cache.put(cacheKey,result.clone()).catch(()=>{});if(ctx?.waitUntil)ctx.waitUntil(saving);else await saving;}
+    return playback(result,source);
+  }
+}
+async function boundedAudio(response){
+  if(Number(response.headers.get("content-length")||0)>4194304)throw Error("AUDIO_TOO_LARGE");
+  const reader=response.body?.getReader();if(!reader)throw Error("NO_AUDIO");
+  const parts=[];let length=0;
+  try{while(true){const {value,done}=await reader.read();if(done)break;length+=value.length;if(length>4194304)throw Error("AUDIO_TOO_LARGE");parts.push(value);}}
+  catch(e){await reader.cancel().catch(()=>{});throw e;}
+  if(length<129)throw Error("EMPTY_AUDIO");
+  const bytes=new Uint8Array(length);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length;}return bytes;
+}
+function playback(response,source){
+  const headers=new Headers(response.headers);headers.set("Cache-Control","no-store");headers.set("Access-Control-Allow-Origin","*");headers.set("X-Content-Type-Options","nosniff");headers.set("X-Garden-Voice-Source",source);
+  return new Response(response.body,{status:200,headers});
+}
+
 async function gardenSpeech(request,env){
   let data;
   try{data=await request.json();}catch{return reply({success:false,error:"INVALID_JSON"},400);}
@@ -89,10 +149,11 @@ async function gardenSpeech(request,env){
   return new Response(upstream.body,{headers:{"content-type":"audio/mpeg","cache-control":"no-store","access-control-allow-origin":"*"}});
 }
 
-export default{async fetch(request,env){
+export default{async fetch(request,env,ctx){
   const u=new URL(request.url);
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:H});
-  if(request.method==="GET"&&(u.pathname==="/"||u.pathname==="/health"))return reply({success:true,service:"lazygarden-backend",openai_configured:Boolean(env.OPENAI_API_KEY?.trim()),speech_diagnostics:2});
+  if(request.method==="GET"&&(u.pathname==="/"||u.pathname==="/health"))return reply({success:true,service:"lazygarden-backend",openai_configured:Boolean(configuredApiKey(env.OPENAI_API_KEY)),speech_diagnostics:3,game_voice:true});
+  if(request.method==="POST"&&u.pathname==="/api/game/voice")return gameVoice(request,env,ctx);
   if(request.method==="POST"&&u.pathname==="/api/voice/speech")return gardenSpeech(request,env);
   if(request.method==="POST"&&(u.pathname==="/api/ai/respond"||u.pathname==="/api/garden/ai"))return gardenAI(request,env);
   return reply({success:false,error:"NOT_FOUND"},404);

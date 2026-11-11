@@ -1,4 +1,4 @@
-name: Verify AI Studio game recordings
+name: Verify garden voice playback
 on:
   push:
     branches: [main]
@@ -17,6 +17,8 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
+      - name: Verify saved-clip fallback and cache routing
+        run: node --test cloudflare-worker/test/*.mjs
       - name: Retrieve exact-language audio before installing a decoder
         id: fetch-audio
         if: always()
@@ -24,7 +26,7 @@ jobs:
         run: |
           import json, pathlib, re, subprocess, urllib.request, urllib.error
 
-          target = 'https://lazy-ai-creator-studio.lazisalihi.workers.dev'
+          target = 'https://lazygarden.lazisalihi.workers.dev'
           output = pathlib.Path('voice-diagnostics')
           output.mkdir()
           report = {'endpoint': target, 'health': None, 'speech': []}
@@ -47,18 +49,18 @@ jobs:
                   pass
               return result
 
-          for actor, language, text in [('meli', 'sq', 'Dëgjojeni shatërvanin! Rona dhe Cufi pastruan gjethet, dhe oborri ynë mori përsëri jetë.'),
-                                        ('meli', 'it', 'Ascoltate la fontana! Rona e Cufi hanno tolto le foglie e il cortile è tornato a vivere.')]:
+          for actor, language, text in [('meli', 'sq', 'Nuk del ujë. Lazi, na ndihmon?'),
+                                        ('meli', 'it', 'Non esce acqua. Lazi, ci aiuti?')]:
               result = {'actor': actor, 'language': language, 'audio': False, 'downloaded': False}
               clip = output / (actor + '-' + language + '.mp3')
               try:
                   request = urllib.request.Request(
                       target + '/api/game/voice',
-                      data=json.dumps({'scene_id': 'story_1', 'line_id': 'line_1', 'character_id': actor, 'language': language, 'text': text}).encode(),
+                      data=json.dumps({'scene_id': 'fountain_quest', 'line_id': 'call_lazi', 'character_id': actor, 'language': language, 'text': text}).encode(),
                       headers={**headers, 'Content-Type': 'application/json'})
                   with urllib.request.urlopen(request, timeout=25) as response:
                       payload = response.read(4 * 1024 * 1024 + 1)
-                      result.update(status=response.status, bytes=len(payload))
+                      result.update(status=response.status, bytes=len(payload), source=response.headers.get('X-Garden-Voice-Source'))
                       if response.headers.get_content_type() == 'audio/mpeg' and 128 < len(payload) <= 4 * 1024 * 1024:
                           clip.write_bytes(payload)
                           result['downloaded'] = True

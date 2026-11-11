@@ -18,19 +18,22 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   @Volatile private var workerRetryAt=0L
   @Volatile private var scriptRetryAt=0L
   private const val VOICE_BACKEND="https://script.google.com/macros/s/AKfycby5NE2pnupggwtbbSn07lBSIUKns1rhO6kFkvKI4RzzzzDN0sE7XKD1TFTQy2UM68lv/exec"
-  private const val SPEECH_BACKEND="https://lazy-ai-creator-studio.lazisalihi.workers.dev/api/game/voice"
+  private const val SPEECH_BACKEND="https://lazygarden.lazisalihi.workers.dev/api/game/voice"
  }
  private val speechCache=SpeechCache(java.io.File(context.filesDir,"voice_cache"))
  private fun online():Boolean=runCatching{val cm=context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager;cm.getNetworkCapabilities(cm.activeNetwork)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)==true}.getOrDefault(false)
  private var player:MediaPlayer?=null
  private var cachedSpeechFile:java.io.File?=null
- private var released=false
+ @Volatile private var released=false
+ @Volatile private var activeConnection:HttpURLConnection?=null
  private var lastId=""
  private val main=Handler(Looper.getMainLooper())
  private val network=Executors.newSingleThreadExecutor()
  data class Line(val sceneId:String,val lineId:String,val characterId:String,val language:String,val asset:String?,val subtitle:String,val durationMillis:Long)
  enum class Status { IDLE, LOADING, PLAYING, UNAVAILABLE, OFFLINE }
  var status=Status.IDLE;private set
+ var errorCode:String?=null;private set
+ val isBusy get()=status==Status.LOADING||status==Status.PLAYING
  var onStatusChanged:(Status)->Unit={}
  private fun report(value:Status){status=value;onStatusChanged(value)}
  private var lastRequested:Line?=null
@@ -40,7 +43,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   stop();workerRetryAt=0;scriptRetryAt=0
   return play(cue)
  }
- var currentLine:Line?=null;private set
+ @Volatile var currentLine:Line?=null;private set
  private var queued:Line?=null
  var isTalking=false;private set
  var onTalkingChanged:(Boolean)->Unit={}
@@ -57,12 +60,12 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   return play(cue)
  }
  private fun play(cue:Line):Boolean{
-  currentLine=cue;lastRequested=cue;report(Status.LOADING)
+  currentLine=cue;lastRequested=cue;errorCode=null;report(Status.LOADING)
   GardenContent.asset(context,"${cue.sceneId}/${cue.lineId}/${cue.characterId}/${cue.language}")?.let{playRemote(cue,it.absolutePath);return true}
   cue.asset?.let{return playAsset(cue,it)}
   speechCache.find(cue.characterId,cue.language,cue.subtitle)?.let{playRemote(cue,it.absolutePath);return true}
   if(!online())return fallback(cue)
-  // Fetch only already-produced exact-language clips from the Studio D1/R2 library.
+  // The game endpoint prefers saved Studio clips and resolves missing scene audio.
   fetchWorkerSpeech(cue)
   return true
  }
@@ -75,18 +78,28 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
  private fun fetchWorkerSpeech(cue:Line){
   if(cue.subtitle.isBlank()||android.os.SystemClock.elapsedRealtime()<workerRetryAt){fetchAiAudio(cue);return}
   network.execute{
+   if(released||currentLine!==cue)return@execute
    var connection:HttpURLConnection?=null
+   var serviceFailure=true
    try{
     connection=(URL(SPEECH_BACKEND).openConnection() as HttpURLConnection).apply{
-     requestMethod="POST";connectTimeout=5000;readTimeout=18000
+     requestMethod="POST";connectTimeout=5000;readTimeout=22000
      doOutput=true;setRequestProperty("Content-Type","application/json")
      setRequestProperty("User-Agent","LazyGarden/"+BuildConfig.VERSION_NAME)
     }
+    activeConnection=connection
     val payload=JSONObject().put("character_id",cue.characterId.lowercase(Locale.ROOT))
      .put("language",cue.language).put("text",cue.subtitle)
      .put("scene_id",cue.sceneId).put("line_id",cue.lineId).toString()
     connection.outputStream.use{it.write(payload.toByteArray(Charsets.UTF_8))}
-    if(connection.responseCode !in 200..299||!connection.contentType.orEmpty().startsWith("audio/"))throw IllegalStateException("Speech backend unavailable")
+    val response=connection.responseCode
+    if(response !in 200..299){
+     serviceFailure=response==401||response==403||response==429||response>=500
+     val code=runCatching{connection.errorStream?.bufferedReader()?.use{JSONObject(it.readText().take(4096)).optString("error")}}.getOrNull()
+     main.post{if(currentLine===cue)errorCode=code?.takeIf{it.matches(Regex("[A-Z_]{1,60}"))}?:"SPEECH_HTTP_$response"}
+     throw IllegalStateException("Speech backend unavailable")
+    }
+    if(!connection.contentType.orEmpty().startsWith("audio/mpeg"))throw IllegalStateException("Invalid speech audio")
     require(connection.contentLengthLong<=SpeechCache.MAX_CLIP_BYTES)
     val file=java.io.File.createTempFile("garden_voice_",".mp3",context.cacheDir)
     try{
@@ -102,27 +115,28 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
       else file.delete()
      }
     }catch(e:Exception){file.delete();throw e}
-   }catch(_:Exception){workerRetryAt=android.os.SystemClock.elapsedRealtime()+60_000;main.post{if(!released&&currentLine===cue)fetchAiAudio(cue)}}
-   finally{connection?.disconnect()}
+   }catch(_:Exception){if(serviceFailure&&!released&&currentLine===cue)workerRetryAt=android.os.SystemClock.elapsedRealtime()+60_000;main.post{if(!released&&currentLine===cue)fetchAiAudio(cue)}}
+   finally{if(activeConnection===connection)activeConnection=null;connection?.disconnect()}
   }
  }
  private fun fetchAiAudio(cue:Line){
   if(!online()||android.os.SystemClock.elapsedRealtime()<scriptRetryAt){fallback(cue);return}
   val scene=URLEncoder.encode(cue.sceneId,"UTF-8");val line=URLEncoder.encode(cue.lineId,"UTF-8");val lang=URLEncoder.encode(cue.language,"UTF-8");val speaker=URLEncoder.encode(cue.characterId,"UTF-8")
   network.execute{
+   if(released||currentLine!==cue)return@execute
    var connection:HttpURLConnection?=null
    try{
     val endpoint="$VOICE_BACKEND?action=line&lang=$lang&scene_id=$scene&line_id=$line&character_id=$speaker"
     connection=(URL(endpoint).openConnection() as HttpURLConnection).apply{instanceFollowRedirects=true;connectTimeout=4500;readTimeout=6000;requestMethod="GET"}
+    activeConnection=connection
     val json=connection.inputStream.bufferedReader().use{it.readText()}
     val root=JSONObject(json);val row=root.optJSONObject("line")
     val sameLanguage=row?.optString("lang",row.optString("language"))==cue.language
     val sameActor=row?.optString("character_id")==cue.characterId
     val sameText=row?.optString("text")?.trim()==cue.subtitle.trim()
     val audio=if(sameLanguage&&sameActor&&sameText)row?.optString("audio_url","").orEmpty().takeIf{it.startsWith("https://")}.orEmpty() else ""
-    if(audio.isBlank())scriptRetryAt=android.os.SystemClock.elapsedRealtime()+60_000
     main.post{if(!released&&currentLine===cue){if(audio.isNotBlank())playRemote(cue,audio) else fallback(cue)}}
-   }catch(_:Exception){scriptRetryAt=android.os.SystemClock.elapsedRealtime()+60_000;main.post{if(!released&&currentLine===cue)fallback(cue)}}finally{connection?.disconnect()}
+   }catch(_:Exception){if(!released&&currentLine===cue)scriptRetryAt=android.os.SystemClock.elapsedRealtime()+60_000;main.post{if(!released&&currentLine===cue)fallback(cue)}}finally{if(activeConnection===connection)activeConnection=null;connection?.disconnect()}
   }
  }
  private fun playRemote(cue:Line,url:String){
@@ -145,7 +159,7 @@ class GardenVoice(private val context:Context,private val enabled:()->Boolean={t
   talking(false);report(if(online())Status.UNAVAILABLE else Status.OFFLINE);playQueued();return false
  }
  private fun talking(value:Boolean){if(value)report(Status.PLAYING);if(isTalking!=value){isTalking=value;onTalkingChanged(value)}}
- fun stop(){queued=null;lastId="";player?.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;currentLine=null;talking(false);report(Status.IDLE)}
+ fun stop(){currentLine=null;activeConnection?.disconnect();activeConnection=null;queued=null;lastId="";player?.release();player=null;cachedSpeechFile?.delete();cachedSpeechFile=null;talking(false);report(Status.IDLE)}
  fun release(){stop();released=true;network.shutdownNow();main.removeCallbacksAndMessages(null)}
 }
 

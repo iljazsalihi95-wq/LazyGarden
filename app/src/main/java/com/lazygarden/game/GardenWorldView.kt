@@ -26,7 +26,7 @@ class GardenWorldView(context:Context,private val tasks:Int,private val construc
  private var progress=0f; private var life=0f
  private var ambientMs=0L
  private val familyPlayers=mutableMapOf<String,CharacterAnimation.Player>()
- internal val residentCast get()=if(!constructing&&(settings.fountainQuestActive||settings.fountainQuestCompleted))CharacterSprites.identities.filter{it!="rexha"||tasks>0||settings.fountainQuestStage.ordinal>=FountainQuest.Stage.REXHA_ARRIVAL.ordinal}else names
+ internal val residentCast get()=CharacterSprites.identities.filter{it!="rexha"||tasks>0||settings.fountainQuestStage.ordinal>=FountainQuest.Stage.REXHA_ARRIVAL.ordinal}
  private var sceneMs=initialElapsed; private var completed=false
  internal val sceneElapsedMillis get()=sceneMs
  private val sprites by lazy { BitmapFactory.decodeResource(resources,R.drawable.resident_atlas) }

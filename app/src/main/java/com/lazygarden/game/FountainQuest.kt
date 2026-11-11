@@ -36,5 +36,6 @@ object FountainQuest {
  }
  fun fraction(stage:Stage,elapsed:Long)=if(stage.duration==0L)0f else (elapsed/stage.duration.toFloat()).coerceIn(0f,1f)
  /** A timed spoken beat may finish its line, but a broken audio service cannot stall gameplay. */
- fun canAdvance(stage:Stage,elapsed:Long,talking:Boolean)=stage.duration>0&&elapsed>=stage.duration&&(!talking||elapsed>=stage.duration+10000)
+ const val MAX_DIALOGUE_WAIT=35_000L
+ fun canAdvance(stage:Stage,elapsed:Long,talking:Boolean,loading:Boolean=false)=stage.duration>0&&elapsed>=stage.duration&&(!(talking||loading)||elapsed>=stage.duration+MAX_DIALOGUE_WAIT)
 }

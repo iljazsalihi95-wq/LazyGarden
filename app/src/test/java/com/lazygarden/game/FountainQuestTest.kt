@@ -29,7 +29,11 @@ class FountainQuestTest {
   assertFalse(FountainQuest.canAdvance(stage,stage.duration-1,false))
   assertFalse(FountainQuest.canAdvance(stage,stage.duration,true))
   assertTrue(FountainQuest.canAdvance(stage,stage.duration,false))
-  assertTrue(FountainQuest.canAdvance(stage,stage.duration+10000,true))
+  assertFalse(FountainQuest.canAdvance(stage,stage.duration+10000,true))
+  assertFalse(FountainQuest.canAdvance(stage,stage.duration,false,true))
+  assertFalse(FountainQuest.canAdvance(stage,stage.duration+20000,false,true))
+  assertTrue(FountainQuest.canAdvance(stage,stage.duration+FountainQuest.MAX_DIALOGUE_WAIT,true))
+  assertTrue(FountainQuest.canAdvance(stage,stage.duration+FountainQuest.MAX_DIALOGUE_WAIT,false,true))
   assertFalse(FountainQuest.canAdvance(FountainQuest.Stage.COLLECT,99999,false))
  }
  @Test fun everySpokenCueAndNewObjectiveHasFiveTranslations(){
