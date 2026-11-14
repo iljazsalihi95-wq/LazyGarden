@@ -17,7 +17,7 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
  private val constructionPieces=ConstructionPieceArt(c)
  private fun piece(c:Canvas,index:Int,r:RectF){
   val color=index.coerceIn(0,5)
-  constructionPieces.draw(c,p,color,pieces[color],r,water=color==3&&engine.spec.terrainKind==5)
+  constructionPieces.draw(c,p,color,pieces[color],r,water=color==3&&engine.spec.terrainKind==5,task=save.tasks)
  }
  private val background=GameSkin.bitmap(c,R.drawable.garden_estate)
  private val socket=GameSkin.bitmap(c,R.drawable.hd_socket);private val frame=GameSkin.bitmap(c,R.drawable.hd_board_frame);private val hud=GameSkin.bitmap(c,R.drawable.hd_hud)
@@ -58,7 +58,7 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
   if(engine.spec.terrainCount>0||engine.rescueTarget>0){
    val idx=when(engine.spec.terrainKind){1->0;2,3->1;4->2;else->3}
    SpriteArt.draw(c,p,obstacleArt,3,2,idx,RectF(w*.13f,112*d,w*.13f+24*d,136*d));text(c,"${engine.terrainRemaining}",w*.31f,130*d,16*d)
-   if(engine.rescueTarget>0){materialArt.draw(c,p,RestorationInventory.rewardForLevel(engine.level,save.tasks)?.first?:Material.TOOL,RectF(w*.42f,112*d,w*.42f+26*d,138*d));text(c,"${engine.rescued}/${engine.rescueTarget}",w*.59f,130*d,16*d)}
+   if(engine.rescueTarget>0){materialArt.draw(c,p,RestorationInventory.rewardForLevel(engine.level,save.tasks)?.first?:Material.TOOL,RectF(w*.42f,112*d,w*.42f+26*d,138*d),save.tasks);text(c,"${engine.rescued}/${engine.rescueTarget}",w*.59f,130*d,16*d)}
   }
   val bounds=RectF(left-12*d,top-12*d,left+8*cell+12*d,top+8*cell+12*d);p.color=0xff082d39.toInt();c.drawRoundRect(bounds,18*d,18*d,p)
   for(r in 0..7)for(col in 0..7){val x=left+col*cell;val y=top+r*cell;p.colorFilter=if((r+col)%2==0)null else darkSocket;c.drawBitmap(socket,null,RectF(x-.6f*d,y-.6f*d,x+cell+.6f*d,y+cell+.6f*d),p);p.colorFilter=null;if(selected==r*8+col){p.shader=RadialGradient(x+cell/2,y+cell/2,cell*.72f,intArrayOf(0xccfff09a.toInt(),0x00fff09a),null,Shader.TileMode.CLAMP);c.drawCircle(x+cell/2,y+cell/2,cell*.72f,p);p.shader=null}}
@@ -83,7 +83,7 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
      val source=(0..r).lastOrNull{active.cargoBefore[it][col]>0}?:r
      cy=top+(source+(r-source)*u*u)*cell
     }
-    materialArt.draw(c,p,material,RectF(x+cell*.12f,cy+cell*.12f,x+cell*.88f,cy+cell*.88f))
+    materialArt.draw(c,p,material,RectF(x+cell*.12f,cy+cell*.12f,x+cell*.88f,cy+cell*.88f),save.tasks)
     if(terrain>0)SpriteArt.draw(c,p,obstacleArt,3,2,0,RectF(x,y,x+cell,y+cell),255)
    }
   }
@@ -111,7 +111,7 @@ class Match3BoardView(c:Context,val engine:Match3Engine,private val changed:()->
      val source=(0..7).last{active.cargoBefore[it][col]>0}
      val x=left+(col+.5f)*cell;val y=top+(source+.5f+(8-source)*u*u)*cell
      val size=cell*(.76f-.30f*u)
-     materialArt.draw(c,p,material,RectF(x-size/2,y-size/2,x+size/2,y+size/2))
+     materialArt.draw(c,p,material,RectF(x-size/2,y-size/2,x+size/2,y+size/2),save.tasks)
      p.color=0xffffdc7a.toInt();p.alpha=((1-u)*190).toInt()
      for(k in 0..4)c.drawCircle(x+sin(k*2f)*cell*.25f*u,y-k*cell*.15f,cell*.035f,p)
      p.alpha=255

@@ -50,29 +50,42 @@ class StorySceneView(
     override fun onDraw(c:Canvas){
         super.onDraw(c);if(width==0||height==0)return
         val w=width.toFloat();val h=height.toFloat()
+        val windowRoom = if (chapter == WindowWorkshop.TASK) WindowWorkshop.frame(context,w,h) else null
         val scale=maxOf(w/background.width,h/background.height)*1.4f
         val dw=background.width*scale;val dh=background.height*scale
         val dst=RectF((w-dw)/2,(h-dh)/2,(w+dw)/2,(h+dh)/2)
         val focal=when(chapter){0->PointF(.562f,.515f);1->PointF(.20f,.715f);else->PointF(site.workX,site.workY)}
         dst.offset(w*.50f-(dst.left+dw*focal.x),h*.57f-(dst.top+dh*focal.y))
         dst.offset(dst.left.coerceIn(w-dw,0f)-dst.left,dst.top.coerceIn(h-dh,0f)-dst.top)
-        backdrop.draw(c,dst);WorldRestorationArt.draw(context,c,dst,save.tasks,ms/12000f)
-        if(save.tasks>0)WorldRestorationArt.water(c,p,dst,ms.toFloat())
-        if(chapter>=7)EstateRoomArt.draw(context,c,p,EstateRoomArt.bounds(dst),chapter,1f,1f,ms)
+        if(windowRoom != null) {
+            WindowWorkshop.drawRoom(context,c,p,windowRoom,1f,1f)
+        } else {
+            backdrop.draw(c,dst);WorldRestorationArt.draw(context,c,dst,save.tasks,ms/12000f)
+            if(save.tasks>0)WorldRestorationArt.water(c,p,dst,ms.toFloat())
+            if(chapter>=7)EstateRoomArt.draw(context,c,p,EstateRoomArt.bounds(dst),chapter,1f,1f,ms)
+        }
         val positions=listOf(.32f to .78f,.70f to .79f,.12f to .88f,.88f to .88f)
         for((i,id)in cast.withIndex()){
             val target=CharacterAnimation.Position(w*positions[i].first,h*positions[i].second)
             val from=CharacterAnimation.Position(if(i%2==0)-w*.20f else w*1.20f,target.y+h*.09f)
-            val route=CharacterAnimation.sampleRoute(from,target,StoryBlocking.progress(ms),w*.50f)
+            val progress=StoryBlocking.progress(ms)
+            val route=windowRoom?.let{WindowWorkshop.position(it,i,progress,false)}
+                ?: CharacterAnimation.sampleRoute(from,target,progress,w*.50f)
             val state=StoryBlocking.state(ms,id==speaker,speaking())
             val player=players.getOrPut(id){CharacterAnimation.Player()};player.update(state,ms)
             val actor=SceneCast.actor(id);val aw=minOf(w*(if(actor.child).15f else .23f),h*.28f)
-            val ah=aw*CharacterSprites.aspect(context,actor.sprite)
+            val ah=windowRoom?.let{WindowWorkshop.actorHeight(it,actor.child,true)} ?: aw*CharacterSprites.aspect(context,actor.sprite)
             val r=RectF(route.position.x-aw/2,route.position.y-ah,route.position.x+aw/2,route.position.y)
-            p.shader=null;p.alpha=255;p.color=0x49302010
-            c.drawOval(RectF(r.centerX()-aw*.29f,r.bottom-aw*.03f,r.centerX()+aw*.29f,r.bottom+aw*.025f),p)
+
             val right=if(state==CharacterAnimation.State.WALK)route.facingRight else if(id==speaker)r.centerX()<w*.5f else r.centerX()<w*.32f
-            SceneActorArt.draw(context,c,p,id,player,ms,r,right)
+            if(windowRoom != null) {
+                WindowWorkshop.drawActor(context,c,p,id,player,ms,route.position,ah,right,
+                    walkDistance=WindowWorkshop.walkDistance(windowRoom,route.position,route.facingRight))
+            } else {
+                p.shader=null;p.alpha=255;p.color=0x49302010
+                c.drawOval(RectF(r.centerX()-aw*.29f,r.bottom-aw*.03f,r.centerX()+aw*.29f,r.bottom+aw*.025f),p)
+                SceneActorArt.draw(context,c,p,id,player,ms,r,right)
+            }
             onActorRendered?.invoke(id,state)
             if(id==speaker&&dialogueReady){
                 val label=SceneCast.name(id);p.typeface=Typeface.DEFAULT_BOLD;p.textSize=12*resources.displayMetrics.density;p.textAlign=Paint.Align.CENTER

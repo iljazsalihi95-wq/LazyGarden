@@ -8,7 +8,7 @@ import kotlin.math.*
 class ConstructionPieceArt(context:Context){
  private val materials=MaterialArt(context)
  private val colors=intArrayOf(0xffe7ad4f.toInt(),0xff5fc7b0.toInt(),0xffaa88e3.toInt(),0xff60bfea.toInt(),0xffee8c82.toInt(),0xffa5cb61.toInt())
- fun draw(c:Canvas,p:Paint,index:Int,material:Material,r:RectF,water:Boolean=false){
+ fun draw(c:Canvas,p:Paint,index:Int,material:Material,r:RectF,water:Boolean=false,task:Int=0){
   val i=index.coerceIn(0,5);val radius=r.width()*.13f
   p.shader=null;p.colorFilter=null;p.alpha=255;p.style=Paint.Style.FILL
   p.color=0x55332312;c.drawRoundRect(RectF(r.left,r.top+r.height()*.06f,r.right,r.bottom),radius,radius,p)
@@ -22,7 +22,7 @@ class ConstructionPieceArt(context:Context){
   c.drawPath(shape,p);p.shader=null
   p.style=Paint.Style.STROKE;p.color=0xccfff5d1.toInt();p.strokeWidth=r.width()*.025f;c.drawPath(shape,p);p.style=Paint.Style.FILL
   val art=RectF(face);art.inset(r.width()*.16f,r.height()*.13f)
-  materials.draw(c,p,material,art)
+  materials.draw(c,p,material,art,task)
   if(water){
    val x=r.right-r.width()*.17f;val y=r.bottom-r.height()*.20f;val size=r.width()*.15f
    val drop=Path().apply{moveTo(x,y-size);cubicTo(x-size,y,x-size,y+size,x,y+size);cubicTo(x+size,y+size,x+size,y,x,y-size);close()}
