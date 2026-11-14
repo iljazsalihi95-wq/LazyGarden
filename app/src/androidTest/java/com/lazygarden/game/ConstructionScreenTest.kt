@@ -27,8 +27,14 @@ class ConstructionScreenTest {
                 val screen=ConstructionScreen(activity,save,{},{built++},{},{replayed=it},{narrated=it})
                 activity.setContentView(screen)
                 fun select(task:Int){views(screen).filterIsInstance<Button>().first{it.contentDescription==RestorationCatalog.title(task,"sq")}.performClick()}
+                fun selectZone(index:Int){
+                    val label=EstateZones.all[index].title("sq")
+                    views(screen).first{it.contentDescription?.startsWith("$label. ")==true}.performClick()
+                }
+                selectZone(3)
                 select(19)
                 assertFalse(views(screen).filterIsInstance<Button>().any{it.text.startsWith("Ndërto •")})
+                selectZone(0)
                 select(0)
                 views(screen).filterIsInstance<Button>().first{it.text.startsWith("▶ Riluaj")}.performClick()
                 views(screen).filterIsInstance<Button>().first{it.text=="Biseda dhe historia"}.performClick()
