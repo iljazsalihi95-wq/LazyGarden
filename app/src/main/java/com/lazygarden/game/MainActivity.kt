@@ -70,6 +70,8 @@ class MainActivity : AppCompatActivity() {
     textSize=13f
     maxLines=2
    },LinearLayout.LayoutParams(dp(270),dp(48)).apply{bottomMargin=dp(3)})
+  }else if(nextWork==null){
+   bottom.addView(premiumButton(ExpansionScreen.title(save.language)){showExpansion()},LinearLayout.LayoutParams(dp(260),dp(48)))
   }else bottom.addView(label(t("estate_progress").replace("{count}",save.tasks.toString()),14f))
   bottom.addView(premiumButton(if(save.activeBoard!=null)"▶ ${t("continue")} · ${save.level}" else "▶ ${t("play")} · ${save.level}",true){showMatch3()},LinearLayout.LayoutParams(dp(242),dp(64)).apply{setMargins(0,dp(5),0,dp(5))})
   val nav=LinearLayout(this);nav.addView(side(t("levels"),R.drawable.hd_icon_map){showMap()},LinearLayout.LayoutParams(0,dp(57),1f).apply{marginEnd=dp(8)});nav.addView(side(if(save.hasPendingStory)"${t("story")} · ${t("new")}" else t("story"),R.drawable.hd_icon_book){if(save.hasPendingStory)showStory() else showStoryArchive()},LinearLayout.LayoutParams(0,dp(57),1f));nav.addView(side(GameText.get(save.language,"inventory"),R.drawable.boost_hammer){showInventory()},LinearLayout.LayoutParams(0,dp(57),1f).apply{marginStart=dp(8)});for(i in 0 until nav.childCount)(nav.getChildAt(i) as Button).setCompoundDrawables(null,null,null,null);bottom.addView(nav);root.addView(bottom,FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));attach(root)
@@ -124,7 +126,11 @@ class MainActivity : AppCompatActivity() {
   if(save.constructing){showGarden();return}
   screen="construction";engine=null
   attach(ConstructionScreen(this,save,{showGarden()},{if(save.tasks==0)showFountainQuest() else restorationOptions()},{showMatch3()},
-   {task->if(task==0)showFountainReplay() else showSceneReplay(task)}, {task->showStory(task,0)}))
+   {task->if(task==0)showFountainReplay() else showSceneReplay(task)}, {task->showStory(task,0)},{showExpansion()}))
+ }
+ private fun showExpansion(){
+  screen="expansion";engine=null
+  attach(ExpansionScreen(this,save,{showConstruction()},{showMatch3()}))
  }
  private fun restorationOptions(){
   if(save.constructing)return
