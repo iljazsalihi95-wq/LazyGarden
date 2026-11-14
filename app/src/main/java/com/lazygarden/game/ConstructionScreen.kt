@@ -17,6 +17,9 @@ class ConstructionScreen(
     private val details=LinearLayout(context)
     private val map=SiteMap(context)
     private val choices=LinearLayout(context)
+    private val zones=LinearLayout(context)
+    private val zoneThumbnails=mutableMapOf<Int,Bitmap>()
+    private val zoneArt by lazy { GameSkin.bitmap(context,R.drawable.estate_zone_art) }
     private val language get()=save.language
     private fun words(sq:String,de:String,it:String,mk:String,tr:String)=when(language){"de"->de;"it"->it;"mk"->mk;"tr"->tr;else->sq}
     private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
@@ -33,22 +36,31 @@ class ConstructionScreen(
         addView(button(words("‹ Kopshti","‹ Garten","‹ Giardino","‹ Градина","‹ Bahçe"),back))
         addView(text(words("PLANI I PRONËS","BAUPLAN DES ANWESENS","PROGETTO DELLA TENUTA","ПЛАН НА ИМОТОТ","MÜLK PLANI"),22f,0xffffdf83.toInt()))
         addView(text("${RestorationUiModel.progress(save.tasks)}  •  ${save.coins} ${GameText.get(save.language,"coins")}  •  ★ ${save.stars}  •  🔑 ${save.keys}",14f))
-        addView(map,LayoutParams(-1,0,0.9f))
+        addView(HorizontalScrollView(context).apply{
+            isHorizontalScrollBarEnabled=false
+            addView(zones)
+        },LayoutParams(-1,dp(86)))
+        addView(map,LayoutParams(-1,0,0.85f))
         addView(HorizontalScrollView(context).apply{isHorizontalScrollBarEnabled=true;addView(choices)},LayoutParams(-1,dp(55)))
         details.orientation=VERTICAL
-        addView(ScrollView(context).apply{addView(details)},LayoutParams(-1,0,1.2f))
+        addView(ScrollView(context).apply{addView(details)},LayoutParams(-1,0,1.4f))
         refresh()
     }
     private fun refresh(){
+        val activeZone=EstateZones.index(selected)
+        renderZones(activeZone)
         choices.removeAllViews()
-        RestorationCatalog.entries.indices.forEach { task ->
+        EstateZones.all[activeZone].tasks.forEach { task ->
             val marker=when{task<save.tasks->"✓";task==save.tasks->"→";else->"🔒"}
             choices.addView(button("$marker ${task+1}"){selected=task;refresh()},LayoutParams(dp(66),-1).apply{marginEnd=dp(4)})
-            choices.getChildAt(task).alpha=if(task==selected)1f else .65f
-            choices.getChildAt(task).contentDescription=RestorationCatalog.title(task,language)
+            val button=choices.getChildAt(choices.childCount-1)
+            button.alpha=if(task==selected)1f else .65f
+            button.isSelected=task==selected
+            button.contentDescription=RestorationCatalog.title(task,language)
         }
         map.invalidate();map.contentDescription=RestorationCatalog.title(selected,language)
         details.removeAllViews()
+        (details.parent as? ScrollView)?.scrollTo(0,0)
         details.addView(text("${selected+1}. ${RestorationCatalog.title(selected,language)}",21f,0xffffdf83.toInt()))
         val done=selected<save.tasks
         val current=selected==save.tasks
@@ -81,6 +93,53 @@ class ConstructionScreen(
         }
         details.addView(button(words("Luaj për të fituar materiale, yje dhe monedha","Spielen: Material, Sterne und Münzen verdienen","Gioca: materiali, stelle e monete","Играј за материјали, ѕвезди и монети","Malzeme, yıldız ve para kazanmak için oyna"),levels))
     }
+    private fun renderZones(activeZone: Int) {
+        zones.removeAllViews()
+        EstateZones.all.forEachIndexed { index, zone ->
+            val width=zoneArt.width/2
+            val height=zoneArt.height/2
+            val thumbnail=zoneThumbnails.getOrPut(index) {
+                Bitmap.createBitmap(zoneArt,index%2*width,index/2*height,width,height)
+            }
+            val card=FrameLayout(context).apply {
+                contentDescription="${zone.title(language)}. ${zone.completed(save.tasks)}/${zone.tasks.count()}"
+                isFocusable=true
+                isSelected=index==activeZone
+                setBackgroundColor(if(index==activeZone)0xffe1ba66.toInt() else 0xff52786a.toInt())
+                setPadding(dp(2),dp(2),dp(2),dp(2))
+                setOnClickListener {
+                    if(index!=activeZone){
+                        selected=save.tasks.coerceIn(zone.tasks.first,zone.tasks.last)
+                        refresh()
+                    }
+                }
+            }
+            card.addView(ImageView(context).apply {
+                setImageBitmap(thumbnail)
+                scaleType=ImageView.ScaleType.CENTER_CROP
+                alpha=if(save.tasks<zone.tasks.first).63f else 1f
+            },FrameLayout.LayoutParams(-1,-1))
+            card.addView(TextView(context).apply {
+                text="${zone.title(language)}\n${zone.completed(save.tasks)}/${zone.tasks.count()}"
+                textSize=12f
+                setTextColor(Color.WHITE)
+                typeface=Typeface.DEFAULT_BOLD
+                setBackgroundColor(0xd01a362b.toInt())
+                gravity=Gravity.CENTER
+                importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                setPadding(dp(5),dp(4),dp(5),dp(4))
+            },FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM))
+            zones.addView(card,LayoutParams(dp(146),-1).apply{marginEnd=dp(5)})
+        }
+        zones.post {
+            val scroll=zones.parent as? HorizontalScrollView ?: return@post
+            val card=zones.getChildAt(activeZone) ?: return@post
+            if(card.left<scroll.scrollX || card.right>scroll.scrollX+scroll.width){
+                scroll.smoothScrollTo(card.left-(scroll.width-card.width)/2,0)
+            }
+        }
+    }
+
     private fun phase(key:String):String=when(key){
         "ARRIVAL"->words("Mbërritja","Ankunft","Arrivo","Пристигнување","Varış")
         "INSPECT"->words("Kontrolli","Prüfung","Ispezione","Проверка","İnceleme")
