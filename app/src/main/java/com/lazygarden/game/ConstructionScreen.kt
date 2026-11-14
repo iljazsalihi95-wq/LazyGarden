@@ -1,5 +1,6 @@
 package com.lazygarden.game
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
 import android.view.Gravity
@@ -58,7 +59,7 @@ class ConstructionScreen(
             button.isSelected=task==selected
             button.contentDescription=RestorationCatalog.title(task,language)
         }
-        map.invalidate();map.contentDescription=RestorationCatalog.title(selected,language)
+        map.moveTo(selected);map.contentDescription=RestorationCatalog.title(selected,language)
         details.removeAllViews()
         (details.parent as? ScrollView)?.scrollTo(0,0)
         details.addView(text("${selected+1}. ${RestorationCatalog.title(selected,language)}",21f,0xffffdf83.toInt()))
@@ -159,16 +160,53 @@ class ConstructionScreen(
         private val paint=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         private val image=GameSkin.bitmap(context,R.drawable.garden_before)
         private val backdrop=GardenBackdrop(context,save.tasks)
+        private var target=RestorationWorksites.forTask(selected)
+        private var camera=CharacterAnimation.Position(target.workX,target.workY)
+        private var animator:ValueAnimator?=null
+
+        fun moveTo(task:Int){
+            val site=RestorationWorksites.forTask(task)
+            if(site==target)return
+            target=site
+            val start=camera
+            val end=CharacterAnimation.Position(site.workX,site.workY)
+            animator?.cancel()
+            if(!isAttachedToWindow){
+                camera=end
+                invalidate()
+                return
+            }
+            animator=ValueAnimator.ofFloat(0f,1f).apply{
+                duration=620
+                interpolator=android.view.animation.LinearInterpolator()
+                addUpdateListener {
+                    camera=CharacterAnimation.move(start,end,it.animatedValue as Float)
+                    invalidate()
+                }
+                start()
+            }
+        }
+
+        override fun onDetachedFromWindow(){
+            animator?.cancel()
+            animator=null
+            camera=CharacterAnimation.Position(target.workX,target.workY)
+            super.onDetachedFromWindow()
+        }
+
         override fun onDraw(c:Canvas){
-            super.onDraw(c);if(width==0||height==0)return
-            val scale=maxOf(width/image.width.toFloat(),height/image.height.toFloat())
-            val w=image.width*scale;val h=image.height*scale
-            val site=RestorationWorksites.forTask(selected)
-            val left=(width*.5f-w*site.workX).coerceIn(width-w,0f)
-            val top=(height*.5f-h*site.workY).coerceIn(height-h,0f)
+            super.onDraw(c)
+            if(width==0||height==0)return
+            val scale=maxOf(width/image.width.toFloat(),height/image.height.toFloat())*1.45f
+            val w=image.width*scale
+            val h=image.height*scale
+            val left=(width*.5f-w*camera.x).coerceIn(width-w,0f)
+            val top=(height*.5f-h*camera.y).coerceIn(height-h,0f)
             val bounds=RectF(left,top,left+w,top+h)
-            backdrop.draw(c,bounds);WorldRestorationArt.draw(context,c,bounds,save.tasks,0f)
-            val x=left+w*site.workX;val y=top+h*site.workY
+            backdrop.draw(c,bounds)
+            WorldRestorationArt.draw(context,c,bounds,save.tasks,0f)
+            val x=left+w*target.workX
+            val y=top+h*target.workY
             paint.style=Paint.Style.STROKE;paint.strokeWidth=dp(2).toFloat();paint.color=0xffffdf83.toInt()
             c.drawCircle(x,y,dp(25).toFloat(),paint);c.drawLine(x-dp(38),y,x+dp(38),y,paint);c.drawLine(x,y-dp(38),x,y+dp(38),paint)
             paint.style=Paint.Style.FILL;paint.color=0xee153f35.toInt();c.drawCircle(x,y,dp(17).toFloat(),paint)
