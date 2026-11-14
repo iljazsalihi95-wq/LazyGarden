@@ -12,7 +12,8 @@ class ConstructionScreen(
     context:Context, private val save:GardenSave,
     private val back:()->Unit, private val build:()->Unit,
     private val levels:()->Unit, private val replay:(Int)->Unit,
-    private val story:(Int)->Unit
+    private val story:(Int)->Unit,
+    private val expansion:(()->Unit)?=null
 ):LinearLayout(context) {
     private var selected=save.tasks.coerceAtMost(RestorationUiModel.total-1)
     private val details=LinearLayout(context)
@@ -41,6 +42,9 @@ class ConstructionScreen(
             isHorizontalScrollBarEnabled=false
             addView(zones)
         },LayoutParams(-1,dp(86)))
+        expansion?.let { open ->
+            addView(button(ExpansionScreen.title(language),open),LayoutParams(-1,dp(48)))
+        }
         addView(map,LayoutParams(-1,0,0.85f))
         addView(HorizontalScrollView(context).apply{isHorizontalScrollBarEnabled=true;addView(choices)},LayoutParams(-1,dp(55)))
         details.orientation=VERTICAL

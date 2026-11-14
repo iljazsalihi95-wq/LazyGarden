@@ -10,6 +10,14 @@ class GardenSave(ctx:Context) {
  val stars get()=p.getInt("stars",0)
  val level get()=p.getInt("level",1).coerceIn(1,Campaign.COUNT)
  val tasks get()=p.getInt("tasks",if(p.getBoolean("fountain",false))1 else 0).coerceIn(0,RestorationInventory.TASK_COUNT)
+ internal val completedLevels get()=maxOf(level-1,p.getInt("rewarded_level",0)).coerceIn(0,Campaign.COUNT)
+ internal fun parcelProgress(parcel:Parcel)=p.getInt("parcel_${parcel.name}",0).coerceIn(0,parcel.phases.size)
+ internal fun workParcel(parcel:Parcel,expected:Int):Boolean=synchronized(parcelWorkLock){
+  if(constructing||expected !in parcel.phases.indices||
+   !parcel.unlocked(tasks,completedLevels,expected)||parcelProgress(parcel)!=expected)return@synchronized false
+  p.edit().putInt("parcel_${parcel.name}",expected+1).commit()
+ }
+ private companion object { val parcelWorkLock=Any() }
  val fountainRestored get()=tasks>0
  val constructing get()=p.getBoolean("constructing",false)
  val restorationElapsed get()=p.getLong("restoration_elapsed",0L).coerceAtLeast(0L)
