@@ -17,6 +17,7 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
  protected val sceneHeight get()=(height-dp(88f).toInt()).coerceAtLeast(1)
  private val toolSlots=Array(3){RectF()}
  private val materialArt=MaterialArt(context)
+ private val workshopTools=WorkshopToolArt(context)
  private var selectedTool:Material?=null
  private var wrongToolAt=-3000L
  private var contactX=0f;private var contactY=0f;private var contactAt=-2000L
@@ -81,9 +82,23 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
   val anchor=WorldRestorationArt.objectRect(d,task);d.offset((width*.5f-anchor.centerX())*camera,(sceneHeight*.64f-anchor.bottom)*camera)
   d.offset(d.left.coerceIn((width-d.width()).coerceAtMost(0f),0f)-d.left,d.top.coerceIn((sceneHeight-d.height()).coerceAtMost(0f),0f)-d.top)
   if(task==2)pathWorkPoint.set(d.left+d.width()*EstatePathPlan.workX,d.top+d.height()*EstatePathPlan.workY)
+  val step=plan.steps[plan.index(ms)]
+  if(task==WindowWorkshop.TASK){
+   val room=WindowWorkshop.frame(context,width.toFloat(),sceneHeight.toFloat())
+   WindowWorkshop.drawRoom(context,c,p,room,plan.progress(ms,"REMOVE"),plan.progress(ms,"WINDOWS"))
+   workTarget.set(WindowWorkshop.pane(room))
+   workTarget.inset(-dp(12f),-dp(12f))
+   val work=step.key in windowWorkSteps
+   windowActors(c,room,step,work)
+   drawContact(c)
+   drawDialogue(c,step)
+   c.restoreToCount(scene)
+   drawWorkTools(c,step,work)
+   return
+  }
   backdrop.draw(c,d);WorldRestorationArt.water(c,p,d,ms.toFloat())
   WorldRestorationArt.draw(context,c,d,task,ms/12000f)
-  val step=plan.steps[plan.index(ms)];val f=plan.fraction(ms)
+  val f=plan.fraction(ms)
   if(task>=7){
    val repairKeys=listOf("REPAIR","WINDOWS","ROOF","ASSEMBLE","LIGHT")
    val repair=repairKeys.maxOf{plan.progress(ms,it)}
@@ -110,6 +125,48 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
   if(step.key in listOf("WATER","GROW")){tool(c,d,6,.69f,.65f,.16f);for(i in 0..15){val t=((ms%1100)/1100f+i*.07f)%1f;p.color=0xbb9ce9ff.toInt();c.drawCircle(width*(.59f-t*.22f),sceneHeight*(.53f+t*.19f),d.width()*.0025f,p)}}
   actors(c,d,WorldRestorationArt.objectRect(d,task),step,work)
   if(work)particles(c,d,step.sound,f)
+  drawContact(c)
+  if(step.key=="CELEBRATE"){for(i in 0..27){val t=((ms%2300)/2300f+i*.037f)%1f;p.color=if(i%2==0)0xffffd86b.toInt() else 0xffb1efc6.toInt();p.alpha=((1-t)*210).toInt();c.drawCircle(width*(i*0.173f%1),sceneHeight*(.25f+t*.60f),dp(2f),p)};p.alpha=255}
+  drawDialogue(c,step)
+  c.restoreToCount(scene)
+  drawWorkTools(c,step,work)
+ }
+ private val windowWorkSteps=setOf("REMOVE","WINDOWS","REPAIR","CLEAN")
+ private fun windowActors(c:Canvas,room:RectF,step:RestorationSequence.Step,work:Boolean){
+  val ids=listOf("lazi","besi","meli","rona")
+  val arrival=plan.progress(ms,"ARRIVAL")
+  val progress=CharacterAnimation.ease(plan.fraction(ms))
+  val contact=WindowWorkshop.contact(room,step.key,progress)
+  for(index in listOf(1,0,2,3)){
+   val id=ids[index]
+   val actor=SceneCast.actor(id)
+   val route=WindowWorkshop.position(room,index,arrival,true)
+   val state=when{
+    arrival<1f->CharacterAnimation.State.WALK
+    index==1&&work->CharacterAnimation.State.WORK
+    index==step.speaker&&voice.isTalking->CharacterAnimation.State.TALK
+    else->CharacterAnimation.State.IDLE
+   }
+   val player=actorPlayers.getOrPut(id){CharacterAnimation.Player()}
+   player.update(state,ms)
+   val actorHeight=WindowWorkshop.actorHeight(room,actor.child,index!=1)
+   val right=if(arrival<1f)route.facingRight else route.position.x<room.centerX()
+   val installerPose=if(index!=1||arrival<1f)null else if(!work)0 else {
+    if((kotlin.math.sin(progress*12f)>.10f))3 else 2
+   }
+   WindowWorkshop.drawActor(context,c,p,id,player,ms,route.position,actorHeight,right,installerPose,
+    WindowWorkshop.walkDistance(room,route.position,route.facingRight))
+   if(index==1&&work){
+    val hand=PointF(route.position.x + actorHeight*(if(installerPose==3).30f else .22f),
+     route.position.y-actorHeight*(if(installerPose==3).85f else .77f))
+    WindowWorkshop.drawTool(workshopTools,c,p,WorkshopTool.forWindowStep(step.key),hand,contact)
+   }
+  }
+ }
+ private fun drawDialogue(c:Canvas,step:RestorationSequence.Step){
+  if(step.line.isNotBlank())SceneBubble.draw(c,p,width,sceneHeight,if(step.speaker==1)RestorationJobs.worker(task,step.key).name else listOf("Lazi","Greku","Meli","Rona").getOrElse(step.speaker){"Lazi"},SceneText.line(step.line,save.language),dp(1f),width*(if(step.speaker%2==0).26f else .74f))
+ }
+ private fun drawContact(c:Canvas){
   val contact=(ms-contactAt)/650f
   if(contact in 0f..1f){
    p.style=Paint.Style.STROKE;p.strokeWidth=dp(2f);p.color=0xffffd47a.toInt();p.alpha=((1-contact)*230).toInt()
@@ -117,10 +174,6 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
    for(i in 0..9){val angle=i*PI.toFloat()/5;val radius=contact*dp(42f);c.drawCircle(contactX+cos(angle)*radius,contactY+sin(angle)*radius-contact*dp(18f),dp(3f)*(1-contact),p)}
    p.alpha=255
   }
-  if(step.key=="CELEBRATE"){for(i in 0..27){val t=((ms%2300)/2300f+i*.037f)%1f;p.color=if(i%2==0)0xffffd86b.toInt() else 0xffb1efc6.toInt();p.alpha=((1-t)*210).toInt();c.drawCircle(width*(i*0.173f%1),sceneHeight*(.25f+t*.60f),dp(2f),p)};p.alpha=255}
-  if(step.line.isNotBlank())SceneBubble.draw(c,p,width,sceneHeight,if(step.speaker==1)RestorationJobs.worker(task,step.key).name else listOf("Lazi","Greku","Meli","Rona").getOrElse(step.speaker){"Lazi"},SceneText.line(step.line,save.language),dp(1f),width*(if(step.speaker%2==0).26f else .74f))
-  c.restoreToCount(scene)
-  drawWorkTools(c,step,work)
  }
  private fun drawWorkTools(c:Canvas,step:RestorationSequence.Step,work:Boolean){
   toolSlots.forEach{it.setEmpty()}
@@ -145,7 +198,9 @@ open class RestorationGardenView(context:Context,private val task:Int,initialEla
   c.drawText(title,cx,sceneHeight+dp(16f),p)
   choices.forEachIndexed{i,m->val x=cx+(i-1)*(size+gap);val r=toolSlots[i];r.set(x-size/2,y,x+size/2,y+size)
    p.color=if((selectedTool?:RestorationJobs.tool(task,step.key))==m)0xffd9bd72.toInt() else 0xff698d81.toInt()
-   c.drawRoundRect(r,dp(10f),dp(10f),p);val inner=RectF(r);inner.inset(dp(7f),dp(7f));materialArt.draw(c,p,m,inner)
+   c.drawRoundRect(r,dp(10f),dp(10f),p);val inner=RectF(r);inner.inset(dp(7f),dp(7f));if(task==WindowWorkshop.TASK&&m==RestorationJobs.tool(task,step.key)){
+    workshopTools.draw(c,p,WorkshopTool.forWindowStep(step.key),inner)
+   }else materialArt.draw(c,p,m,inner,task)
   }
  }
  private inline fun reveal(c:Canvas,r:RectF,f:Float,draw:()->Unit){if(f<=0)return;val s=c.save();c.clipRect(r.left,r.top,r.left+r.width()*f,r.bottom);draw();c.restoreToCount(s)}
